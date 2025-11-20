@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Learner AI Helper</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5f7fa;
+            --text-color: #333;
+            --border-color: #dce1e6;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+        }
+
+        /* API Key Section */
+        #api-key-section {
+            background-color: #eef4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #c8d9f3;
+        }
+
+        #api-key-section h2 {
+            margin-top: 0;
+        }
+
+        #api-key-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #api-key-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        #api-key-status {
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        #api-key-status.success { color: var(--success-color); }
+        #api-key-status.error { color: var(--error-color); }
+
+
+        /* Main App Section */
+        #app-section.hidden {
+            display: none;
+        }
+
+        nav {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+
+        nav button {
+            padding: 12px 18px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            position: relative;
+            color: #555;
+            transition: color 0.2s;
+        }
+
+        nav button:hover {
+            color: var(--primary-color);
+        }
+
+        nav button.active {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        nav button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: var(--primary-color);
+            border-radius: 3px 3px 0 0;
+        }
+
+        .feature-panel {
+            display: none;
+        }
+
+        .feature-panel.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        
+        textarea {
+            min-height: 100px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #357abd;
+        }
+        
+        button.secondary {
+            background-color: #7f8c8d;
+        }
+        
+        button.secondary:hover {
+            background-color: #6c7a7b;
+        }
+
+        /* Output Section */
+        #output-section {
+            margin-top: 25px;
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 100px;
+        }
+
+        #output-section h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+        #loader {
+            text-align: center;
+            padding: 20px;
+            font-size: 1.1em;
+        }
+        
+        #result {
+            white-space: pre-wrap; /* Important for preserving formatting from AI */
+            line-height: 1.6;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Japanese Learner AI Helper</h1>
+
+        <!-- API KEY SECTION -->
+        <div id="api-key-section">
+            <h2>Google AI API Key</h2>
+            <p style="font-size: 0.9em; margin-top:0; color: #555;">Get your key from <a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>. Your key is saved only in your browser.</p>
+            <div id="api-key-form">
+                <input type="password" id="api-key-input" placeholder="Enter your Google AI API Key">
+                <button id="save-api-key">Save Key</button>
+                <button id="clear-api-key" class="secondary">Clear Key</button>
+            </div>
+            <p id="api-key-status"></p>
+        </div>
+
+        <!-- MAIN APP SECTION -->
+        <div id="app-section" class="hidden">
+            <nav id="feature-tabs">
+                <button data-feature="explain" class="active">Explain Sentence</button>
+                <button data-feature="compare">Compare Words</button>
+                <button data-feature="check">Check Sentence</button>
+            </nav>
+
+            <!-- Explain Sentence Panel -->
+            <div id="explain-panel" class="feature-panel active">
+                <div class="form-group">
+                    <label for="sentence-to-explain">Japanese Sentence to Explain</label>
+                    <textarea id="sentence-to-explain" placeholder="e.g., この映画は面白そうだね。"></textarea>
+                </div>
+                <button id="submit-explain">Explain</button>
+            </div>
+
+            <!-- Compare Words Panel -->
+            <div id="compare-panel" class="feature-panel">
+                <div class="form-group">
+                    <label for="word1">Word 1</label>
+                    <input type="text" id="word1" placeholder="e.g., 聞く">
+                </div>
+                <div class="form-group">
+                    <label for="word2">Word 2</label>
+                    <input type="text" id="word2" placeholder="e.g., 聴く">
+                </div>
+                <button id="submit-compare">Compare</button>
+            </div>
+
+            <!-- Check Sentence Panel -->
+            <div id="check-panel" class="feature-panel">
+                 <div class="form-group">
+                    <label for="sentence-to-check">Your Sentence to Check</label>
+                    <textarea id="sentence-to-check" placeholder="e.g., 私はすしを食べたいです。"></textarea>
+                </div>
+                <button id="submit-check">Check</button>
+            </div>
+        </div>
+
+        <!-- OUTPUT SECTION -->
+        <div id="output-section" class="hidden">
+            <h2>AI Response</h2>
+            <div id="loader" class="hidden">Thinking... 🧠</div>
+            <div id="result"></div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Element References ---
+            const apiKeyInput = document.getElementById('api-key-input');
+            const saveApiKeyBtn = document.getElementById('save-api-key');
+            const clearApiKeyBtn = document.getElementById('clear-api-key');
+            const apiKeyStatus = document.getElementById('api-key-status');
+            const appSection = document.getElementById('app-section');
+            const outputSection = document.getElementById('output-section');
+            const featureTabs = document.getElementById('feature-tabs');
+            const featurePanels = document.querySelectorAll('.feature-panel');
+            const loader = document.getElementById('loader');
+            const resultDiv = document.getElementById('result');
+
+            // --- API & State Variables ---
+            const API_KEY_STORAGE_KEY = 'google-ai-api-key';
+            let apiKey = '';
+
+            // --- Generic AI Call Function ---
+            async function callGoogleAI(prompt) {
+                if (!apiKey) {
+                    alert('API Key is not set. Please set your API key first.');
+                    return;
+                }
+                
+                loader.classList.remove('hidden');
+                resultDiv.textContent = '';
+                outputSection.classList.remove('hidden');
+
+                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: prompt
+                                }]
+                            }]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.candidates && data.candidates.length > 0) {
+                        const text = data.candidates[0].content.parts[0].text;
+                        resultDiv.textContent = text;
+                    } else if (data.promptFeedback) {
+                         resultDiv.textContent = 'Response was blocked. Reason: ' + (data.promptFeedback.blockReason || "Unknown");
+                    } else {
+                        resultDiv.textContent = "No content received from the AI.";
+                    }
+
+                } catch (error) {
+                    console.error("Error calling Google AI:", error);
+                    resultDiv.textContent = `An error occurred: ${error.message}`;
+                } finally {
+                    loader.classList.add('hidden');
+                }
+            }
+
+            // --- Feature-Specific Handlers ---
+            document.getElementById('submit-explain').addEventListener('click', () => {
+                const sentence = document.getElementById('sentence-to-explain').value.trim();
+                if (!sentence) { alert('Please enter a sentence to explain.'); return; }
+                const prompt = `Explain the following Japanese sentence. The sentence is: "${sentence}"`;
+                callGoogleAI(prompt);
+            });
+
+            document.getElementById('submit-compare').addEventListener('click', () => {
+                const word1 = document.getElementById('word1').value.trim();
+                const word2 = document.getElementById('word2').value.trim();
+                if (!word1 || !word2) { alert('Please enter two words to compare.'); return; }
+                const prompt = `You are an expert Japanese language teacher. Explain the difference in nuance and usage between the Japanese words "${word1}" and "${word2}". Provide clear definitions, example sentences for each, and contexts where one would be more appropriate than the other.`;
+                callGoogleAI(prompt);
+});
+
+            document.getElementById('submit-check').addEventListener('click', () => {
+                const sentence = document.getElementById('sentence-to-check').value.trim();
+                if (!sentence) { alert('Please enter a sentence to check.'); return; }
+                const prompt = `You are an expert Japanese language teacher. Check if the following Japanese sentence is grammatically correct and sounds natural. 
+                - If it is perfect, simply state that it is correct and natural.
+                - If it is incorrect or unnatural, provide the corrected, more natural version. Then, explain in simple terms why the original sentence was wrong or awkward.
+                The sentence to check is: "${sentence}"`;
+                callGoogleAI(prompt);
+            });
+
+            // --- UI & API Key Management ---
+            function checkApiKey() {
+                apiKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+                if (apiKey) {
+                    apiKeyStatus.textContent = 'API Key is saved in your browser.';
+                    apiKeyStatus.className = 'success';
+                    apiKeyInput.value = '********'; // Obfuscate
+                    appSection.classList.remove('hidden');
+                } else {
+                    apiKeyStatus.textContent = 'Please enter your Google AI Studio API Key to begin.';
+                    apiKeyStatus.className = 'error';
+                    appSection.classList.add('hidden');
+                    outputSection.classList.add('hidden');
+                }
+            }
+
+            saveApiKeyBtn.addEventListener('click', () => {
+                const newKey = apiKeyInput.value.trim();
+                if (newKey && newKey !== '********') {
+                    localStorage.setItem(API_KEY_STORAGE_KEY, newKey);
+                    checkApiKey();
+                } else if (!newKey) {
+                    alert('Please enter an API key.');
+                }
+            });
+
+            clearApiKeyBtn.addEventListener('click', () => {
+                localStorage.removeItem(API_KEY_STORAGE_KEY);
+                apiKeyInput.value = '';
+                checkApiKey();
+            });
+            
+            apiKeyInput.addEventListener('focus', () => {
+                if (apiKey) {
+                    apiKeyInput.value = '';
+                }
+            });
+
+            // --- Tab Switching Logic ---
+            featureTabs.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    // Update active button
+                    featureTabs.querySelector('.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    
+                    // Update active panel
+                    featurePanels.forEach(panel => panel.classList.remove('active'));
+                    const targetPanelId = e.target.dataset.feature + '-panel';
+                    document.getElementById(targetPanelId).classList.add('active');
+                }
+            });
+
+            // --- Initial Load ---
+            checkApiKey();
+        });
+    </script>
+</body>
+</html>

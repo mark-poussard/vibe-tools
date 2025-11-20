@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vanguard of the Void</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --card-bg: #ecf0f1;
+            --text-color: #2c3e50;
+            --highlight: #f1c40f;
+            --monster-color: #e74c3c;
+            --skill-color: #3498db;
+            --loot-color: #2ecc71;
+            --hero-color: #9b59b6;
+            --event-color: #e67e22;
+            --curse-color: #7f8c8d;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Layout --- */
+        #game-container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+            display: none; /* Hidden by default until hero selected */
+        }
+
+        #hero-selection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 20px;
+        }
+
+        .hero-select-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        #map-screen {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 20px;
+        }
+
+        .map-node {
+            width: 300px;
+            padding: 20px;
+            background: #34495e;
+            border: 2px solid #7f8c8d;
+            border-radius: 10px;
+            text-align: center;
+            opacity: 0.5;
+            pointer-events: none; /* Disabled by default */
+            transition: all 0.3s;
+        }
+
+        .map-node.unlocked {
+            opacity: 1;
+            pointer-events: all;
+            border-color: var(--highlight);
+            background: #2c3e50;
+            cursor: pointer;
+        }
+
+        .map-node.unlocked:hover {
+            transform: scale(1.05);
+            background: var(--monster-color);
+        }
+
+        #hero-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding-top: 20px;
+        }
+        .hero-panel {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #7f8c8d;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #deck-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 1000px;
+        }
+        .deck-manager-container {
+            display: flex;
+            gap: 20px;
+            flex-grow: 1;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .deck-column {
+            flex: 1;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .deck-column h2 { text-align: center; margin: 0 0 10px 0; font-size: 18px; color: var(--highlight); }
+        .card-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-content: flex-start;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 5px;
+        }
+        /* Scale down cards slightly in manager */
+        .card-grid .card { transform: scale(0.9); margin: -5px; }
+        .card-grid .card:hover { transform: scale(1.0) translateY(-5px); z-index: 10; }
+
+        .row {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            min-height: 160px;
+            align-items: center;
+        }
+
+        .area-label {
+            position: absolute;
+            top: -20px;
+            left: 10px;
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        
+
+        /* --- Zones --- */
+        #stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        #adventure-row {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px dashed var(--monster-color);
+            position: relative;
+        }
+
+        #hero-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(155, 89, 182, 0.1);
+            border: 1px solid var(--hero-color);
+            padding: 20px;
+        }
+
+        #equipment-slots {
+            display: flex;
+            gap: 5px;
+        }
+
+        #hand-row {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px dashed var(--skill-color);
+            overflow-x: auto;
+            position: relative;
+        }
+
+        /* --- Cards --- */
+        .card {
+            width: 100px;
+            height: 150px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 8px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-size: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            user-select: none;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.4);
+        }
+
+        .card.selected {
+            border: 3px solid var(--highlight);
+            transform: translateY(-10px);
+        }
+
+        .card-header {
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+        }
+
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+
+        .card-desc {
+            font-size: 10px;
+            flex-grow: 1;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        /* Card Types */
+        .type-monster { border-top: 5px solid var(--monster-color); }
+        .type-skill { border-top: 5px solid var(--skill-color); }
+        .type-loot { border-top: 5px solid var(--loot-color); }
+        .type-event { border-top: 5px solid var(--event-color); cursor: default; }
+        .type-curse { border-top: 5px solid var(--curse-color); background: #bdc3c7; }
+        .type-hero { border-top: 5px solid var(--hero-color); width: 120px; height: 160px; }
+        
+        /* Event Buttons */
+        .choice-btn {
+            width: 100%;
+            padding: 4px;
+            font-size: 9px;
+            background: var(--bg-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 2px;
+        }
+        .choice-btn:hover { background: var(--event-color); }
+
+        /* Mini Equipment Cards */
+        .card.equipped {
+            width: 60px;
+            height: 80px;
+            font-size: 10px;
+        }
+
+        .destroy-btn {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            border: none;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        /* --- UI Elements --- */
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: var(--monster-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #c0392b; }
+        button:disabled { background-color: #7f8c8d; cursor: not-allowed; }
+
+        #log-console {
+            height: 100px;
+            background: rgba(0,0,0,0.5);
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .log-entry { margin-bottom: 2px; }
+        .log-dmg { color: #ff7675; }
+        .log-gain { color: #55efc4; }
+        .log-event { color: var(--highlight); }
+
+        /* Overlay */
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            display: none; /* Hidden by default */
+        }
+        #overlay h1 { font-size: 48px; }
+    </style>
+</head>
+<body>
+
+<!-- Hero Selection Screen -->
+<div id="hero-selection">
+    <h1>Choose Your Hero</h1>
+    <div class="hero-select-container" id="hero-select-container">
+        <!-- Hero cards injected here -->
+    </div>
+</div>
+    
+<!-- Map Screen -->
+<div id="map-screen">
+    <h1>World Map</h1>
+    <button onclick="showHeroScreen()" style="background-color: var(--hero-color);">Hero Status</button>
+    <button onclick="showDeckScreen()" style="background-color: var(--skill-color); margin-bottom: 20px;">Manage Deck</button>
+  
+    <div class="map-node" id="node-1" onclick="enterTier(1)">
+        <h2>Tier 1: The Caverns</h2>
+        <p>Status: <span id="status-1">Unlocked</span></p>
+    </div>
+    <div class="map-node" id="node-2" onclick="enterTier(2)">
+        <h2>Tier 2: The Deep Dark</h2>
+        <p>Status: <span id="status-2">Locked</span></p>
+    </div>
+    <div class="map-node" id="node-3" onclick="enterTier(3)">
+        <h2>Tier 3: The Void</h2>
+        <p>Status: <span id="status-3">Locked</span></p>
+    </div>
+
+    <button onclick="resetProgress()" style="background-color: #c0392b; margin-top: 30px; font-size: 12px;">Reset All Progress</button>
+</div>
+
+<!-- Hero / Inventory Screen -->
+<div id="hero-screen">
+    <div style="display:flex; justify-content:space-between; align-items:center; width:100%; max-width:600px;">
+        <h1>Hero Details</h1>
+        <button onclick="closeHeroScreen()">Back to Map</button>
+    </div>
+
+    <div class="hero-panel">
+        <!-- Stats -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #fff; padding-bottom:10px;">
+            <strong style="color:var(--hero-color); font-size:1.5em;"><span id="hero-screen-name">Hero</span></strong>
+            <div style="text-align:right;">
+                <strong style="color:#f1c40f; font-size:1.2em; margin-right:15px;">Gold: <span id="hero-screen-gold">0</span></strong>
+                <strong style="color:var(--monster-color); font-size:1.2em;">HP: <span id="hero-screen-hp">0</span>/<span id="hero-screen-max-hp">0</span></strong>
+            </div>
+        </div>
+
+  
+
+        <!-- Equipped -->
+        <div>
+            <div style="font-size:1em; margin-bottom:10px; color:var(--loot-color);">Equipped Items (Click to Unequip):</div>
+            <div id="hero-screen-equipped" style="display:flex; gap:10px; min-height:100px; align-items:center; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"></div>
+        </div>
+
+        <!-- Inventory -->
+        <div>
+            <div style="font-size:1em; margin-bottom:10px; color:var(--highlight);">Inventory (Click to Equip):</div>
+            <div id="hero-screen-inventory" style="display:flex; flex-wrap:wrap; gap:10px; min-height:150px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Deck Management Screen -->
+<div id="deck-screen">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1>Deck Manager</h1>
+        <button onclick="closeDeckScreen()">Back to Map</button>
+    </div>
+    <div class="deck-manager-container">
+        <!-- Active Deck -->
+        <div class="deck-column">
+            <h2>Active Deck (<span id="manager-deck-count">0</span>)</h2>
+            <div id="manager-deck-grid" class="card-grid"></div>
+        </div>
+        <!-- Collection (Sideboard) -->
+        <div class="deck-column">
+            <h2>Collection (<span id="manager-col-count">0</span>)</h2>
+            <div id="manager-col-grid" class="card-grid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Game Overlay (Win/Loss) -->
+<div id="overlay">
+    <h1 id="overlay-title">Game Over</h1>
+    <button onclick="location.reload()">Play Again</button>
+</div>
+
+<!-- Main Game Interface -->
+<div id="game-container">
+    
+    <!-- Top Bar: Stats & Log -->
+    <div id="stats-bar">
+        <div>
+            <strong style="color:var(--hero-color)"><span id="hero-name">Hero</span></strong> | 
+            <strong style="color:var(--monster-color)">HP: <span id="hero-hp">0</span>/<span id="hero-max-hp">0</span></strong> | 
+            <strong style="color:var(--skill-color)">Block: <span id="hero-block">0</span></strong> | 
+            <strong style="color:var(--highlight)">AP: <span id="hero-ap">0</span>/<span id="hero-max-ap">0</span></strong>
+        </div>
+        <div>
+            Deck: <span id="deck-count">0</span> | Discard: <span id="discard-count">0</span> | Dungeon: <span id="dungeon-count">0</span>
+        </div>
+    </div>
+
+    <!-- Adventure Row (Monsters) -->
+    <div id="adventure-row" class="row">
+        <div class="area-label">
+            Adventure Row 
+            <button id="explore-btn" style="font-size:10px; padding:2px 5px; margin-left:10px;" onclick="exploreDungeon()">Explore (+1)</button>
+        </div>
+        <!-- Monster cards injected here -->
+    </div>  
+
+    <!-- Hero Area -->
+    <div id="hero-area">
+        <div id="hero-card-container">
+            <!-- Hero Card injected here -->
+        </div>
+        <div id="equipment-slots">
+            <!-- Equipped Loot injected here -->
+        </div>
+        <div style="text-align: right;">
+            <button id="end-turn-btn" onclick="endTurn()">End Turn</button>
+        </div>
+    </div>
+
+    <!-- Hand -->
+    <div id="hand-row" class="row">
+        <div class="area-label">Your Hand</div>
+        <!-- Player Hand injected here -->
+    </div>
+
+    <!-- Text Log -->
+    <div id="log-console"></div>
+
+</div>
+
+<script>
+/* --- GAME DATA --- */
+
+const CARD_TYPES = {
+    HERO: 'hero',
+    MONSTER: 'monster',
+    SKILL: 'skill',
+    LOOT: 'loot',
+    EVENT: 'event',
+    CURSE: 'curse'
+};
+
+// Define starting items for heroes
+const STARTING_ITEMS = {
+    'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, block: 1, value: 5, desc: '+1 Block on Play' }, // Logic simulation
+    'i_dagger': { id: 'i_dagger', name: 'Rusty Dagger', type: CARD_TYPES.LOOT, atkBuff: 1, value: 5, desc: '+1 DMG' },
+    'i_wand': { id: 'i_wand', name: 'Ember', type: CARD_TYPES.LOOT, atkBuff: 0, value: 5, desc: '+5 Max HP', hpBonus: 3 }
+};
+
+const HEROES = [
+    { 
+        id: 'h_ironclad', 
+        name: 'Ironclad', 
+        type: CARD_TYPES.HERO, 
+        hp: 30, maxHp: 30, 
+        ap: 3, maxAp: 3, 
+        block: 0, 
+        desc: 'Tanky. Starts with Shield.',
+        startItem: 'i_shield'
+    },
+    { 
+        id: 'h_shadow', 
+        name: 'Shadow', 
+        type: CARD_TYPES.HERO, 
+        hp: 25, maxHp: 25, 
+        ap: 4, maxAp: 4, 
+        block: 0, 
+        desc: 'Agile. High AP.',
+        startItem: 'i_dagger'
+    },
+    { 
+        id: 'h_weaver', 
+        name: 'Weaver', 
+        type: CARD_TYPES.HERO, 
+        hp: 25, maxHp: 25, 
+        ap: 3, maxAp: 3, 
+        block: 0, 
+        desc: 'Fragile. Starts with HP relic.',
+        startItem: 'i_wand'
+    }
+];
+
+const BASE_STRIKE = { id: 's1', name: 'Strike', type: CARD_TYPES.SKILL, cost: 1, dmg: 3, desc: 'Deal 3 DMG' };
+const BASE_DEFEND = { id: 's2', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, block: 3, desc: 'Gain 3 Block' };
+
+const HERO_DECKS = {
+    // Tank: Balanced + Shield Bash
+    'h_ironclad': [
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND,
+        { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, cost: 2, dmg: 5, block: 5, desc: '5 DMG & 5 Block' }
+    ],
+    // Rogue: Aggressive + 0 Cost Shiv
+    'h_shadow': [
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND,
+        { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: '0 Cost Attack' }
+    ],
+    // Mage: High Cost/High Dmg
+    'h_weaver': [
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND,
+        { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Massive DMG' }
+    ]
+};
+
+const SKILL_LIBRARY = [
+    { id: 's_mend', name: 'Mend', type: CARD_TYPES.SKILL, cost: 1, heal: 4, desc: 'Heal 4 HP' },
+    { id: 's_rush', name: 'Adrenaline', type: CARD_TYPES.SKILL, cost: 0, gainAp: 2, desc: 'Gain 2 AP' },
+    { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, cost: 2, dmg: 5, block: 5, desc: '5 DMG & 5 Block' },
+    { id: 's_exec', name: 'Execution', type: CARD_TYPES.SKILL, cost: 3, dmg: 15, desc: 'Deal 15 DMG' },
+    { id: 's_step', name: 'Quick Step', type: CARD_TYPES.SKILL, cost: 0, block: 2, desc: 'Gain 2 Block' },
+    { id: 's_wall', name: 'Heavy Plate', type: CARD_TYPES.SKILL, cost: 2, block: 10, desc: 'Gain 10 Block' },
+    { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: '0 Cost Attack' },
+    { id: 's_wild', name: 'Reckless Swing', type: CARD_TYPES.SKILL, cost: 1, dmg: 8, desc: 'Deal 8 DMG' },
+    { id: 's_holy', name: 'Holy Light', type: CARD_TYPES.SKILL, cost: 2, heal: 8, desc: 'Heal 8 HP' },
+    { id: 's_perf', name: 'Perfect Guard', type: CARD_TYPES.SKILL, cost: 3, block: 20, desc: 'Gain 20 Block' }
+];
+
+const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, cost: 1, desc: 'Unplayable trash.' };
+
+const REWARDS = {
+    'm_goblin': { id: 'l_dagger', name: 'Dagger', type: CARD_TYPES.LOOT, value: 1, atkBuff: 1, desc: '+1 DMG' },
+    'm_rat': { id: 's_bite', name: 'Rabid Bite', type: CARD_TYPES.SKILL, cost: 0, dmg: 2, desc: '0 Cost Attack' },
+    'm_orc': { id: 's_smash', name: 'Big Smash', type: CARD_TYPES.SKILL, cost: 2, dmg: 8, desc: 'Heavy DMG' },
+    'm_ghost': { id: 'l_amulet', name: 'Ghost Amulet', type: CARD_TYPES.LOOT, value: 2, atkBuff: 2, desc: '+2 DMG' }, 
+    'm_slime': { id: 'l_goo', name: 'Slime Shield', type: CARD_TYPES.LOOT, value: 2, block: 2, desc: '+2 Block on Play' },
+    'm_kobold': { id: 'l_spear', name: 'Short Spear', type: CARD_TYPES.LOOT, value: 2, atkBuff: 2, desc: '+2 DMG' },
+    'm_spider': { id: 's_web', name: 'Web Shot', type: CARD_TYPES.SKILL, cost: 1, dmg: 5, desc: 'Sticky Shot' },
+    'm_wolf': { id: 's_claw', name: 'Feral Claw', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: 'Fast Attack' },
+    'm_cultist': { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Massive DMG' },
+    'm_golem': { id: 's_stone', name: 'Stone Form', type: CARD_TYPES.SKILL, cost: 2, block: 15, desc: 'Huge Block' },
+    'm_assassin': { id: 'l_cloak', name: 'Shadow Cloak', type: CARD_TYPES.LOOT, value: 1, block: 1, desc: '+1 Block on Play' },
+    'm_ent': { id: 'l_bark', name: 'Bark Skin', type: CARD_TYPES.LOOT, value: 5, hpBonus: 5, desc: '+5 Max HP' },
+    'm_leech': { id: 's_drain', name: 'Void Spike', type: CARD_TYPES.SKILL, cost: 1, dmg: 6, desc: 'Piercing Strike' },
+    'm_drake': { id: 'l_scale', name: 'Dragon Scale', type: CARD_TYPES.LOOT, value: 5, block: 3, desc: '+3 Block on Play' },
+
+    'm_boss': { id: 'w_win', name: 'Victory', type: CARD_TYPES.EVENT, desc: 'You Won!' }
+};
+
+const EVENT_MONSTERS = {
+    'm_ghost': { id: 'm_ghost', name: 'Vengeful Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, rewardId: 'm_ghost', desc: 'Hit by Physical' },
+    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, rewardId: 'm_goblin', desc: 'It has teeth!' }
+};
+
+// --- TIERED DATA ---
+
+const COMMON_EVENTS = [
+    { 
+        id: 'e_shrine', name: 'Cursed Shrine', type: CARD_TYPES.EVENT, desc: 'A dark aura hums.',
+        choices: [
+            { label: 'Pray (Heal 10, Get Curse)', effect: 'pray' },
+            { label: 'Desecrate (Fight Spirit)', effect: 'fight' },
+            { label: 'Ignore (Leave)', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_trap', name: 'Trap Door', type: CARD_TYPES.EVENT, desc: 'The floor crumbles!',
+        choices: [
+            { label: 'Jump (Discard 1 Card)', effect: 'trap_card' },
+            { label: 'Brace (Take 5 DMG)', effect: 'trap_dmg' }
+        ]
+    },
+    {
+        id: 'e_chest', name: 'Wooden Chest', type: CARD_TYPES.EVENT, desc: 'Is it breathing?',
+        choices: [
+            { label: 'Open (Loot or Mimic)', effect: 'chest_open' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    }
+];
+
+const TIER_POOLS = {
+    1: [ // The Caverns
+        { id: 'm_goblin', name: 'Goblin', type: CARD_TYPES.MONSTER, hp: 4, maxHp: 4, atk: 2, rewardId: 'm_goblin', desc: 'Reward: Dagger' },
+        { id: 'm_rat', name: 'Giant Rat', type: CARD_TYPES.MONSTER, hp: 3, maxHp: 3, atk: 3, rewardId: 'm_rat', desc: 'Reward: Bite' },
+        { id: 'm_slime', name: 'Acid Slime', type: CARD_TYPES.MONSTER, hp: 5, maxHp: 5, atk: 1, rewardId: 'm_slime', desc: 'Weak & Sticky' },
+        { id: 'm_kobold', name: 'Kobold Scout', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, rewardId: 'm_kobold', desc: 'Pointy Spear' }
+    ],
+    2: [ // The Deep Dark
+        { id: 'm_orc', name: 'Orc', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 4, rewardId: 'm_orc', desc: 'Reward: Smash' },
+        { id: 'm_spider', name: 'Cave Spider', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 2, rewardId: 'm_spider', desc: 'Reward: Web' },
+        { id: 'm_wolf', name: 'Dire Wolf', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, rewardId: 'm_wolf', desc: 'Fast Biter' },
+        { id: 'm_cultist', name: 'Dark Cultist', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, rewardId: 'm_cultist', desc: 'Glass Cannon' }
+    ],
+    3: [ // The Void
+        { id: 'm_golem', name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, rewardId: 'm_golem', desc: 'High HP Tank' },
+        { id: 'm_assassin', name: 'Void Assassin', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 6, rewardId: 'm_assassin', desc: 'High Damage!' },
+        { id: 'm_ent', name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, rewardId: 'm_ent', desc: 'Ancient Wood' },
+        { id: 'm_drake', name: 'Baby Drake', type: CARD_TYPES.MONSTER, hp: 18, maxHp: 18, atk: 5, rewardId: 'm_drake', desc: 'Fierce!' }
+    ]
+};
+
+const MINI_BOSSES = {
+    1: [ // Gatekeepers to Tier 2
+        { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isMiniBoss: true, desc: 'BOSS: Gatekeeper' },
+        { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isMiniBoss: true, desc: 'BOSS: Gatekeeper' }
+    ],
+    2: [ // Gatekeepers to Tier 3
+        { id: 'mb_lich', name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isMiniBoss: true, desc: 'BOSS: Gatekeeper' },
+        { id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isMiniBoss: true, desc: 'BOSS: Gatekeeper' }
+    ]
+};
+
+const FINAL_BOSS = { id: 'm_boss', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, rewardId: 'm_boss', desc: 'FINAL BOSS' };
+
+/* --- STATE --- */
+
+let state = {
+    hero: null,
+    deck: [],
+    hand: [],
+    discard: [],
+    dungeonDeck: [],
+    adventureRow: [], 
+    equipped: [],
+    selectedCardIndex: -1,
+    turn: 1,
+    maxUnlockedTier: 1, // Track progress
+    collection: [], // Cards removed from deck
+    inventory: [],
+    gold: 0
+};
+
+/* --- STARTUP LOGIC --- */
+
+function initSelectionScreen() {
+    const container = document.getElementById('hero-select-container');
+    HEROES.forEach((hero, index) => {
+        // Create a card for the hero
+        let div = createCardElement(hero);
+        div.onclick = () => startGame(index);
+        // Add a "Select" label
+        let label = document.createElement('div');
+        label.innerHTML = "<br><strong>CLICK TO SELECT</strong>";
+        label.style.textAlign = "center";
+        label.style.fontSize = "10px";
+        div.appendChild(label);
+        container.appendChild(div);
+    });
+}
+
+function startGame(heroIndex) {
+    // Switch UI
+    document.getElementById('hero-selection').style.display = 'none';
+    document.getElementById('game-container').style.display = 'flex';
+
+    // Initialize State
+    state.hero = JSON.parse(JSON.stringify(HEROES[heroIndex]));
+    // Load unique hero deck
+    state.deck = JSON.parse(JSON.stringify(HERO_DECKS[state.hero.id]));
+    
+    // Hand/Discard reset
+    state.hand = [];
+    state.discard = [];
+    state.equipped = [];
+    
+    // Start Item Logic
+    state.equipped = [];
+    if(state.hero.startItem) {
+        let item = STARTING_ITEMS[state.hero.startItem];
+        // If item gives HP bonus immediately
+        if(item.hpBonus) {
+            state.hero.maxHp += item.hpBonus;
+            state.hero.hp += item.hpBonus;
+        }
+        // We push deep copy to equipped
+        state.equipped.push(JSON.parse(JSON.stringify(item)));
+    }
+
+    // Setup Deck
+    shuffle(state.deck);
+    
+    // Go to Map
+    showMap();
+
+    log(`You selected ${state.hero.name}. The void awaits.`);
+    if(state.hero.startItem) log(`Equipped starting item: ${STARTING_ITEMS[state.hero.startItem].name}`);
+}
+
+function showMap() {
+    document.getElementById('hero-selection').style.display = 'none';
+    document.getElementById('game-container').style.display = 'none';
+    document.getElementById('map-screen').style.display = 'flex';
+    document.getElementById('overlay').style.display = 'none';
+
+    saveGame(); // Auto-save when hitting the map
+
+    // Update UI based on unlocks
+    for(let i=1; i<=3; i++) {
+        const node = document.getElementById(`node-${i}`);
+        const status = document.getElementById(`status-${i}`);
+        
+        if (i <= state.maxUnlockedTier) {
+            node.classList.add('unlocked');
+            status.innerText = "Available";
+            status.style.color = "#2ecc71";
+        } else {
+            node.classList.remove('unlocked');
+            status.innerText = "Locked";
+            status.style.color = "#e74c3c";
+        }
+    }
+}
+
+function showHeroScreen() {
+    document.getElementById('map-screen').style.display = 'none';
+    document.getElementById('hero-screen').style.display = 'flex';
+    renderHeroScreen();
+}
+
+function closeHeroScreen() {
+    document.getElementById('hero-screen').style.display = 'none';
+    document.getElementById('map-screen').style.display = 'flex';
+    saveGame();
+}
+
+function sellItem(index) {
+    const item = state.inventory[index];
+    const val = item.value || 0;
+    
+    state.gold += val;
+    state.inventory.splice(index, 1);
+    
+    log(`Sold ${item.name} for ${val} Gold.`); // Logs to console if visible, or just updates state
+    renderHeroScreen();
+}
+
+function showDeckScreen() {
+    // Hide Map, Show Deck Screen
+    document.getElementById('map-screen').style.display = 'none';
+    document.getElementById('deck-screen').style.display = 'flex';
+
+    // Consolidate all cards into state.deck for management
+    // (In case we came from a run where cards were in discard)
+    state.deck = state.deck.concat(state.discard);
+    state.discard = [];
+    state.hand = []; // Should be empty from map logic, but safety first
+
+    renderDeckManager();
+}
+
+function closeDeckScreen() {
+    document.getElementById('deck-screen').style.display = 'none';
+    document.getElementById('map-screen').style.display = 'flex';
+
+    saveGame();
+}
+
+function moveToCollection(index) {
+    if (state.deck.length <= 5) {
+        alert("Deck must have at least 5 cards!");
+        return;
+    }
+    const card = state.deck.splice(index, 1)[0];
+    state.collection.push(card);
+    renderDeckManager();
+}
+
+function moveToDeck(index) {
+    const card = state.collection.splice(index, 1)[0];
+    state.deck.push(card);
+    renderDeckManager();
+}
+
+function renderDeckManager() {
+    const deckGrid = document.getElementById('manager-deck-grid');
+    const colGrid = document.getElementById('manager-col-grid');
+    
+    document.getElementById('manager-deck-count').innerText = state.deck.length;
+    document.getElementById('manager-col-count').innerText = state.collection.length;
+
+    deckGrid.innerHTML = '';
+    colGrid.innerHTML = '';
+
+    // Render Active Deck
+    state.deck.forEach((card, idx) => {
+        let div = createCardElement(card);
+        // Add click to remove
+        div.onclick = () => moveToCollection(idx);
+        // Add visual cue
+        let hint = document.createElement('div');
+        hint.innerText = "Click to Remove";
+        hint.style = "position:absolute; bottom:2px; width:100%; text-align:center; font-size:8px; color:red; opacity:0.7;";
+        div.appendChild(hint);
+        deckGrid.appendChild(div);
+    });
+
+    // Render Collection
+    state.collection.forEach((card, idx) => {
+        let div = createCardElement(card);
+        // Add click to add
+        div.onclick = () => moveToDeck(idx);
+        // Add visual cue
+        let hint = document.createElement('div');
+        hint.innerText = "Click to Add";
+        hint.style = "position:absolute; bottom:2px; width:100%; text-align:center; font-size:8px; color:green; opacity:0.7;";
+        div.appendChild(hint);
+        colGrid.appendChild(div);
+    });
+}
+
+function mapEquipItem(invIndex) {
+    if (state.equipped.length >= 3) {
+        alert("Slots full! Unequip something first.");
+        return;
+    }
+    const item = state.inventory.splice(invIndex, 1)[0];
+    state.equipped.push(item);
+    
+    // Apply HP Bonus immediately if exists
+    if (item.hpBonus) {
+        state.hero.maxHp += item.hpBonus;
+        state.hero.hp += item.hpBonus;
+    }
+    
+    renderHeroScreen();
+}
+
+function mapUnequipItem(equipIndex) {
+    const item = state.equipped[equipIndex];
+
+    // Revert HP Bonus
+    if (item.hpBonus) {
+        state.hero.maxHp -= item.hpBonus;
+        state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+    }
+
+    state.equipped.splice(equipIndex, 1);
+    state.inventory.push(item);
+    renderHeroScreen();
+}
+
+function renderHeroScreen() {
+    if(state.hero) {
+        document.getElementById('hero-screen-name').innerText = state.hero.name;
+        document.getElementById('hero-screen-hp').innerText = state.hero.hp;
+        document.getElementById('hero-screen-max-hp').innerText = state.hero.maxHp;
+        document.getElementById('hero-screen-gold').innerText = state.gold;
+    }
+
+    // 1. Render Equipped
+    const equipContainer = document.getElementById('hero-screen-equipped');
+    equipContainer.innerHTML = '';
+    state.equipped.forEach((item, idx) => {
+        let div = createCardElement(item);
+        div.classList.add('equipped');
+        
+        // Click card to Unequip
+        div.onclick = () => mapUnequipItem(idx);
+        div.style.cursor = "pointer";
+        div.title = "Click to Unequip";
+        
+        equipContainer.appendChild(div);
+    });
+
+    // 2. Render Inventory
+    const invContainer = document.getElementById('hero-screen-inventory');
+    invContainer.innerHTML = '';
+    state.inventory.forEach((item, idx) => {
+        let div = createCardElement(item);
+        div.classList.add('equipped'); 
+        div.style.borderTop = "5px solid #f1c40f"; 
+
+        // Click to Equip
+        div.onclick = () => mapEquipItem(idx);
+        div.title = "Click to Equip";
+        
+        // Sell Button
+        let btn = document.createElement('button');
+        btn.className = 'destroy-btn';
+        btn.innerText = '$';
+        btn.style.background = '#27ae60'; // Green for money
+        btn.title = `Sell for ${item.value||0}g`;
+        btn.onclick = (e) => { 
+            e.stopPropagation(); // Prevent Equip
+            sellItem(idx); 
+        };
+        div.appendChild(btn);
+        
+        invContainer.appendChild(div);
+    });
+    
+    if (state.inventory.length === 0) invContainer.innerHTML = '<span style="font-style:italic; opacity:0.5;">Empty.</span>';
+}
+
+function enterTier(tierNum) {
+    state.tier = tierNum;
+    state.dungeonDeck = buildDungeonTier(tierNum);
+    state.adventureRow = []; // Clear row
+    state.turn = 1;
+
+    // Switch UI
+    document.getElementById('map-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'flex';
+
+    // Start the loop
+    drawCards(5);
+    
+    // Ensure at least one monster to start
+    let card = state.dungeonDeck.shift();
+    if(card) state.adventureRow.push(card);
+    
+    const names = ["The Caverns", "The Deep Dark", "The Void"];
+    log(`Entered Tier ${tierNum}: ${names[tierNum-1]}`);
+    render();
+}
+
+function buildDungeonTier(tierNum) {
+    let segment = [];
+    const monsterPool = TIER_POOLS[tierNum];
+    
+    // Add 5 Monsters from the pool
+    for(let i=0; i<5; i++) {
+        segment.push({...monsterPool[Math.floor(Math.random() * monsterPool.length)]});
+    }
+    
+    // Add 2 Random Events
+    for(let i=0; i<2; i++) {
+        segment.push({...COMMON_EVENTS[Math.floor(Math.random() * COMMON_EVENTS.length)]});
+    }
+
+    shuffle(segment);
+
+    // Ensure the first card is NOT an event so the player isn't blocked immediately
+    if (segment.length > 0 && segment[0].type === CARD_TYPES.EVENT) {
+        const safeIndex = segment.findIndex(c => c.type === CARD_TYPES.MONSTER);
+        if (safeIndex !== -1) {
+            [segment[0], segment[safeIndex]] = [segment[safeIndex], segment[0]];
+        }
+    }
+
+    // Add Boss at the bottom
+    if (tierNum < 3) {
+        const bossPool = MINI_BOSSES[tierNum];
+        const boss = {...bossPool[Math.floor(Math.random() * bossPool.length)]};
+        segment.push(boss);
+    } else {
+        segment.push({...FINAL_BOSS});
+    }
+
+    return segment;
+}
+
+/* --- ENGINE HELPERS --- */
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function drawCards(count) {
+    for(let i=0; i<count; i++) {
+        if(state.deck.length === 0) {
+            if(state.discard.length === 0) break;
+            state.deck = [...state.discard];
+            state.discard = [];
+            shuffle(state.deck);
+            log("Deck reshuffled.");
+        }
+        state.hand.push(state.deck.pop());
+    }
+}
+
+function spawnMonsters() {
+    // Only add 1 card automatically at the start of the turn/refresh
+    // Max size is now 5
+    if(state.adventureRow.length < 5 && state.dungeonDeck.length > 0) {
+        let card = state.dungeonDeck.shift(); 
+        state.adventureRow.push(card);
+    }
+}
+
+/* --- ACTIONS --- */
+
+function exploreDungeon() {
+    // Check Capacity (Max 5)
+    if (state.adventureRow.length >= 5) {
+        log("The path is too crowded.", "red");
+        return;
+    }
+    
+    // Check Empty Deck
+    if (state.dungeonDeck.length === 0) {
+        log("The dungeon is silent.", "red");
+        return;
+    }
+
+    // Check for Events (Block exploration)
+    const hasEvent = state.adventureRow.some(c => c.type === CARD_TYPES.EVENT);
+    if (hasEvent) {
+        log("You must resolve the Event before exploring further!", "red");
+        return;
+    }
+
+    // Draw 1 card
+    let card = state.dungeonDeck.shift();
+    state.adventureRow.push(card);
+    log("You explore deeper...");
+    render();
+}
+
+function selectCard(index) {
+    // 1. Handle Deselection
+    if (state.selectedCardIndex === index) {
+        state.selectedCardIndex = -1;
+        render();
+        return;
+    }
+
+    // 2. Select the card
+    state.selectedCardIndex = index;
+    const card = state.hand[index];
+
+    // 3. Auto-Play: Self-Target (Loot or Non-Damage Skills)
+    // Note: Hybrid cards (Dmg + Block) are treated as Attacks, so they skip this.
+    if (card.type === CARD_TYPES.LOOT || (card.type === CARD_TYPES.SKILL && !card.dmg)) {
+        playCard('hero');
+        return;
+    }
+
+    // 4. Auto-Play: Attack (If exactly 1 Monster is present)
+    if (card.type === CARD_TYPES.SKILL && card.dmg) {
+        // Find valid targets (ignore Events)
+        const monsterIndices = state.adventureRow
+            .map((c, i) => c.type === CARD_TYPES.MONSTER ? i : -1)
+            .filter(i => i !== -1);
+
+        if (monsterIndices.length === 1) {
+            playCard(monsterIndices[0]);
+            return;
+        }
+    }
+
+    // 5. Manual Target Required (Highlight card)
+    render();
+}
+
+function playCard(target) {
+    if (state.selectedCardIndex === -1) return;
+
+    const card = state.hand[state.selectedCardIndex];
+    
+    if (card.type === CARD_TYPES.CURSE) {
+        log("Cannot play Curses!", "red");
+        return;
+    }
+
+    if (state.hero.ap < card.cost) {
+        log("Not enough AP!", "red");
+        return;
+    }
+
+    let success = false;
+
+    if (card.type === CARD_TYPES.SKILL) {
+        // 1. Handle Damage (Must target Enemy)
+        if (card.dmg) {
+            if (target === 'hero') return; 
+            if (state.adventureRow[target].type === CARD_TYPES.EVENT) {
+                log("Cannot attack an Event.", "red");
+                return;
+            }
+            dealDamage(target, card.dmg);
+            success = true;
+        } 
+        
+        // 2. Handle Self-Effects (Block/Heal/AP)
+        // These trigger if: 
+        // A) It's a pure buff card (no dmg) and we targeted 'hero'
+        // B) It's a hybrid card (has dmg) and we successfully hit an enemy (success is true)
+        if (card.block || card.heal || card.gainAp) {
+            if (!card.dmg && target !== 'hero') return; // Pure buff must target hero
+            if (card.dmg && !success) return; // Hybrid failed to hit target
+
+            if (card.block) addBlock(card.block);
+            if (card.heal) healHero(card.heal);
+            if (card.gainAp) { state.hero.ap += card.gainAp; log(`Gained ${card.gainAp} AP.`); }
+            success = true;
+        }
+    } else if (card.type === CARD_TYPES.LOOT) {
+        if (target !== 'hero') return;
+        
+        // Check Slot Limit
+        if (state.equipped.length >= 3) {
+            log("Slots full! Destroy an item first.", "red");
+            return;
+        }
+        
+        equipItem(card);
+        success = true;
+    }
+
+    if (success) {
+        // 1. Pay Costs & Remove Card (Do this FIRST)
+        state.hero.ap -= card.cost;
+        const playedCard = state.hand.splice(state.selectedCardIndex, 1)[0];
+        
+        if (playedCard.type !== CARD_TYPES.LOOT) {
+            state.discard.push(playedCard);
+        }
+        
+        state.selectedCardIndex = -1;
+        
+        // 2. Trigger Item Passives
+        state.equipped.forEach(item => {
+            if(item.block) addBlock(item.block);
+        });
+
+        // 3. Render Updates
+        render();
+
+        // 4. Check for Auto-End Turn (Zone Cleared)
+        // We do this last so the card completely resolves before the state resets
+        if (state.adventureRow.length === 0) {
+            log("Zone cleared. Ending turn...", "#95a5a6");
+            endTurn();
+        }
+    }
+}
+
+// --- EVENT RESOLUTION ---
+function resolveEventChoice(cardIndex, choiceIndex) {
+    const eventCard = state.adventureRow[cardIndex];
+    const choice = eventCard.choices[choiceIndex];
+
+    log(`<span class="log-event">Event: ${choice.label}</span>`);
+
+    // --- Original Events ---
+    if (choice.effect === 'pray') {
+        healHero(10);
+        state.discard.push({...CURSE_CARD});
+        log("You were healed, but cursed.");
+        removeEvent();
+    } 
+    else if (choice.effect === 'fight') {
+        spawnEventMonster('m_ghost');
+    } 
+    else if (choice.effect === 'leave') {
+        log("You ignore it.");
+        removeEvent();
+    }
+    
+    // --- New Events ---
+    
+    // 1. Trap Door
+    else if (choice.effect === 'trap_dmg') {
+        state.hero.hp -= 5;
+        log("You hit the ground hard. Took 5 DMG.", "red");
+        removeEvent();
+    }
+    else if (choice.effect === 'trap_card') {
+        if(state.hand.length > 0) {
+            const rIdx = Math.floor(Math.random() * state.hand.length);
+            const lost = state.hand.splice(rIdx, 1)[0];
+            state.discard.push(lost);
+            log(`You dodged, but dropped your ${lost.name}.`);
+        } else {
+            log("You had nothing to drop! Lucky.");
+        }
+        removeEvent();
+    }
+
+    // 2. Tribute
+    else if (choice.effect === 'tribute_pay') {
+        state.hero.maxHp -= 5;
+        state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+        // Give a strong item
+        let relic = { id: 'l_blood', name: 'Blood Gem', type: CARD_TYPES.LOOT, value: 5, atkBuff: 3, desc: '+3 DMG' };
+        state.inventory.push(relic);
+        log("You sacrificed vitality for power.");
+        removeEvent();
+    }
+
+    // 3. Suspicious Chest
+    else if (choice.effect === 'chest_open') {
+        if(Math.random() > 0.5) {
+            log("It's a trap! MIMIC!", "red");
+            spawnEventMonster('m_mimic');
+        } else {
+            // Pick random skill from library
+            const randomSkill = SKILL_LIBRARY[Math.floor(Math.random() * SKILL_LIBRARY.length)];
+            // Clone it to avoid reference issues
+            const reward = JSON.parse(JSON.stringify(randomSkill));
+            state.collection.push(reward);
+            log(`You found a scroll: ${reward.name}!`);
+            removeEvent();
+        }
+    }
+
+    // 4. Weapon Master
+    else if (choice.effect === 'train_str') {
+        let card = { id: 's_heavy', name: 'Heavy Strike', type: CARD_TYPES.SKILL, cost: 2, dmg: 10, desc: 'Deal 10 DMG' };
+        state.collection.push(card);
+        log("Learned Heavy Strike.");
+        removeEvent();
+    }
+    else if (choice.effect === 'train_def') {
+        let card = { id: 's_iron', name: 'Iron Skin', type: CARD_TYPES.SKILL, cost: 1, block: 8, desc: 'Gain 8 Block' };
+        state.collection.push(card);
+        log("Learned Iron Skin.");
+        removeEvent();
+    }
+
+    // 5. Spring
+    else if (choice.effect === 'spring_heal') {
+        healHero(5);
+        removeEvent();
+    }
+    else if (choice.effect === 'spring_max') {
+        state.hero.maxHp += 3;
+        state.hero.hp += 3;
+        log("You feel permanently stronger (+3 Max HP).", "green");
+        removeEvent();
+    }
+
+    render();
+
+    // Check for Auto-End Turn after event resolves
+    if (state.adventureRow.length === 0) {
+        log("Zone cleared. Ending turn...", "#95a5a6");
+        endTurn();
+    }
+
+    // Helper to clear the event from the row
+    function removeEvent() {
+        state.adventureRow.splice(cardIndex, 1);
+    }
+
+    // Helper to swap event with monster
+    function spawnEventMonster(id) {
+        const monster = JSON.parse(JSON.stringify(EVENT_MONSTERS[id]));
+        state.adventureRow[cardIndex] = monster;
+        render();
+    }
+}
+
+function equipItem(card) {
+    state.equipped.push(card);
+    log(`Equipped ${card.name}.`);
+    if(card.hpBonus) {
+        state.hero.maxHp += card.hpBonus;
+        state.hero.hp += card.hpBonus;
+        log(`Max HP increased by ${card.hpBonus}.`);
+    }
+}
+
+function unequipItem(index) {
+    const item = state.equipped[index];
+    
+    // Revert Max HP bonus if applicable
+    if (item.hpBonus) {
+        state.hero.maxHp -= item.hpBonus;
+        state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+    }
+
+    state.equipped.splice(index, 1);
+    log(`Destroyed ${item.name}.`);
+    
+    // Only render game screen if game container is visible
+    if(document.getElementById('game-container').style.display !== 'none') {
+        render();
+    }
+}
+
+function dealDamage(monsterIndex, amount) {
+    let monster = state.adventureRow[monsterIndex];
+    let bonus = 0;
+    state.equipped.forEach(item => { if(item.atkBuff) bonus += item.atkBuff; });
+    
+    let totalDmg = amount + bonus;
+    monster.hp -= totalDmg;
+    
+    log(`Hit ${monster.name} for <span class="log-dmg">${totalDmg}</span> dmg.`);
+
+    if (monster.hp <= 0) {
+        killMonster(monsterIndex);
+    }
+}
+
+function killMonster(index) {
+    let m = state.adventureRow[index];
+    log(`${m.name} defeated!`);
+    
+    if (m.id === 'm_boss') {
+        victory();
+        return;
+    }
+
+    // Tier Transition
+    if (m.isMiniBoss) {
+        log(`Mini-Boss Defeated! Sector Cleared!`, "gold");
+        
+        // Unlock next tier
+        if (state.tier < 3) {
+            state.maxUnlockedTier = Math.max(state.maxUnlockedTier, state.tier + 1);
+        }
+        
+        // Transform Boss into a Legendary Reward
+        if(Math.random() < 0.1){
+            let reward = { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 10, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' };
+            state.inventory.push(reward);
+        }
+        
+        state.adventureRow.splice(index, 1);
+        
+        // Delay slightly then go to map
+        setTimeout(() => {
+            log("Returning to Map...");
+            // Clear hand/board
+            state.hand.forEach(c => state.discard.push(c));
+            state.hand = [];
+            showMap();
+        }, 1500);
+        return;
+    }
+
+    // Loot Chance scales with danger (number of OTHER monsters in the row)
+    // Base: 10% + 10% per other monster. 
+    // 0 others = 10%, 4 others = 50%
+    const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
+    const dropChance = 0.10 + (otherMonsters * 0.10);
+
+    log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
+
+    if (Math.random() < dropChance) {
+        if (REWARDS[m.rewardId]) {
+            let lootCard = JSON.parse(JSON.stringify(REWARDS[m.rewardId]));
+            // Loot goes to Inventory now, not Deck
+            if(lootCard.type === CARD_TYPES.LOOT){
+                state.inventory.push(lootCard);
+            } else {
+                state.collection.push(lootCard);
+            }
+            log(`Looted: ${lootCard.name}`, "#2ecc71");
+        }
+    } else {
+        log("No loot found.");
+    }
+    
+    state.adventureRow.splice(index, 1);
+}
+
+function addBlock(amount) {
+    state.hero.block += amount;
+    log(`Gained ${amount} Block.`);
+}
+
+function healHero(amount) {
+    state.hero.hp = Math.min(state.hero.maxHp, state.hero.hp + amount);
+    log(`Healed for <span class="log-gain">${amount}</span> HP.`);
+}
+
+function endTurn() {
+    log("--- Enemy Turn ---");
+    
+    state.adventureRow.forEach(m => {
+        if(m.type === CARD_TYPES.EVENT) return;
+
+        let dmg = m.atk;
+        
+        if (state.hero.block > 0) {
+            if (state.hero.block >= dmg) {
+                state.hero.block -= dmg;
+                dmg = 0;
+                log(`${m.name} attack blocked.`);
+            } else {
+                dmg -= state.hero.block;
+                state.hero.block = 0;
+                log(`${m.name} broke your shield!`);
+            }
+        }
+
+        if (dmg > 0) {
+            state.hero.hp -= dmg;
+            log(`${m.name} deals <span class="log-dmg">${dmg}</span> damage!`);
+        }
+    });
+
+    if (state.hero.hp <= 0) {
+        gameOver();
+        return;
+    }
+
+    state.hero.ap = state.hero.maxAp;
+    state.hero.block = 0; 
+    
+    while(state.hand.length > 0) {
+        state.discard.push(state.hand.pop());
+    }
+
+    drawCards(5);
+
+    // If the row is completely empty (no monsters/events), the dungeon sends a new threat
+    if (state.adventureRow.length === 0) {
+        spawnMonsters();
+    }
+
+    state.turn++;
+    state.selectedCardIndex = -1;
+    render();
+}
+
+function checkWinCondition() {}
+
+function victory() {
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('overlay-title').innerText = "VICTORY!";
+    document.getElementById('overlay-title').style.color = "gold";
+}
+
+function gameOver() {
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('overlay-title').innerText = "YOU DIED";
+    document.getElementById('overlay-title').style.color = "red";
+}
+
+function log(msg, color) {
+    const el = document.getElementById('log-console');
+    let style = color ? `style="color:${color}"` : '';
+    el.innerHTML = `<div class="log-entry" ${style}>> ${msg}</div>` + el.innerHTML;
+}
+
+/* --- RENDERING --- */
+
+function render() {
+    // Hero Name
+    document.getElementById('hero-name').innerText = state.hero.name;
+
+    document.getElementById('hero-hp').innerText = state.hero.hp;
+    document.getElementById('hero-max-hp').innerText = state.hero.maxHp;
+    document.getElementById('hero-ap').innerText = state.hero.ap;
+    document.getElementById('hero-max-ap').innerText = state.hero.maxAp;
+    document.getElementById('hero-block').innerText = state.hero.block;
+    
+    document.getElementById('deck-count').innerText = state.deck.length;
+    document.getElementById('discard-count').innerText = state.discard.length;
+    document.getElementById('dungeon-count').innerText = state.dungeonDeck.length;
+
+    const advContainer = document.getElementById('adventure-row');
+    
+    // Check logic for button state
+    const hasEvent = state.adventureRow.some(c => c.type === CARD_TYPES.EVENT);
+    const isFull = state.adventureRow.length >= 5;
+    const disabledAttr = (hasEvent || isFull || state.dungeonDeck.length === 0) ? 'disabled' : '';
+    const btnColor = hasEvent ? '#e67e22' : '#7f8c8d'; // Visual cue
+
+    advContainer.innerHTML = `
+        <div class="area-label">
+            Adventure Row 
+            <button id="explore-btn" 
+                    style="font-size:10px; padding:2px 8px; margin-left:10px; background-color:${btnColor};" 
+                    onclick="exploreDungeon()" 
+                    ${disabledAttr}>
+                Explore (+1)
+            </button>
+        </div>`;
+    
+    state.adventureRow.forEach((m, idx) => {
+        let cardDiv = createCardElement(m, idx); 
+        if(m.type === CARD_TYPES.MONSTER) {
+            cardDiv.onclick = () => playCard(idx);
+        }
+        advContainer.appendChild(cardDiv);
+    });
+
+    // Hero
+    const heroContainer = document.getElementById('hero-card-container');
+    heroContainer.innerHTML = '';
+    let heroCard = createCardElement(state.hero);
+    heroCard.onclick = () => playCard('hero'); 
+    heroContainer.appendChild(heroCard);
+
+    const equipContainer = document.getElementById('equipment-slots');
+    equipContainer.innerHTML = '';
+    state.equipped.forEach((item) => {
+        let div = createCardElement(item);
+        div.classList.add('equipped');
+        // No buttons here anymore
+        equipContainer.appendChild(div);
+    });
+
+    // Hand
+    const handContainer = document.getElementById('hand-row');
+    handContainer.innerHTML = '<div class="area-label">Your Hand</div>';
+    state.hand.forEach((card, idx) => {
+        let div = createCardElement(card);
+        div.onclick = (e) => {
+            e.stopPropagation();
+            selectCard(idx);
+        };
+        if (idx === state.selectedCardIndex) div.classList.add('selected');
+        handContainer.appendChild(div);
+    });
+}
+
+function createCardElement(data, index) {
+    const div = document.createElement('div');
+    div.classList.add('card');
+    div.classList.add(`type-${data.type}`);
+    
+    let bodyHtml = '';
+    let statsHtml = '';
+
+    if (data.type === CARD_TYPES.MONSTER) {
+        bodyHtml = `<div class="card-desc">${data.desc}</div>`;
+        statsHtml = `<div class="card-stats"><span>⚔️${data.atk}</span><span>❤️${data.hp}</span></div>`;
+    } else if (data.type === CARD_TYPES.HERO) {
+        bodyHtml = `<div class="card-desc">${data.desc}</div>`;
+        statsHtml = `<div class="card-stats"><span>⚡${data.ap}</span><span>❤️${data.hp}</span></div>`;
+    } else if (data.type === CARD_TYPES.SKILL || data.type === CARD_TYPES.CURSE) {
+        bodyHtml = `<div class="card-desc">${data.desc}</div>`;
+        statsHtml = `<div class="card-stats"><span>⚡${data.cost}</span></div>`;
+    } else if (data.type === CARD_TYPES.LOOT) {
+        bodyHtml = `<div class="card-desc">${data.desc}</div>`;
+        // Display Gold Value
+        let valDisplay = data.value ? `<span style="color:#f1c40f;">💰${data.value}</span>` : '';
+        statsHtml = `<div class="card-stats">${valDisplay}</div>`;
+    } else if (data.type === CARD_TYPES.EVENT) {
+        let buttons = '';
+        if(data.choices) {
+            data.choices.forEach((choice, choiceIdx) => {
+                buttons += `<button class="choice-btn" onclick="event.stopPropagation(); resolveEventChoice(${index}, ${choiceIdx})">${choice.label}</button>`;
+            });
+        }
+        bodyHtml = `<div class="card-desc">${data.desc}${buttons}</div>`;
+    } else {
+        bodyHtml = `<div class="card-desc">${data.desc}</div>`;
+    }
+
+    div.innerHTML = `
+        <div class="card-header">${data.name}</div>
+        ${bodyHtml}
+        ${statsHtml}
+    `;
+    return div;
+}
+
+function saveGame() {
+    // Save the entire state object
+    localStorage.setItem('vanguardSave', JSON.stringify(state));
+}
+
+function loadGame() {
+    const save = localStorage.getItem('vanguardSave');
+    if (save) {
+        try {
+            state = JSON.parse(save);
+            
+            // If loaded, skip selection and go to Map
+            // We reset the "run" state (hand/row) to ensure a clean load on the map
+            state.hand = [];
+            state.discard = [];
+            state.adventureRow = []; 
+            // Ensure deck is consolidated if we crashed mid-run
+            if (state.deck.length < 5) { 
+                // If deck is empty (cards in hand/discard), we might need to rebuild logic or just reset deck
+                // For safety in this prototype, we assume saving happens mostly on Map
+            }
+            
+            showMap();
+            log("Game Loaded.");
+            return true;
+        } catch (e) {
+            console.error("Save file corrupted", e);
+            return false;
+        }
+    }
+    return false;
+}
+
+function resetProgress() {
+    if(confirm("Are you sure? This will wipe all progress.")) {
+        localStorage.removeItem('vanguardSave');
+        location.reload();
+    }
+}
+
+// Start Game
+if (!loadGame()) {
+    initSelectionScreen();
+}
+
+</script>
+</body>
+</html>
