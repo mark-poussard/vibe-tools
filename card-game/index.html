@@ -6,7 +6,7 @@
     <title>Vanguard of the Void</title>
     <style>
         :root {
-            --bg-color: #2c3e50;
+            --bg-color: #202c39;
             --card-bg: #ecf0f1;
             --text-color: #2c3e50;
             --highlight: #f1c40f;
@@ -16,335 +16,282 @@
             --hero-color: #9b59b6;
             --event-color: #e67e22;
             --curse-color: #7f8c8d;
+            --ui-panel: rgba(0,0,0,0.4);
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: white;
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
+            padding: 0;
+            height: 100dvh; /* Dynamic Viewport Height for mobile */
             overflow: hidden;
+            font-size: 14px;
         }
 
-        /* --- Layout --- */
-        #game-container {
-            width: 100%;
-            max-width: 1000px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            height: 100%;
-            display: none; /* Hidden by default until hero selected */
-        }
-
-        #hero-selection {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 20px;
-        }
-
-        .hero-select-container {
-            display: flex;
-            gap: 20px;
-        }
-
-        #map-screen {
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            gap: 20px;
-        }
-
-        .map-node {
-            width: 300px;
-            padding: 20px;
-            background: #34495e;
-            border: 2px solid #7f8c8d;
-            border-radius: 10px;
-            text-align: center;
-            opacity: 0.5;
-            pointer-events: none; /* Disabled by default */
-            transition: all 0.3s;
-        }
-
-        .map-node.unlocked {
-            opacity: 1;
-            pointer-events: all;
-            border-color: var(--highlight);
-            background: #2c3e50;
-            cursor: pointer;
-        }
-
-        .map-node.unlocked:hover {
-            transform: scale(1.05);
-            background: var(--monster-color);
-        }
-
-        #hero-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
+        /* --- Common Layouts --- */
+        .screen {
             width: 100%;
             height: 100%;
-            padding-top: 20px;
-        }
-        .hero-panel {
-            background: rgba(0,0,0,0.3);
-            padding: 20px;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 600px;
-            border: 1px solid #7f8c8d;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-        }
-
-        #deck-screen {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-            max-width: 1000px;
-        }
-        .deck-manager-container {
-            display: flex;
-            gap: 20px;
-            flex-grow: 1;
-            overflow: hidden;
-            margin-top: 20px;
-        }
-        .deck-column {
-            flex: 1;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid #7f8c8d;
-            border-radius: 8px;
             padding: 10px;
-            display: flex;
-            flex-direction: column;
-        }
-        .deck-column h2 { text-align: center; margin: 0 0 10px 0; font-size: 18px; color: var(--highlight); }
-        .card-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-content: flex-start;
             overflow-y: auto;
-            flex-grow: 1;
-            padding: 5px;
         }
-        /* Scale down cards slightly in manager */
-        .card-grid .card { transform: scale(0.9); margin: -5px; }
-        .card-grid .card:hover { transform: scale(1.0) translateY(-5px); z-index: 10; }
 
-        .row {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            padding: 10px;
+        h1 { margin: 10px 0; font-size: 24px; text-align: center; }
+        button {
+            padding: 12px;
+            font-size: 14px;
+            border: none;
             border-radius: 8px;
-            min-height: 160px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        button:active { transform: scale(0.98); }
+
+        /* --- Game Screen Grid --- */
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            gap: 5px;
+            display: none; /* Controlled by JS */
+        }
+
+        /* Stats Bar (Compact) */
+        #stats-bar {
+            background: var(--ui-panel);
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+        .stat-row { display: flex; justify-content: space-between; }
+
+        /* Scrollable Card Rows (The key to mobile layout) */
+        .scroll-row {
+            display: flex;
+            gap: 8px;
+            padding: 5px 2px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
+            min-height: 135px; /* Fits card height */
             align-items: center;
         }
-
-        .area-label {
-            position: absolute;
-            top: -20px;
-            left: 10px;
-            font-size: 12px;
-            text-transform: uppercase;
-            opacity: 0.7;
-        }
-
-        
-
-        /* --- Zones --- */
-        #stats-bar {
-            display: flex;
-            justify-content: space-between;
-            background: rgba(0,0,0,0.3);
-            padding: 10px;
-            border-radius: 8px;
-        }
+        /* Hide scrollbar but keep functionality */
+        .scroll-row::-webkit-scrollbar { display: none; }
 
         #adventure-row {
-            background: rgba(231, 76, 60, 0.1);
-            border: 1px dashed var(--monster-color);
-            position: relative;
-        }
-
-        #hero-area {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(155, 89, 182, 0.1);
-            border: 1px solid var(--hero-color);
-            padding: 20px;
-        }
-
-        #equipment-slots {
-            display: flex;
-            gap: 5px;
+            background: rgba(231, 76, 60, 0.05);
+            border-top: 2px solid var(--monster-color);
+            border-bottom: 2px solid var(--monster-color);
         }
 
         #hand-row {
-            background: rgba(52, 152, 219, 0.1);
-            border: 1px dashed var(--skill-color);
-            overflow-x: auto;
-            position: relative;
+            background: rgba(52, 152, 219, 0.05);
+            border-top: 2px solid var(--skill-color);
+            margin-top: auto; /* Push to bottom */
+            margin-bottom: 5px;
         }
 
-        /* --- Cards --- */
-        .card {
-            width: 100px;
-            height: 150px;
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border-radius: 8px;
-            padding: 8px;
+        .area-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-left: 5px;
+            margin-bottom: -5px;
+            z-index: 1;
+        }
+
+        /* Hero Area (Middle) */
+        #hero-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            flex-grow: 1;
+            min-height: 100px;
+        }
+        #hero-card-container { transform: scale(0.9); transform-origin: left center; }
+        #equipment-slots { display: flex; gap: 4px; overflow-x: auto; }
+        
+        #end-turn-container {
+            margin-left: auto;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: 5px;
+        }
+        #end-turn-btn {
+            background: var(--monster-color);
+            color: white;
+            width: 80px;
+            height: 60px;
             font-size: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            line-height: 1.2;
+            white-space: pre-wrap;
+        }
+
+        /* --- Cards (Mobile Optimized) --- */
+        .card {
+            flex: 0 0 85px; /* Fixed width, no shrinking/growing */
+            width: 85px;
+            height: 120px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-radius: 6px;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
             position: relative;
+            font-size: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             user-select: none;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.4);
-        }
-
-        .card.selected {
-            border: 3px solid var(--highlight);
-            transform: translateY(-10px);
         }
 
         .card-header {
             font-weight: bold;
             text-align: center;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 4px;
-            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 10px;
+            margin-bottom: 2px;
+            padding-bottom: 2px;
+            border-bottom: 1px solid #bdc3c7;
         }
 
+        .card-desc {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 9px;
+            line-height: 1.1;
+            overflow: hidden;
+        }
+        
         .card-stats {
             display: flex;
             justify-content: space-between;
             font-weight: bold;
+            font-size: 11px;
+            margin-top: 2px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 4px;
+            padding: 2px;
         }
 
-        .card-desc {
-            font-size: 10px;
-            flex-grow: 1;
-            text-align: center;
+        /* Card Types Borders */
+        .type-monster { border-bottom: 4px solid var(--monster-color); }
+        .type-skill { border-bottom: 4px solid var(--skill-color); }
+        .type-loot { border-bottom: 4px solid var(--loot-color); }
+        .type-event { border-bottom: 4px solid var(--event-color); }
+        .type-curse { border-bottom: 4px solid var(--curse-color); background: #bdc3c7; }
+        .type-hero { border: 2px solid var(--hero-color); width: 90px; height: 120px; }
+
+        .card.selected { border: 2px solid var(--highlight); transform: translateY(-10px); }
+        .card.equipped { width: 50px; height: 70px; font-size: 8px; flex: 0 0 50px; }
+
+        /* Buttons on cards */
+        .choice-btn { font-size: 8px; padding: 4px; width: 100%; margin-top: 2px; }
+        .destroy-btn { width: 20px; height: 20px; font-size: 12px; }
+
+        /* --- Map & Menus --- */
+        #map-screen, #hero-selection, #hero-screen, #deck-screen {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-
-        /* Card Types */
-        .type-monster { border-top: 5px solid var(--monster-color); }
-        .type-skill { border-top: 5px solid var(--skill-color); }
-        .type-loot { border-top: 5px solid var(--loot-color); }
-        .type-event { border-top: 5px solid var(--event-color); cursor: default; }
-        .type-curse { border-top: 5px solid var(--curse-color); background: #bdc3c7; }
-        .type-hero { border-top: 5px solid var(--hero-color); width: 120px; height: 160px; }
-        
-        /* Event Buttons */
-        .choice-btn {
-            width: 100%;
-            padding: 4px;
-            font-size: 9px;
-            background: var(--bg-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 2px;
-        }
-        .choice-btn:hover { background: var(--event-color); }
-
-        /* Mini Equipment Cards */
-        .card.equipped {
-            width: 60px;
-            height: 80px;
-            font-size: 10px;
-        }
-
-        .destroy-btn {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: red;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            border: none;
-            font-size: 10px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        /* --- UI Elements --- */
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: var(--monster-color);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover { background-color: #c0392b; }
-        button:disabled { background-color: #7f8c8d; cursor: not-allowed; }
-
-        #log-console {
-            height: 100px;
-            background: rgba(0,0,0,0.5);
+            padding: 20px;
+            gap: 15px;
+            height: 100%;
             overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
+        }
+
+        .map-node {
+            width: 100%;
+            padding: 15px;
+            background: #34495e;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+        .map-node.unlocked { border-color: var(--highlight); background: #2c3e50; }
+
+        .deck-manager-container {
+            display: flex;
+            flex-direction: column; /* Vertical stack */
+            gap: 10px;
+            flex: 1; /* Fill remaining screen height */
+            overflow: hidden; /* Prevent container scroll */
+            margin-top: 10px;
+            min-height: 0; /* Flexbox nesting fix */
+        }
+        .deck-column {
+            display: flex;
+            flex-direction: column;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid #7f8c8d;
+            border-radius: 8px;
+            padding: 5px;
+            min-height: 0; /* Allow shrinking */
+        }
+        .deck-column h2 { 
+            text-align: center; margin: 5px 0; font-size: 14px; color: var(--highlight); 
+            flex-shrink: 0; 
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            overflow-y: auto; /* Individual area scroll */
+            flex: 1; /* Fill column space */
+            padding: 5px;
+        }
+
+        /* Grids for managers */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 8px;
+            padding-bottom: 20px;
+        }
+
+        /* Log (Mini Overlay) */
+        #log-console {
+            height: 40px;
+            font-size: 10px;
+            background: rgba(0,0,0,0.6);
+            position: absolute;
+            bottom: 150px; /* Above hand */
+            left: 10px;
+            right: 10px;
+            pointer-events: none;
             padding: 5px;
             border-radius: 4px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column-reverse; /* Newest at bottom */
         }
-        .log-entry { margin-bottom: 2px; }
-        .log-dmg { color: #ff7675; }
-        .log-gain { color: #55efc4; }
-        .log-event { color: var(--highlight); }
 
         /* Overlay */
         #overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            display: flex;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 100;
-            display: none; /* Hidden by default */
         }
-        #overlay h1 { font-size: 48px; }
     </style>
 </head>
 <body>
@@ -396,8 +343,6 @@
             </div>
         </div>
 
-  
-
         <!-- Equipped -->
         <div>
             <div style="font-size:1em; margin-bottom:10px; color:var(--loot-color);">Equipped Items (Click to Unequip):</div>
@@ -405,9 +350,9 @@
         </div>
 
         <!-- Inventory -->
-        <div>
-            <div style="font-size:1em; margin-bottom:10px; color:var(--highlight);">Inventory (Click to Equip):</div>
-            <div id="hero-screen-inventory" style="display:flex; flex-wrap:wrap; gap:10px; min-height:150px; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"></div>
+        <div style="flex-grow: 1; overflow-y: auto;">
+            <div style="font-size:1em; margin-bottom:10px; color:var(--highlight); position: sticky; top:0; background: var(--bg-color); padding: 5px;">Inventory</div>
+            <div id="hero-screen-inventory" class="card-grid" style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"></div>
         </div>
     </div>
 </div>
@@ -419,13 +364,13 @@
         <button onclick="closeDeckScreen()">Back to Map</button>
     </div>
     <div class="deck-manager-container">
-        <!-- Active Deck -->
-        <div class="deck-column">
-            <h2>Active Deck (<span id="manager-deck-count">0</span>)</h2>
+        <!-- Active Deck (Fixed max height to 40% of screen) -->
+        <div class="deck-column" style="flex: 0 0 40%;">
+            <h2>Deck (<span id="manager-deck-count">0</span>)</h2>
             <div id="manager-deck-grid" class="card-grid"></div>
         </div>
-        <!-- Collection (Sideboard) -->
-        <div class="deck-column">
+        <!-- Collection (Takes remaining space) -->
+        <div class="deck-column" style="flex: 1;">
             <h2>Collection (<span id="manager-col-count">0</span>)</h2>
             <div id="manager-col-grid" class="card-grid"></div>
         </div>
@@ -441,49 +386,52 @@
 <!-- Main Game Interface -->
 <div id="game-container">
     
-    <!-- Top Bar: Stats & Log -->
+    <!-- Top: Compact Stats -->
     <div id="stats-bar">
-        <div>
-            <strong style="color:var(--hero-color)"><span id="hero-name">Hero</span></strong> | 
-            <strong style="color:var(--monster-color)">HP: <span id="hero-hp">0</span>/<span id="hero-max-hp">0</span></strong> | 
-            <strong style="color:var(--skill-color)">Block: <span id="hero-block">0</span></strong> | 
-            <strong style="color:var(--highlight)">AP: <span id="hero-ap">0</span>/<span id="hero-max-ap">0</span></strong>
+        <div class="stat-row">
+            <strong style="color:var(--hero-color)"><span id="hero-name">Hero</span></strong>
+            <strong style="color:var(--monster-color)">HP: <span id="hero-hp">0</span>/<span id="hero-max-hp">0</span></strong>
         </div>
-        <div>
-            Deck: <span id="deck-count">0</span> | Discard: <span id="discard-count">0</span> | Dungeon: <span id="dungeon-count">0</span>
+        <div class="stat-row">
+            <strong style="color:var(--highlight)">AP: <span id="hero-ap">0</span>/<span id="hero-max-ap">0</span></strong>
+            <strong style="color:var(--skill-color)">Blk: <span id="hero-block">0</span></strong>
+            <span>Deck:<span id="deck-count">0</span></span>
         </div>
     </div>
 
-    <!-- Adventure Row (Monsters) -->
-    <div id="adventure-row" class="row">
-        <div class="area-label">
-            Adventure Row 
-            <button id="explore-btn" style="font-size:10px; padding:2px 5px; margin-left:10px;" onclick="exploreDungeon()">Explore (+1)</button>
-        </div>
-        <!-- Monster cards injected here -->
-    </div>  
+    <!-- Row 2: Adventure (Scrollable) -->
+    <div class="area-label">
+        Adventure 
+        <button id="explore-btn" style="font-size:9px; padding:2px 6px;" onclick="exploreDungeon()">+ Explore</button>
+    </div>
+    <div id="adventure-row" class="scroll-row">
+        <!-- Monsters injected here -->
+    </div>
 
-    <!-- Hero Area -->
+    <!-- Row 3: Hero & Equip -->
     <div id="hero-area">
         <div id="hero-card-container">
-            <!-- Hero Card injected here -->
+            <!-- Hero Card -->
         </div>
-        <div id="equipment-slots">
-            <!-- Equipped Loot injected here -->
+        <div style="flex-grow:1; overflow:hidden;">
+            <div class="area-label" style="margin-bottom:2px;">Equipped</div>
+            <div id="equipment-slots">
+                <!-- Equipped Items -->
+            </div>
         </div>
-        <div style="text-align: right;">
-            <button id="end-turn-btn" onclick="endTurn()">End Turn</button>
+        <div id="end-turn-container">
+            <button id="end-turn-btn" onclick="endTurn()">END<br>TURN</button>
         </div>
     </div>
 
-    <!-- Hand -->
-    <div id="hand-row" class="row">
-        <div class="area-label">Your Hand</div>
-        <!-- Player Hand injected here -->
-    </div>
-
-    <!-- Text Log -->
+    <!-- Log Overlay -->
     <div id="log-console"></div>
+
+    <!-- Row 4: Hand (Scrollable, fixed bottom) -->
+    <div class="area-label">Hand</div>
+    <div id="hand-row" class="scroll-row">
+        <!-- Hand cards -->
+    </div>
 
 </div>
 
@@ -684,6 +632,7 @@ let state = {
 /* --- STARTUP LOGIC --- */
 
 function initSelectionScreen() {
+    switchScreen('hero-selection');
     const container = document.getElementById('hero-select-container');
     HEROES.forEach((hero, index) => {
         // Create a card for the hero
@@ -731,16 +680,14 @@ function startGame(heroIndex) {
     shuffle(state.deck);
     
     // Go to Map
-    showMap();
+    switchScreen('map-screen');
 
     log(`You selected ${state.hero.name}. The void awaits.`);
     if(state.hero.startItem) log(`Equipped starting item: ${STARTING_ITEMS[state.hero.startItem].name}`);
 }
 
 function showMap() {
-    document.getElementById('hero-selection').style.display = 'none';
-    document.getElementById('game-container').style.display = 'none';
-    document.getElementById('map-screen').style.display = 'flex';
+    switchScreen('map-screen');
     document.getElementById('overlay').style.display = 'none';
 
     saveGame(); // Auto-save when hitting the map
@@ -763,8 +710,7 @@ function showMap() {
 }
 
 function showHeroScreen() {
-    document.getElementById('map-screen').style.display = 'none';
-    document.getElementById('hero-screen').style.display = 'flex';
+    switchScreen('hero-screen');
     renderHeroScreen();
 }
 
@@ -786,9 +732,7 @@ function sellItem(index) {
 }
 
 function showDeckScreen() {
-    // Hide Map, Show Deck Screen
-    document.getElementById('map-screen').style.display = 'none';
-    document.getElementById('deck-screen').style.display = 'flex';
+    switchScreen('deck-screen');
 
     // Consolidate all cards into state.deck for management
     // (In case we came from a run where cards were in discard)
@@ -949,9 +893,8 @@ function enterTier(tierNum) {
     state.adventureRow = []; // Clear row
     state.turn = 1;
 
-    // Switch UI
-    document.getElementById('map-screen').style.display = 'none';
-    document.getElementById('game-container').style.display = 'flex';
+    // Switch UI: Use helper to hide everything else
+    switchScreen('game-container');
 
     // Start the loop
     drawCards(5);
@@ -1479,10 +1422,25 @@ function gameOver() {
 function log(msg, color) {
     const el = document.getElementById('log-console');
     let style = color ? `style="color:${color}"` : '';
-    el.innerHTML = `<div class="log-entry" ${style}>> ${msg}</div>` + el.innerHTML;
+    // Append to end, CSS flex-direction: column-reverse handles order
+    el.innerHTML += `<div class="log-entry" ${style}>${msg}</div>`; 
+    // Keep only last 4 messages to save space
+    if (el.children.length > 4) {
+        el.removeChild(el.children[0]);
+    }
 }
 
 /* --- RENDERING --- */
+
+function switchScreen(activeScreenId) {
+    const screens = ['hero-selection', 'map-screen', 'game-container', 'hero-screen', 'deck-screen'];
+    screens.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = (id === activeScreenId) ? 'flex' : 'none';
+        }
+    });
+}
 
 function render() {
     // Hero Name
@@ -1495,8 +1453,6 @@ function render() {
     document.getElementById('hero-block').innerText = state.hero.block;
     
     document.getElementById('deck-count').innerText = state.deck.length;
-    document.getElementById('discard-count').innerText = state.discard.length;
-    document.getElementById('dungeon-count').innerText = state.dungeonDeck.length;
 
     const advContainer = document.getElementById('adventure-row');
     
