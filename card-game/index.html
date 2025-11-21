@@ -1397,11 +1397,18 @@ function playCard(target) {
         // 3. Render Updates
         render();
 
-        // 4. Check for Auto-End Turn (Zone Cleared)
+        // 4. Check for Auto-End Turn OR Dungeon Clear
         // We do this last so the card completely resolves before the state resets
         if (state.adventureRow.length === 0) {
-            log("Zone cleared. Ending turn...", "#95a5a6");
-            endTurn();
+            if (state.dungeonDeck.length === 0) {
+                // ALL threats removed
+                dungeonComplete();
+            } else {
+                // Just the current batch
+                log("Zone cleared. Ending turn...", "#95a5a6");
+                endTurn();
+            }
+            return;
         }
 
         // Check for No Options (0 AP and no 0-cost cards)
@@ -1573,62 +1580,68 @@ function killMonster(index) {
 
     // Tier Transition
     if (m.isBoss) {
-        log(`Mini-Boss Defeated! Sector Cleared!`, "gold");
-        
-        // Mark Node as Complete
-        if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
-            state.completedNodes.push(state.currentNodeId);
-            log(`Zone Cleared: ${MAP_GRAPH[state.currentNodeId].name}`, "gold");
-        }
-        
-        // Transform Boss into a Legendary Reward
+        log(`Boss Defeated!`, "gold");
+
+        // Reward: Boss Relic & Heal
         if(Math.random() < 0.1){
             let reward = { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 10, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' };
             state.inventory.push(reward);
-        }
-        
-        state.adventureRow.splice(index, 1);
-        
-        // Delay slightly then go to map
-        setTimeout(() => {
-            log("Returning to Map...");
-            // Move Hand -> Deck
-            while(state.hand.length > 0) {
-                state.deck.push(state.hand.pop());
-            }
-            // Move Discard -> Deck
-            while(state.discard.length > 0) {
-                state.deck.push(state.discard.pop());
-            }
-            showMap();
-        }, 1500);
-        return;
-    }
-
-    // Loot Chance scales with danger (number of OTHER monsters in the row)
-    // Base: 10% + 10% per other monster. 
-    // 0 others = 10%, 4 others = 50%
-    const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
-    const dropChance = 0.10 + (otherMonsters * 0.10);
-
-    log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
-
-    if (Math.random() < dropChance) {
-        if (REWARDS[m.rewardId]) {
-            let lootCard = JSON.parse(JSON.stringify(REWARDS[m.rewardId]));
-            // Loot goes to Inventory now, not Deck
-            if(lootCard.type === CARD_TYPES.LOOT){
-                state.inventory.push(lootCard);
-            } else {
-                state.collection.push(lootCard);
-            }
-            log(`Looted: ${lootCard.name}`, "#2ecc71");
+            log(`Looted: ${reward.name}`, "#2ecc71");
         }
     } else {
-        log("No loot found.");
+        // Loot Chance scales with danger (number of OTHER monsters in the row)
+        // Base: 10% + 10% per other monster. 
+        // 0 others = 10%, 4 others = 50%
+        const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
+        const dropChance = 0.10 + (otherMonsters * 0.10);
+
+        log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
+
+        if (Math.random() < dropChance) {
+            if (REWARDS[m.rewardId]) {
+                let lootCard = JSON.parse(JSON.stringify(REWARDS[m.rewardId]));
+                // Loot goes to Inventory now, not Deck
+                if(lootCard.type === CARD_TYPES.LOOT){
+                    state.inventory.push(lootCard);
+                } else {
+                    state.collection.push(lootCard);
+                }
+                log(`Looted: ${lootCard.name}`, "#2ecc71");
+            }
+        } else {
+            log("No loot found.");
+        }
     }
     
     state.adventureRow.splice(index, 1);
+}
+
+function dungeonComplete() {
+    // Standard Node Completion
+    log("Dungeon Cleared!", "gold");
+    
+    // Mark Node as Complete
+    if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
+        state.completedNodes.push(state.currentNodeId);
+    }
+
+    // Delay slightly then go to map
+    setTimeout(() => {
+        log("Returning to Map...");
+        continueGame(); // Reuses the logic to consolidate deck and show map
+    }, 1500);
+}
+
+function continueGame() {
+    document.getElementById('overlay').style.display = 'none';
+    
+    // Consolidate Deck (Hand/Discard -> Deck)
+    while(state.hand.length > 0) state.deck.push(state.hand.pop());
+    while(state.discard.length > 0) state.deck.push(state.discard.pop());
+    
+    state.adventureRow = [];
+    
+    showMap();
 }
 
 function addBlock(amount) {
