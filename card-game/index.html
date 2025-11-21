@@ -855,6 +855,25 @@ const BOSSES = {
     ]
 };
 
+/* --- STATE --- */
+
+let state = {
+    hero: null,
+    deck: [],
+    hand: [],
+    discard: [],
+    dungeonDeck: [],
+    adventureRow: [], 
+    equipped: [],
+    selectedCardIndex: -1,
+    turn: 1,
+    completedNodes: [], // Array of node IDs (e.g. ['node_caverns'])
+    currentNodeId: null, // The node currently being played
+    collection: [], // Cards removed from deck
+    inventory: [],
+    gold: 0
+};
+
 /* --- EVENT MANAGER (STORE PATTERN) --- */
 const EVENTS = {
     GAME_UPDATED: 'game_updated',       // Hand, Row, Deck, Discard changed
@@ -908,29 +927,86 @@ function initUIListeners() {
     });
 }
 
-/* --- STATE --- */
+/* --- SCREEN MANAGER --- */
+const Screens = {
+    HERO_SELECT: {
+        id: 'hero-selection',
+        onEnter: () => {
+            // If we need to re-render the selection cards dynamically, do it here
+            // (Currently static in HTML, but could be moved here)
+        }
+    },
+    MAP: {
+        id: 'map-screen',
+        onEnter: () => {
+            document.getElementById('overlay').style.display = 'none';
+            EventManager.emit(EVENTS.MAP_UPDATED); // Render Graph
+            saveGame();
+            
+            // Init Drag Logic
+            if (!mapState.initialized) {
+                initMapDrag();
+                mapState.initialized = true;
+                document.getElementById('map-viewport').scrollLeft = 0;
+            }
+        }
+    },
+    GAME: {
+        id: 'game-container',
+        onEnter: () => {
+            // Force update UI when entering combat
+            EventManager.emit(EVENTS.GAME_UPDATED);
+            EventManager.emit(EVENTS.HERO_UPDATED);
+        }
+    },
+    HERO_DETAIL: {
+        id: 'hero-screen',
+        onEnter: () => {
+            EventManager.emit(EVENTS.HERO_UPDATED);
+            EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        }
+    },
+    DECK_MANAGER: {
+        id: 'deck-screen',
+        onEnter: () => {
+            // Consolidate Deck logic moved here
+            state.deck = state.deck.concat(state.discard);
+            state.discard = [];
+            state.hand = [];
+            renderDeckManager();
+        }
+    }
+};
 
-let state = {
-    hero: null,
-    deck: [],
-    hand: [],
-    discard: [],
-    dungeonDeck: [],
-    adventureRow: [], 
-    equipped: [],
-    selectedCardIndex: -1,
-    turn: 1,
-    completedNodes: [], // Array of node IDs (e.g. ['node_caverns'])
-    currentNodeId: null, // The node currently being played
-    collection: [], // Cards removed from deck
-    inventory: [],
-    gold: 0
+const ScreenManager = {
+    activeScreen: null,
+    
+    show(screenName) {
+        const target = Screens[screenName];
+        if (!target) return;
+
+        this.activeScreen = screenName;
+
+        // 1. Hide All Screens
+        Object.values(Screens).forEach(scr => {
+            const el = document.getElementById(scr.id);
+            if (el) el.style.display = 'none';
+        });
+
+        // 2. Show Target
+        const el = document.getElementById(target.id);
+        if (el) {
+            el.style.display = 'flex';
+            // 3. Run Setup Logic
+            if (target.onEnter) target.onEnter();
+        }
+    }
 };
 
 /* --- STARTUP LOGIC --- */
 
 function initSelectionScreen() {
-    switchScreen('hero-selection');
+    ScreenManager.show('HERO_SELECT');
     const container = document.getElementById('hero-select-container');
     HEROES.forEach((hero, index) => {
         // Create a card for the hero
@@ -983,8 +1059,7 @@ function startGame(heroIndex) {
     shuffle(state.deck);
     
     // Go to Map
-    switchScreen('map-screen');
-    showMap(); 
+    ScreenManager.show('MAP');
     saveGame();
 
     log(`You selected ${state.hero.name}. The void awaits.`);
@@ -992,34 +1067,15 @@ function startGame(heroIndex) {
 }
 
 function showMap() {
-    switchScreen('map-screen');
-    document.getElementById('overlay').style.display = 'none';
-
-    // Render Graph
-    EventManager.emit(EVENTS.MAP_UPDATED); // Renders graph
-    saveGame();
-
-    // Init Drag Logic (Call once or check if init)
-    if (!mapState.initialized) {
-        initMapDrag();
-        mapState.initialized = true;
-        
-        // Center view on first node initially
-        const viewport = document.getElementById('map-viewport');
-        viewport.scrollLeft = 0; // Or specific offset
-    }
+    ScreenManager.show('MAP');
 }
 
 function showHeroScreen() {
-    switchScreen('hero-screen');
-    // Force update based on current state
-    EventManager.emit(EVENTS.HERO_UPDATED);
-    EventManager.emit(EVENTS.INVENTORY_UPDATED);
+    ScreenManager.show('HERO_DETAIL');
 }
 
 function closeHeroScreen() {
-    document.getElementById('hero-screen').style.display = 'none';
-    document.getElementById('map-screen').style.display = 'flex';
+    ScreenManager.show('MAP');
     saveGame();
 }
 
@@ -1036,21 +1092,11 @@ function sellItem(index) {
 }
 
 function showDeckScreen() {
-    switchScreen('deck-screen');
-
-    // Consolidate all cards into state.deck for management
-    // (In case we came from a run where cards were in discard)
-    state.deck = state.deck.concat(state.discard);
-    state.discard = [];
-    state.hand = []; // Should be empty from map logic, but safety first
-
-    renderDeckManager();
+    ScreenManager.show('DECK_MANAGER');
 }
 
 function closeDeckScreen() {
-    document.getElementById('deck-screen').style.display = 'none';
-    document.getElementById('map-screen').style.display = 'flex';
-
+    ScreenManager.show('MAP');
     saveGame();
 }
 
@@ -1357,7 +1403,11 @@ function enterDungeonNode(nodeId) {
     state.adventureRow = [];
     state.turn = 1;
 
-    switchScreen('game-container');
+    // Reset Combat Stats (AP/Block)
+    state.hero.ap = state.hero.maxAp;
+    state.hero.block = 0;
+
+    ScreenManager.show('GAME');
 
     drawCards(5);
     
@@ -1845,7 +1895,7 @@ function continueGame() {
     
     state.adventureRow = [];
     
-    showMap();
+    ScreenManager.show('MAP');
 }
 
 function addBlock(amount) {
@@ -1930,16 +1980,6 @@ function log(msg, color) {
 }
 
 /* --- RENDERING --- */
-
-function switchScreen(activeScreenId) {
-    const screens = ['hero-selection', 'map-screen', 'game-container', 'hero-screen', 'deck-screen'];
-    screens.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.style.display = (id === activeScreenId) ? 'flex' : 'none';
-        }
-    });
-}
 
 function render() {
     // Hero Name
@@ -2078,7 +2118,7 @@ function loadGame() {
                 // For safety in this prototype, we assume saving happens mostly on Map
             }
             
-            showMap();
+            ScreenManager.show('MAP');
             log("Game Loaded.");
             return true;
         } catch (e) {
