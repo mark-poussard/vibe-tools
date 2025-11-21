@@ -1464,13 +1464,7 @@ function render() {
 
     advContainer.innerHTML = `
         <div class="area-label">
-            Adventure Row 
-            <button id="explore-btn" 
-                    style="font-size:10px; padding:2px 8px; margin-left:10px; background-color:${btnColor};" 
-                    onclick="exploreDungeon()" 
-                    ${disabledAttr}>
-                Explore (+1)
-            </button>
+            Adventure Row
         </div>`;
     
     state.adventureRow.forEach((m, idx) => {
