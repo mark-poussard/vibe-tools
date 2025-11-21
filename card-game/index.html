@@ -1625,16 +1625,25 @@ function buildDungeonFromConfig(configKey) {
     // 1. Determine Length
     const cardCount = Math.floor(Math.random() * (config.maxCards - config.minCards + 1)) + config.minCards;
 
+    // Clone event pool to ensure uniqueness per run
+    let availableEvents = [...config.events];
+
     // 2. Fill with Monsters & Events
     // Simple Logic: 70% Monster, 30% Event
     for(let i=0; i<cardCount; i++) {
-        if (Math.random() > 0.3 || config.events.length === 0) {
+        // Check if we should add event (30% chance) AND we have unique events left
+        if ((Math.random() > 0.3 || availableEvents.length === 0)) {
             // Add Monster
             const mId = config.monsters[Math.floor(Math.random() * config.monsters.length)];
             segment.push({...MONSTER_DB[mId]});
         } else {
-            // Add Event
-            const eId = config.events[Math.floor(Math.random() * config.events.length)];
+            // Add Event (Unique)
+            const rIdx = Math.floor(Math.random() * availableEvents.length);
+            const eId = availableEvents[rIdx];
+            
+            // Remove from pool so it isn't picked again
+            availableEvents.splice(rIdx, 1);
+            
             segment.push({...EVENT_DB[eId]});
         }
     }
