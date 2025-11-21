@@ -216,15 +216,94 @@
             overflow-y: auto;
         }
 
-        .map-node {
+        /* Draggable Map Styles */
+        #map-screen { padding: 0; overflow: hidden; position: relative; background: #1a1a1a; }
+        
+        #map-viewport {
             width: 100%;
-            padding: 15px;
-            background: #34495e;
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid transparent;
+            height: 100%;
+            overflow: hidden;
+            cursor: grab;
+            position: relative;
         }
-        .map-node.unlocked { border-color: var(--highlight); background: #2c3e50; }
+        
+        #map-viewport:active { cursor: grabbing; }
+
+        #map-world {
+            width: 1200px; /* Large virtual canvas */
+            height: 800px;
+            position: absolute;
+            top: 0; left: 0;
+            transform-origin: 0 0;
+            background-image: radial-gradient(#34495e 1px, transparent 1px);
+            background-size: 20px 20px; /* Grid pattern */
+        }
+
+        .map-node-visual {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #7f8c8d;
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            z-index: 5;
+            transition: transform 0.2s, border-color 0.2s;
+            /* Center the circle on the coord */
+            transform: translate(-50%, -50%);
+        }
+
+        .map-node-visual.locked { opacity: 0.6; filter: grayscale(1); }
+        .map-node-visual.unlocked { border-color: var(--highlight); background: #27ae60; cursor: pointer; box-shadow: 0 0 15px var(--highlight); animation: pulse 2s infinite; }
+        .map-node-visual.completed { border-color: gold; background: #e67e22; cursor: default; }
+
+        .map-node-visual:hover.unlocked { transform: translate(-50%, -50%) scale(1.1); }
+
+        .node-label {
+            position: absolute;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            background: rgba(0,0,0,0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        /* SVG Connections Layer */
+        #map-lines {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .map-connection {
+            stroke: #7f8c8d;
+            stroke-width: 4;
+            opacity: 0.5;
+        }
+
+        /* UI Overlay Layer */
+        .map-ui-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* Let clicks pass through to map */
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .map-ui-overlay button { pointer-events: auto; } /* Re-enable buttons */
+
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
 
         .deck-manager-container {
             display: flex;
@@ -306,24 +385,32 @@
     
 <!-- Map Screen -->
 <div id="map-screen">
-    <h1>World Map</h1>
-    <button onclick="showHeroScreen()" style="background-color: var(--hero-color);">Hero Status</button>
-    <button onclick="showDeckScreen()" style="background-color: var(--skill-color); margin-bottom: 20px;">Manage Deck</button>
-  
-    <div class="map-node" id="node-1" onclick="enterTier(1)">
-        <h2>Tier 1: The Caverns</h2>
-        <p>Status: <span id="status-1">Unlocked</span></p>
-    </div>
-    <div class="map-node" id="node-2" onclick="enterTier(2)">
-        <h2>Tier 2: The Deep Dark</h2>
-        <p>Status: <span id="status-2">Locked</span></p>
-    </div>
-    <div class="map-node" id="node-3" onclick="enterTier(3)">
-        <h2>Tier 3: The Void</h2>
-        <p>Status: <span id="status-3">Locked</span></p>
+    <!-- 1. The Moving World -->
+    <div id="map-viewport">
+        <div id="map-world">
+            <svg id="map-lines"></svg>
+            <div id="map-nodes-layer"></div>
+        </div>
     </div>
 
-    <button onclick="resetProgress()" style="background-color: #c0392b; margin-top: 30px; font-size: 12px;">Reset All Progress</button>
+    <!-- 2. Fixed UI Overlay -->
+    <div class="map-ui-overlay">
+        <!-- Top Bar -->
+        <div style="display:flex; justify-content: space-between; align-items: start;">
+            <div style="background:rgba(0,0,0,0.6); padding:5px; border-radius:4px;">
+                <h1 style="font-size:16px; margin:0;">World Map</h1>
+            </div>
+            <div style="display:flex; flex-direction: column; gap:5px;">
+                <button onclick="showHeroScreen()" style="background-color: var(--hero-color);">Hero</button>
+                <button onclick="showDeckScreen()" style="background-color: var(--skill-color);">Deck</button>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div style="display:flex; justify-content: flex-end;">
+            <button onclick="resetProgress()" style="background-color: #c0392b; font-size: 10px; padding: 5px;">Reset Save</button>
+        </div>
+    </div>
 </div>
 
 <!-- Hero / Inventory Screen -->
@@ -450,8 +537,8 @@ const CARD_TYPES = {
 // Define starting items for heroes
 const STARTING_ITEMS = {
     'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, block: 1, value: 5, desc: '+1 Block on Play' }, // Logic simulation
-    'i_dagger': { id: 'i_dagger', name: 'Rusty Dagger', type: CARD_TYPES.LOOT, atkBuff: 1, value: 5, desc: '+1 DMG' },
-    'i_wand': { id: 'i_wand', name: 'Ember', type: CARD_TYPES.LOOT, atkBuff: 0, value: 5, desc: '+5 Max HP', hpBonus: 3 }
+    'i_cloak': { id: 'i_cloak', name: 'Cloak', type: CARD_TYPES.LOOT, apBonus: 1, value: 5, desc: '+1 AP' },
+    'i_wand': { id: 'i_wand', name: 'Ember', type: CARD_TYPES.LOOT, atkBuff: 1, value: 5, desc: '+1 DMG' }
 };
 
 const HEROES = [
@@ -460,7 +547,7 @@ const HEROES = [
         name: 'Ironclad', 
         type: CARD_TYPES.HERO, 
         hp: 30, maxHp: 30, 
-        ap: 3, maxAp: 3, 
+        ap: 2, maxAp: 2, 
         block: 0, 
         desc: 'Tanky. Starts with Shield.',
         startItem: 'i_shield'
@@ -470,19 +557,19 @@ const HEROES = [
         name: 'Shadow', 
         type: CARD_TYPES.HERO, 
         hp: 25, maxHp: 25, 
-        ap: 4, maxAp: 4, 
+        ap: 3, maxAp: 3, 
         block: 0, 
-        desc: 'Agile. High AP.',
-        startItem: 'i_dagger'
+        desc: 'Agile. Acts fast.',
+        startItem: 'i_cloak'
     },
     { 
         id: 'h_weaver', 
         name: 'Weaver', 
         type: CARD_TYPES.HERO, 
-        hp: 25, maxHp: 25, 
+        hp: 20, maxHp: 20, 
         ap: 3, maxAp: 3, 
         block: 0, 
-        desc: 'Fragile. Starts with HP relic.',
+        desc: 'Fragile. Powerful spells.',
         startItem: 'i_wand'
     }
 ];
@@ -491,22 +578,19 @@ const BASE_STRIKE = { id: 's1', name: 'Strike', type: CARD_TYPES.SKILL, cost: 1,
 const BASE_DEFEND = { id: 's2', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, block: 3, desc: 'Gain 3 Block' };
 
 const HERO_DECKS = {
-    // Tank: Balanced + Shield Bash
     'h_ironclad': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND,
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
         { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, cost: 2, dmg: 5, block: 5, desc: '5 DMG & 5 Block' }
     ],
-    // Rogue: Aggressive + 0 Cost Shiv
     'h_shadow': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND,
-        { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: '0 Cost Attack' }
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
+        { id: 's_fast', name: 'Fast Hands', type: CARD_TYPES.SKILL, cost: 0, draw: 2, desc: 'Draw 2 cards' }
     ],
-    // Mage: High Cost/High Dmg
     'h_weaver': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND,
+        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
+        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
         { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Massive DMG' }
     ]
 };
@@ -564,7 +648,7 @@ const COMMON_EVENTS = [
     {
         id: 'e_trap', name: 'Trap Door', type: CARD_TYPES.EVENT, desc: 'The floor crumbles!',
         choices: [
-            { label: 'Jump (Discard 1 Card)', effect: 'trap_card' },
+            { label: 'Jump (Unequip Random Item)', effect: 'trap_unequip' },
             { label: 'Brace (Take 5 DMG)', effect: 'trap_dmg' }
         ]
     },
@@ -576,6 +660,13 @@ const COMMON_EVENTS = [
         ]
     }
 ];
+
+const MAP_GRAPH = {
+    // x/y are pixels relative to the map-world container
+    'node_caverns': { id: 'node_caverns', name: 'The Caverns', tier: 1, parents: [], x: 150, y: 300 },
+    'node_dark':    { id: 'node_dark',    name: 'The Deep Dark', tier: 2, parents: ['node_caverns'], x: 400, y: 150 },
+    'node_void':    { id: 'node_void',    name: 'The Void',      tier: 3, parents: ['node_dark'], x: 650, y: 300 }
+};
 
 const TIER_POOLS = {
     1: [ // The Caverns
@@ -623,7 +714,8 @@ let state = {
     equipped: [],
     selectedCardIndex: -1,
     turn: 1,
-    maxUnlockedTier: 1, // Track progress
+    completedNodes: [], // Array of node IDs (e.g. ['node_caverns'])
+    currentNodeId: null, // The node currently being played
     collection: [], // Cards removed from deck
     inventory: [],
     gold: 0
@@ -681,6 +773,8 @@ function startGame(heroIndex) {
     
     // Go to Map
     switchScreen('map-screen');
+    showMap(); 
+    saveGame();
 
     log(`You selected ${state.hero.name}. The void awaits.`);
     if(state.hero.startItem) log(`Equipped starting item: ${STARTING_ITEMS[state.hero.startItem].name}`);
@@ -690,22 +784,18 @@ function showMap() {
     switchScreen('map-screen');
     document.getElementById('overlay').style.display = 'none';
 
-    saveGame(); // Auto-save when hitting the map
+    // Render Graph
+    renderWorldMap();
+    saveGame();
 
-    // Update UI based on unlocks
-    for(let i=1; i<=3; i++) {
-        const node = document.getElementById(`node-${i}`);
-        const status = document.getElementById(`status-${i}`);
+    // Init Drag Logic (Call once or check if init)
+    if (!mapState.initialized) {
+        initMapDrag();
+        mapState.initialized = true;
         
-        if (i <= state.maxUnlockedTier) {
-            node.classList.add('unlocked');
-            status.innerText = "Available";
-            status.style.color = "#2ecc71";
-        } else {
-            node.classList.remove('unlocked');
-            status.innerText = "Locked";
-            status.style.color = "#e74c3c";
-        }
+        // Center view on first node initially
+        const viewport = document.getElementById('map-viewport');
+        viewport.scrollLeft = 0; // Or specific offset
     }
 }
 
@@ -751,8 +841,8 @@ function closeDeckScreen() {
 }
 
 function moveToCollection(index) {
-    if (state.deck.length <= 5) {
-        alert("Deck must have at least 5 cards!");
+    if (state.deck.length <= 10) {
+        alert("Deck must have at least 10 cards!");
         return;
     }
     const card = state.deck.splice(index, 1)[0];
@@ -816,6 +906,10 @@ function mapEquipItem(invIndex) {
         state.hero.maxHp += item.hpBonus;
         state.hero.hp += item.hpBonus;
     }
+
+    if (item.apBonus) {
+        state.hero.maxAp += item.apBonus;
+    }
     
     renderHeroScreen();
 }
@@ -827,6 +921,10 @@ function mapUnequipItem(equipIndex) {
     if (item.hpBonus) {
         state.hero.maxHp -= item.hpBonus;
         state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+    }
+
+    if (item.apBonus) {
+        state.hero.maxAp -= item.apBonus;
     }
 
     state.equipped.splice(equipIndex, 1);
@@ -887,24 +985,161 @@ function renderHeroScreen() {
     if (state.inventory.length === 0) invContainer.innerHTML = '<span style="font-style:italic; opacity:0.5;">Empty.</span>';
 }
 
-function enterTier(tierNum) {
-    state.tier = tierNum;
-    state.dungeonDeck = buildDungeonTier(tierNum);
-    state.adventureRow = []; // Clear row
+function isNodeAccessible(nodeId) {
+    const node = MAP_GRAPH[nodeId];
+    // Accessible if it has no parents OR if all parents are in completedNodes
+    if (node.parents.length === 0) return true;
+    return node.parents.every(parentId => state.completedNodes.includes(parentId));
+}
+
+// Map Dragging State
+let mapState = {
+    isDown: false,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+    isDragging: false // Distinguish click from drag
+};
+
+function initMapDrag() {
+    const slider = document.getElementById('map-viewport');
+    const content = document.getElementById('map-world');
+
+    // Mouse Events
+    slider.addEventListener('mousedown', (e) => {
+        mapState.isDown = true;
+        mapState.isDragging = false;
+        mapState.startX = e.pageX - slider.offsetLeft;
+        mapState.startY = e.pageY - slider.offsetTop;
+        mapState.scrollLeft = slider.scrollLeft;
+        mapState.scrollTop = slider.scrollTop;
+    });
+
+    slider.addEventListener('mouseleave', () => { mapState.isDown = false; });
+    slider.addEventListener('mouseup', () => { 
+        mapState.isDown = false; 
+        setTimeout(() => mapState.isDragging = false, 50); 
+    });
+
+    slider.addEventListener('mousemove', (e) => {
+        if (!mapState.isDown) return;
+        e.preventDefault();
+        mapState.isDragging = true;
+        const x = e.pageX - slider.offsetLeft;
+        const y = e.pageY - slider.offsetTop;
+        const walkX = (x - mapState.startX);
+        const walkY = (y - mapState.startY);
+        slider.scrollLeft = mapState.scrollLeft - walkX;
+        slider.scrollTop = mapState.scrollTop - walkY;
+    });
+
+    // Touch Events (Mobile)
+    slider.addEventListener('touchstart', (e) => {
+        mapState.isDown = true;
+        mapState.isDragging = false;
+        mapState.startX = e.touches[0].pageX - slider.offsetLeft;
+        mapState.startY = e.touches[0].pageY - slider.offsetTop;
+        mapState.scrollLeft = slider.scrollLeft;
+        mapState.scrollTop = slider.scrollTop;
+    });
+
+    slider.addEventListener('touchend', () => { mapState.isDown = false; });
+
+    slider.addEventListener('touchmove', (e) => {
+        if (!mapState.isDown) return;
+        mapState.isDragging = true;
+        const x = e.touches[0].pageX - slider.offsetLeft;
+        const y = e.touches[0].pageY - slider.offsetTop;
+        const walkX = (x - mapState.startX);
+        const walkY = (y - mapState.startY);
+        slider.scrollLeft = mapState.scrollLeft - walkX;
+        slider.scrollTop = mapState.scrollTop - walkY;
+    });
+}
+
+function renderWorldMap() {
+    const layer = document.getElementById('map-nodes-layer');
+    const svgLayer = document.getElementById('map-lines');
+    layer.innerHTML = '';
+    svgLayer.innerHTML = '';
+
+    // 1. Draw Lines (Parents -> Children)
+    Object.values(MAP_GRAPH).forEach(node => {
+        node.parents.forEach(parentId => {
+            const parent = MAP_GRAPH[parentId];
+            // Create SVG Line
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", parent.x);
+            line.setAttribute("y1", parent.y);
+            line.setAttribute("x2", node.x);
+            line.setAttribute("y2", node.y);
+            line.classList.add("map-connection");
+            svgLayer.appendChild(line);
+        });
+    });
+
+    // 2. Draw Nodes
+    Object.values(MAP_GRAPH).forEach(node => {
+        const isUnlocked = isNodeAccessible(node.id);
+        const isCompleted = state.completedNodes.includes(node.id);
+        
+        const el = document.createElement('div');
+        el.className = `map-node-visual`;
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+
+        // Logic for appearance/interaction
+        if (isCompleted) {
+            el.classList.add('completed');
+            el.innerHTML = "✓";
+        } else if (isUnlocked) {
+            el.classList.add('unlocked');
+            el.innerHTML = node.tier;
+            el.onclick = (e) => { 
+                // Prevent drag from triggering click
+                if(!mapState.isDragging) enterDungeonNode(node.id); 
+            };
+        } else {
+            el.classList.add('locked');
+            el.innerHTML = "🔒";
+        }
+
+        // Label
+        const label = document.createElement('div');
+        label.className = 'node-label';
+        label.innerText = node.name;
+        el.appendChild(label);
+
+        layer.appendChild(el);
+    });
+}
+
+function enterDungeonNode(nodeId) {
+    const node = MAP_GRAPH[nodeId];
+    
+    state.currentNodeId = nodeId;
+    state.tier = node.tier; // Still needed for buildDungeonTier logic
+    
+    state.dungeonDeck = buildDungeonTier(node.tier);
+    state.adventureRow = [];
     state.turn = 1;
 
-    // Switch UI: Use helper to hide everything else
     switchScreen('game-container');
 
-    // Start the loop
     drawCards(5);
     
     // Ensure at least one monster to start
-    let card = state.dungeonDeck.shift();
-    if(card) state.adventureRow.push(card);
-    
-    const names = ["The Caverns", "The Deep Dark", "The Void"];
-    log(`Entered Tier ${tierNum}: ${names[tierNum-1]}`);
+    if (state.dungeonDeck.length > 0) {
+        // Ensure first is not event
+        if (state.dungeonDeck[0].type === CARD_TYPES.EVENT) {
+             const safeIdx = state.dungeonDeck.findIndex(c => c.type === CARD_TYPES.MONSTER);
+             if(safeIdx > -1) [state.dungeonDeck[0], state.dungeonDeck[safeIdx]] = [state.dungeonDeck[safeIdx], state.dungeonDeck[0]];
+        }
+        state.adventureRow.push(state.dungeonDeck.shift());
+    }
+
+    log(`Entered: ${node.name}`);
     render();
 }
 
@@ -1080,6 +1315,10 @@ function playCard(target) {
             if (card.block) addBlock(card.block);
             if (card.heal) healHero(card.heal);
             if (card.gainAp) { state.hero.ap += card.gainAp; log(`Gained ${card.gainAp} AP.`); }
+            if (card.draw) {
+                drawCards(card.draw);
+                log(`Drew ${card.draw} cards.`);
+            }
             success = true;
         }
     } else if (card.type === CARD_TYPES.LOOT) {
@@ -1153,14 +1392,28 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         log("You hit the ground hard. Took 5 DMG.", "red");
         removeEvent();
     }
-    else if (choice.effect === 'trap_card') {
-        if(state.hand.length > 0) {
-            const rIdx = Math.floor(Math.random() * state.hand.length);
-            const lost = state.hand.splice(rIdx, 1)[0];
-            state.discard.push(lost);
-            log(`You dodged, but dropped your ${lost.name}.`);
+    else if (choice.effect === 'trap_unequip') {
+        if(state.equipped.length > 0) {
+            const rIdx = Math.floor(Math.random() * state.equipped.length);
+            const item = state.equipped[rIdx];
+            
+            // Revert Passive Stats
+            if (item.hpBonus) {
+                state.hero.maxHp -= item.hpBonus;
+                state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+            }
+            if (item.apBonus) {
+                state.hero.maxAp -= item.apBonus;
+            }
+
+            // Move to inventory
+            state.equipped.splice(rIdx, 1);
+            state.inventory.push(item);
+            
+            log(`The fall knocked off your ${item.name}!`, "red");
+            render(); // Update UI to show item is gone
         } else {
-            log("You had nothing to drop! Lucky.");
+            log("You stumbled, but had nothing equipped to lose.");
         }
         removeEvent();
     }
@@ -1249,24 +1502,6 @@ function equipItem(card) {
     }
 }
 
-function unequipItem(index) {
-    const item = state.equipped[index];
-    
-    // Revert Max HP bonus if applicable
-    if (item.hpBonus) {
-        state.hero.maxHp -= item.hpBonus;
-        state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
-    }
-
-    state.equipped.splice(index, 1);
-    log(`Destroyed ${item.name}.`);
-    
-    // Only render game screen if game container is visible
-    if(document.getElementById('game-container').style.display !== 'none') {
-        render();
-    }
-}
-
 function dealDamage(monsterIndex, amount) {
     let monster = state.adventureRow[monsterIndex];
     let bonus = 0;
@@ -1295,9 +1530,10 @@ function killMonster(index) {
     if (m.isMiniBoss) {
         log(`Mini-Boss Defeated! Sector Cleared!`, "gold");
         
-        // Unlock next tier
-        if (state.tier < 3) {
-            state.maxUnlockedTier = Math.max(state.maxUnlockedTier, state.tier + 1);
+        // Mark Node as Complete
+        if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
+            state.completedNodes.push(state.currentNodeId);
+            log(`Zone Cleared: ${MAP_GRAPH[state.currentNodeId].name}`, "gold");
         }
         
         // Transform Boss into a Legendary Reward
@@ -1564,7 +1800,7 @@ function loadGame() {
             state.discard = [];
             state.adventureRow = []; 
             // Ensure deck is consolidated if we crashed mid-run
-            if (state.deck.length < 5) { 
+            if (state.deck.length < 10) { 
                 // If deck is empty (cards in hand/discard), we might need to rebuild logic or just reset deck
                 // For safety in this prototype, we assume saving happens mostly on Map
             }
