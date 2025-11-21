@@ -200,7 +200,7 @@
         .type-hero { border: 2px solid var(--hero-color); width: 90px; height: 120px; }
 
         .card.selected { border: 2px solid var(--highlight); transform: translateY(-10px); }
-        .card.equipped { width: 50px; height: 70px; font-size: 8px; flex: 0 0 50px; }
+        .card.equipped { transform: scale(0.9);}
 
         /* Buttons on cards */
         .choice-btn { font-size: 8px; padding: 4px; width: 100%; margin-top: 2px; }
@@ -260,7 +260,7 @@
 
         .map-node-visual.locked { opacity: 0.6; filter: grayscale(1); }
         .map-node-visual.unlocked { border-color: var(--highlight); background: #27ae60; cursor: pointer; box-shadow: 0 0 15px var(--highlight); animation: pulse 2s infinite; }
-        .map-node-visual.completed { border-color: gold; background: #e67e22; cursor: default; }
+        .map-node-visual.completed { border-color: gold; background: #e67e22; cursor: pointer; }
 
         .map-node-visual:hover.unlocked { transform: translate(-50%, -50%) scale(1.1); }
 
@@ -591,7 +591,7 @@ const HERO_DECKS = {
     'h_weaver': [
         BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
         BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
-        { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Massive DMG' }
+        { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Deal 12 DMG' }
     ]
 };
 
@@ -602,7 +602,7 @@ const SKILL_LIBRARY = [
     { id: 's_exec', name: 'Execution', type: CARD_TYPES.SKILL, cost: 3, dmg: 15, desc: 'Deal 15 DMG' },
     { id: 's_step', name: 'Quick Step', type: CARD_TYPES.SKILL, cost: 0, block: 2, desc: 'Gain 2 Block' },
     { id: 's_wall', name: 'Heavy Plate', type: CARD_TYPES.SKILL, cost: 2, block: 10, desc: 'Gain 10 Block' },
-    { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: '0 Cost Attack' },
+    { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: 'Deal 3 DMG' },
     { id: 's_wild', name: 'Reckless Swing', type: CARD_TYPES.SKILL, cost: 1, dmg: 8, desc: 'Deal 8 DMG' },
     { id: 's_holy', name: 'Holy Light', type: CARD_TYPES.SKILL, cost: 2, heal: 8, desc: 'Heal 8 HP' },
     { id: 's_perf', name: 'Perfect Guard', type: CARD_TYPES.SKILL, cost: 3, block: 20, desc: 'Gain 20 Block' }
@@ -612,21 +612,21 @@ const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, c
 
 const REWARDS = {
     'm_goblin': { id: 'l_dagger', name: 'Dagger', type: CARD_TYPES.LOOT, value: 1, atkBuff: 1, desc: '+1 DMG' },
-    'm_rat': { id: 's_bite', name: 'Rabid Bite', type: CARD_TYPES.SKILL, cost: 0, dmg: 2, desc: '0 Cost Attack' },
-    'm_orc': { id: 's_smash', name: 'Big Smash', type: CARD_TYPES.SKILL, cost: 2, dmg: 8, desc: 'Heavy DMG' },
+    'm_rat': { id: 's_bite', name: 'Rabid Bite', type: CARD_TYPES.SKILL, cost: 0, dmg: 2, desc: 'Deal 2 DMG' },
+    'm_orc': { id: 's_smash', name: 'Big Smash', type: CARD_TYPES.SKILL, cost: 2, dmg: 8, desc: 'Deal 8 DMG' },
     'm_ghost': { id: 'l_amulet', name: 'Ghost Amulet', type: CARD_TYPES.LOOT, value: 2, atkBuff: 2, desc: '+2 DMG' }, 
     'm_slime': { id: 'l_goo', name: 'Slime Shield', type: CARD_TYPES.LOOT, value: 2, block: 2, desc: '+2 Block on Play' },
     'm_kobold': { id: 'l_spear', name: 'Short Spear', type: CARD_TYPES.LOOT, value: 2, atkBuff: 2, desc: '+2 DMG' },
-    'm_spider': { id: 's_web', name: 'Web Shot', type: CARD_TYPES.SKILL, cost: 1, dmg: 5, desc: 'Sticky Shot' },
-    'm_wolf': { id: 's_claw', name: 'Feral Claw', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: 'Fast Attack' },
-    'm_cultist': { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Massive DMG' },
-    'm_golem': { id: 's_stone', name: 'Stone Form', type: CARD_TYPES.SKILL, cost: 2, block: 15, desc: 'Huge Block' },
+    'm_spider': { id: 's_web', name: 'Web Shot', type: CARD_TYPES.SKILL, cost: 1, dmg: 5, desc: 'Deal 5 DMG' },
+    'm_wolf': { id: 's_claw', name: 'Feral Claw', type: CARD_TYPES.SKILL, cost: 0, dmg: 3, desc: 'Deal 3 DMG' },
+    'm_cultist': { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Deal 12 DMG' },
+    'm_golem': { id: 's_stone', name: 'Stone Form', type: CARD_TYPES.SKILL, cost: 2, block: 15, desc: 'Gain 15 Block' },
     'm_assassin': { id: 'l_cloak', name: 'Shadow Cloak', type: CARD_TYPES.LOOT, value: 1, block: 1, desc: '+1 Block on Play' },
     'm_ent': { id: 'l_bark', name: 'Bark Skin', type: CARD_TYPES.LOOT, value: 5, hpBonus: 5, desc: '+5 Max HP' },
-    'm_leech': { id: 's_drain', name: 'Void Spike', type: CARD_TYPES.SKILL, cost: 1, dmg: 6, desc: 'Piercing Strike' },
+    'm_leech': { id: 's_drain', name: 'Void Spike', type: CARD_TYPES.SKILL, cost: 1, dmg: 6, desc: 'Deal 6 DMG' },
     'm_drake': { id: 'l_scale', name: 'Dragon Scale', type: CARD_TYPES.LOOT, value: 5, block: 3, desc: '+3 Block on Play' },
 
-    'm_boss': { id: 'w_win', name: 'Victory', type: CARD_TYPES.EVENT, desc: 'You Won!' }
+    'm_malakor': { id: 'w_win', name: 'Victory', type: CARD_TYPES.EVENT, desc: 'You Won!' }
 };
 
 const EVENT_MONSTERS = {
@@ -638,7 +638,7 @@ const EVENT_MONSTERS = {
 
 const COMMON_EVENTS = [
     { 
-        id: 'e_shrine', name: 'Cursed Shrine', type: CARD_TYPES.EVENT, desc: 'A dark aura hums.',
+        id: 'e_shrine', name: 'Cursed Shrine', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A dark aura hums.',
         choices: [
             { label: 'Pray (Heal 10, Get Curse)', effect: 'pray' },
             { label: 'Desecrate (Fight Spirit)', effect: 'fight' },
@@ -646,17 +646,39 @@ const COMMON_EVENTS = [
         ]
     },
     {
-        id: 'e_trap', name: 'Trap Door', type: CARD_TYPES.EVENT, desc: 'The floor crumbles!',
+        id: 'e_trap', name: 'Trap Door', type: CARD_TYPES.EVENT, minTier: 1, desc: 'The floor crumbles!',
         choices: [
             { label: 'Jump (Unequip Random Item)', effect: 'trap_unequip' },
             { label: 'Brace (Take 5 DMG)', effect: 'trap_dmg' }
         ]
     },
     {
-        id: 'e_chest', name: 'Wooden Chest', type: CARD_TYPES.EVENT, desc: 'Is it breathing?',
+        id: 'e_chest', name: 'Wooden Chest', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Is it breathing?',
         choices: [
             { label: 'Open (Loot or Mimic)', effect: 'chest_open' },
             { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_tribute', name: 'Dark Altar', type: CARD_TYPES.EVENT, minTier: 2, desc: 'Requires a sacrifice.',
+        choices: [
+            { label: 'Sacrifice (Lose 5 Max HP, Get Relic)', effect: 'tribute_pay' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_trainer', name: 'Old Master', type: CARD_TYPES.EVENT, minTier: 2, desc: 'He offers training.',
+        choices: [
+            { label: 'Train Attack (Get Heavy Strike)', effect: 'train_str' },
+            { label: 'Train Defense (Get Iron Skin)', effect: 'train_def' },
+            { label: 'Ignore', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_spring', name: 'Magic Spring', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Glowing blue water.',
+        choices: [
+            { label: 'Drink (Heal 5 HP)', effect: 'spring_heal' },
+            { label: 'Bottle (Get +1 Max HP)', effect: 'spring_max' }
         ]
     }
 ];
@@ -689,18 +711,19 @@ const TIER_POOLS = {
     ]
 };
 
-const MINI_BOSSES = {
+const BOSSES = {
     1: [ // Gatekeepers to Tier 2
-        { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isMiniBoss: true, desc: 'BOSS: Gatekeeper' },
-        { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isMiniBoss: true, desc: 'BOSS: Gatekeeper' }
+        { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
+        { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' }
     ],
     2: [ // Gatekeepers to Tier 3
-        { id: 'mb_lich', name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isMiniBoss: true, desc: 'BOSS: Gatekeeper' },
-        { id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isMiniBoss: true, desc: 'BOSS: Gatekeeper' }
+        { id: 'mb_lich', name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
+        { id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' }
+    ],
+    3: [ // Gatekeepers to Tier 3
+        { id: 'm_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, desc: 'FINAL BOSS' }
     ]
 };
-
-const FINAL_BOSS = { id: 'm_boss', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, rewardId: 'm_boss', desc: 'FINAL BOSS' };
 
 /* --- STATE --- */
 
@@ -763,6 +786,11 @@ function startGame(heroIndex) {
         if(item.hpBonus) {
             state.hero.maxHp += item.hpBonus;
             state.hero.hp += item.hpBonus;
+        }
+        // If item gives AP bonus immediately
+        if(item.apBonus) {
+            state.hero.maxAp += item.apBonus;
+            state.hero.ap += item.apBonus;
         }
         // We push deep copy to equipped
         state.equipped.push(JSON.parse(JSON.stringify(item)));
@@ -959,27 +987,39 @@ function renderHeroScreen() {
     const invContainer = document.getElementById('hero-screen-inventory');
     invContainer.innerHTML = '';
     state.inventory.forEach((item, idx) => {
-        let div = createCardElement(item);
-        div.classList.add('equipped'); 
-        div.style.borderTop = "5px solid #f1c40f"; 
+        // Create Wrapper for stacking
+        let wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.flexDirection = 'column';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '4px';
 
-        // Click to Equip
+        // Render Card
+        let div = createCardElement(item);
+        div.style.borderTop = "5px solid #f1c40f"; 
+        div.style.flex = "0 0 auto"; 
         div.onclick = () => mapEquipItem(idx);
         div.title = "Click to Equip";
         
-        // Sell Button
+        // Create Block Button below card
         let btn = document.createElement('button');
-        btn.className = 'destroy-btn';
-        btn.innerText = '$';
-        btn.style.background = '#27ae60'; // Green for money
-        btn.title = `Sell for ${item.value||0}g`;
+        btn.innerText = `Sell`;
+        btn.style.fontSize = "10px";
+        btn.style.padding = "4px";
+        btn.style.background = "#27ae60";
+        btn.style.color = "white";
+        btn.style.border = "none";
+        btn.style.borderRadius = "4px";
+        btn.style.cursor = "pointer";
         btn.onclick = (e) => { 
-            e.stopPropagation(); // Prevent Equip
+            e.stopPropagation(); 
             sellItem(idx); 
         };
-        div.appendChild(btn);
+
+        wrapper.appendChild(div);
+        wrapper.appendChild(btn);
         
-        invContainer.appendChild(div);
+        invContainer.appendChild(wrapper);
     });
     
     if (state.inventory.length === 0) invContainer.innerHTML = '<span style="font-style:italic; opacity:0.5;">Empty.</span>';
@@ -1096,13 +1136,17 @@ function renderWorldMap() {
         } else if (isUnlocked) {
             el.classList.add('unlocked');
             el.innerHTML = node.tier;
-            el.onclick = (e) => { 
-                // Prevent drag from triggering click
-                if(!mapState.isDragging) enterDungeonNode(node.id); 
-            };
         } else {
             el.classList.add('locked');
             el.innerHTML = "🔒";
+        }
+
+        // Allow entry if Unlocked OR Completed
+        if (isUnlocked || isCompleted) {
+             el.onclick = (e) => { 
+                // Prevent drag from triggering click
+                if(!mapState.isDragging) enterDungeonNode(node.id); 
+            };
         }
 
         // Label
@@ -1152,9 +1196,13 @@ function buildDungeonTier(tierNum) {
         segment.push({...monsterPool[Math.floor(Math.random() * monsterPool.length)]});
     }
     
-    // Add 2 Random Events
-    for(let i=0; i<2; i++) {
-        segment.push({...COMMON_EVENTS[Math.floor(Math.random() * COMMON_EVENTS.length)]});
+    // Add 2 Random Events (Filtered by Tier)
+    const availableEvents = COMMON_EVENTS.filter(e => e.minTier <= tierNum);
+    
+    if (availableEvents.length > 0) {
+        for(let i=0; i<2; i++) {
+            segment.push({...availableEvents[Math.floor(Math.random() * availableEvents.length)]});
+        }
     }
 
     shuffle(segment);
@@ -1168,13 +1216,9 @@ function buildDungeonTier(tierNum) {
     }
 
     // Add Boss at the bottom
-    if (tierNum < 3) {
-        const bossPool = MINI_BOSSES[tierNum];
-        const boss = {...bossPool[Math.floor(Math.random() * bossPool.length)]};
-        segment.push(boss);
-    } else {
-        segment.push({...FINAL_BOSS});
-    }
+    const bossPool = BOSSES[tierNum];
+    const boss = {...bossPool[Math.floor(Math.random() * bossPool.length)]};
+    segment.push(boss);
 
     return segment;
 }
@@ -1308,7 +1352,7 @@ function playCard(target) {
         // These trigger if: 
         // A) It's a pure buff card (no dmg) and we targeted 'hero'
         // B) It's a hybrid card (has dmg) and we successfully hit an enemy (success is true)
-        if (card.block || card.heal || card.gainAp) {
+        if (card.block || card.heal || card.gainAp || card.draw) {
             if (!card.dmg && target !== 'hero') return; // Pure buff must target hero
             if (card.dmg && !success) return; // Hybrid failed to hit target
 
@@ -1357,6 +1401,13 @@ function playCard(target) {
         // We do this last so the card completely resolves before the state resets
         if (state.adventureRow.length === 0) {
             log("Zone cleared. Ending turn...", "#95a5a6");
+            endTurn();
+        }
+
+        // Check for No Options (0 AP and no 0-cost cards)
+        const hasZeroCostCard = state.hand.some(c => c.cost === 0);
+        if (state.hero.ap === 0 && !hasZeroCostCard) {
+            log("Out of moves. Ending turn...", "#95a5a6");
             endTurn();
         }
     }
@@ -1465,9 +1516,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         removeEvent();
     }
     else if (choice.effect === 'spring_max') {
-        state.hero.maxHp += 3;
-        state.hero.hp += 3;
-        log("You feel permanently stronger (+3 Max HP).", "green");
+        state.hero.maxHp += 1;
+        log("You feel permanently stronger (+1 Max HP).", "green");
         removeEvent();
     }
 
@@ -1520,14 +1570,9 @@ function dealDamage(monsterIndex, amount) {
 function killMonster(index) {
     let m = state.adventureRow[index];
     log(`${m.name} defeated!`);
-    
-    if (m.id === 'm_boss') {
-        victory();
-        return;
-    }
 
     // Tier Transition
-    if (m.isMiniBoss) {
+    if (m.isBoss) {
         log(`Mini-Boss Defeated! Sector Cleared!`, "gold");
         
         // Mark Node as Complete
@@ -1547,9 +1592,14 @@ function killMonster(index) {
         // Delay slightly then go to map
         setTimeout(() => {
             log("Returning to Map...");
-            // Clear hand/board
-            state.hand.forEach(c => state.discard.push(c));
-            state.hand = [];
+            // Move Hand -> Deck
+            while(state.hand.length > 0) {
+                state.deck.push(state.hand.pop());
+            }
+            // Move Discard -> Deck
+            while(state.discard.length > 0) {
+                state.deck.push(state.discard.pop());
+            }
             showMap();
         }, 1500);
         return;
@@ -1642,12 +1692,6 @@ function endTurn() {
 }
 
 function checkWinCondition() {}
-
-function victory() {
-    document.getElementById('overlay').style.display = 'flex';
-    document.getElementById('overlay-title').innerText = "VICTORY!";
-    document.getElementById('overlay-title').style.color = "gold";
-}
 
 function gameOver() {
     document.getElementById('overlay').style.display = 'flex';
