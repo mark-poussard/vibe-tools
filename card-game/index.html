@@ -629,6 +629,7 @@
 
 const CARD_TYPES = {
     HERO: 'hero',
+    GROUP: 'group',
     MONSTER: 'monster',
     SKILL: 'skill',
     LOOT: 'loot',
@@ -968,7 +969,7 @@ const NODE_CONFIGS = {
     },
     'WHISPERING_WOODS': {
         icon: '🌲', minCards: 5, maxCards: 6,
-        monsters: ['m_goblin', 'm_wolf', 'm_bear', 'm_hornet', 'm_treant'],
+        monsters: ['m_goblin', 'm_wolf', 'm_bear', 'm_hornet', 'm_treant', 'g_wolf_pack'],
         events: ['e_trap', 'e_spring'], bossPool: ['mb_brood', 'mb_bandit_king']
     },
     'MOSSY_RUINS': {
@@ -1108,6 +1109,20 @@ const MONSTER_DB = {
     'm_moss_golem': { id: 'm_moss_golem', name: 'Moss Golem', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 2, lootTable: 'tier1_elite', desc: 'Ruins Guard' },
     'm_shaman':     { id: 'm_shaman', name: 'Goblin Shaman', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_standard', desc: 'Magic User' },
     'm_bat_swarm':  { id: 'm_bat_swarm', name: 'Bat Swarm', type: CARD_TYPES.MONSTER, hp: 4, maxHp: 4, atk: 2, lootTable: 'tier1_standard', desc: 'Annoying' },
+
+    // --- GROUPS ---
+    'g_goblin_raid': { 
+        id: 'g_goblin_raid', 
+        type: CARD_TYPES.GROUP, 
+        members: ['m_goblin', 'm_goblin', 'm_shaman'], // 2 Goblins + 1 Shaman
+        desc: 'Goblin Ambush' 
+    },
+    'g_wolf_pack': { 
+        id: 'g_wolf_pack', 
+        type: CARD_TYPES.GROUP, 
+        members: ['m_wolf', 'm_wolf', 'm_wolf'], 
+        desc: 'Wolf Pack' 
+    },
 
     // --- NEW EXPANSION: REGION 2 (Desert) ---
     'm_scorpion':   { id: 'm_scorpion', name: 'Scorpion', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, lootTable: 'tier2_standard', desc: 'Venomous' },
@@ -1921,11 +1936,25 @@ function drawCards(count) {
 }
 
 function spawnMonsters() {
-    // Only add 1 card automatically at the start of the turn/refresh
-    // Max size is now 5
+    // Spawn logic: If row is empty (or we want to fill), draw from deck
     if(state.adventureRow.length < 5 && state.dungeonDeck.length > 0) {
         let card = state.dungeonDeck.shift(); 
-        state.adventureRow.push(card);
+        
+        if (card.type === CARD_TYPES.GROUP) {
+            // Unpack the group
+            log(`${card.desc || 'Ambush'}! Enemies incoming!`, '#e67e22');
+            
+            card.members.forEach(monsterId => {
+                if (state.adventureRow.length < 5) {
+                    // Clone the monster from DB
+                    const monster = JSON.parse(JSON.stringify(MONSTER_DB[monsterId]));
+                    state.adventureRow.push(monster);
+                }
+            });
+        } else {
+            // Standard spawn
+            state.adventureRow.push(card);
+        }
     }
 }
 
