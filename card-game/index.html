@@ -593,10 +593,6 @@
     </div>
 
     <!-- Row 2: Adventure (Scrollable) -->
-    <div class="area-label">
-        Adventure 
-        <button id="explore-btn" style="font-size:9px; padding:2px 6px;" onclick="exploreDungeon()">+ Explore</button>
-    </div>
     <div id="adventure-row" class="scroll-row">
         <!-- Monsters injected here -->
     </div>
@@ -1934,33 +1930,6 @@ function spawnMonsters() {
 }
 
 /* --- ACTIONS --- */
-
-function exploreDungeon() {
-    // Check Capacity (Max 5)
-    if (state.adventureRow.length >= 5) {
-        log("The path is too crowded.", "red");
-        return;
-    }
-    
-    // Check Empty Deck
-    if (state.dungeonDeck.length === 0) {
-        log("The dungeon is silent.", "red");
-        return;
-    }
-
-    // Check for Events (Block exploration)
-    const hasEvent = state.adventureRow.some(c => c.type === CARD_TYPES.EVENT);
-    if (hasEvent) {
-        log("You must resolve the Event before exploring further!", "red");
-        return;
-    }
-
-    // Draw 1 card
-    let card = state.dungeonDeck.shift();
-    state.adventureRow.push(card);
-    log("You explore deeper...");
-    EventManager.emit(EVENTS.GAME_UPDATED);
-}
 
 function selectCard(index) {
     // 1. Handle Deselection
