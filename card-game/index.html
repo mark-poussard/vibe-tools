@@ -901,7 +901,7 @@ const NODE_CONFIGS = {
         minCards: 8, maxCards: 10,
         monsters: ['m_golem', 'm_assassin', 'm_ent', 'm_drake'],
         events: ['e_tribute', 'e_trainer'],
-        bossPool: ['m_malakor']
+        bossPool: ['mb_malakor']
     },
     'SPIDER_NEST': {
         icon: '🕸️', // Web
@@ -1314,39 +1314,16 @@ function renderHeroScreen() {
     const invContainer = document.getElementById('hero-screen-inventory');
     invContainer.innerHTML = '';
     state.inventory.forEach((item, idx) => {
-        // Create Wrapper for stacking
-        let wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.flexDirection = 'column';
-        wrapper.style.alignItems = 'center';
-        wrapper.style.gap = '4px';
-
         // Render Card
         let div = createCardElement(item);
         div.style.borderTop = "5px solid #f1c40f"; 
         div.style.flex = "0 0 auto"; 
+        
+        // Click to Equip
         div.onclick = () => mapEquipItem(idx);
         div.title = "Click to Equip";
         
-        // Create Block Button below card
-        let btn = document.createElement('button');
-        btn.innerText = `Sell`;
-        btn.style.fontSize = "10px";
-        btn.style.padding = "4px";
-        btn.style.background = "#27ae60";
-        btn.style.color = "white";
-        btn.style.border = "none";
-        btn.style.borderRadius = "4px";
-        btn.style.cursor = "pointer";
-        btn.onclick = (e) => { 
-            e.stopPropagation(); 
-            sellItem(idx); 
-        };
-
-        wrapper.appendChild(div);
-        wrapper.appendChild(btn);
-        
-        invContainer.appendChild(wrapper);
+        invContainer.appendChild(div);
     });
     
     if (state.inventory.length === 0) invContainer.innerHTML = '<span style="font-style:italic; opacity:0.5;">Empty.</span>';
@@ -1587,7 +1564,7 @@ function renderMerchantScreen() {
         // Add Price Tag
         let priceTag = document.createElement('div');
         priceTag.className = 'merchant-price';
-        priceTag.innerText = `${price}g`;
+        priceTag.innerText = `Buy: ${price}g`;
         div.appendChild(priceTag);
 
         div.onclick = () => buyMerchantItem(offer.id, price);
@@ -1844,9 +1821,10 @@ function playCard(target) {
             return;
         }
 
-        // Check for No Options (0 AP and no 0-cost cards)
-        const hasZeroCostCard = state.hand.some(c => c.cost === 0);
-        if (state.hero.ap === 0 && !hasZeroCostCard) {
+        // Check for No Playable Options (Is there any non-curse card affordable with current AP?)
+        const canPlayAnything = state.hand.some(c => c.cost <= state.hero.ap);
+        
+        if (!canPlayAnything) {
             log("Out of moves. Ending turn...", "#95a5a6");
             endTurn();
         }
