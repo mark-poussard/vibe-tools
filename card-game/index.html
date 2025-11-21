@@ -230,7 +230,7 @@
         #map-viewport:active { cursor: grabbing; }
 
         #map-world {
-            width: 1200px; /* Large virtual canvas */
+            width: 2100px; /* Large virtual canvas */
             height: 800px;
             position: absolute;
             top: 0; left: 0;
@@ -855,60 +855,162 @@ const COMMON_EVENTS = [
 ];
 
 const MAP_GRAPH = {
-    'node_caverns': { id: 'node_caverns', name: 'The Caverns', type: 'CAVERNS', tier: 1, parents: [], x: 150, y: 300 },
-    
-    'node_dark':    { id: 'node_dark',    name: 'The Deep Dark', type: 'DEEP_DARK', tier: 2, parents: ['node_caverns'], x: 400, y: 150 },
-    // Branch A-2 (Merchant) - Accessible after Dark
-    'node_shop':    { id: 'node_shop',    name: 'Dark Market',   type: 'MERCHANT_TIER_2', tier: 2, parents: ['node_dark'], x: 525, y: 150 },
-    
-    'node_spider':  { id: 'node_spider',  name: 'Spider Nest',   type: 'SPIDER_NEST', tier: 2, parents: ['node_caverns'], x: 400, y: 450 },
+    // --- START: THE GREENLANDS ---
+    'n1': { id: 'n1', name: 'Village Gates',    type: 'VILLAGE_OUTSKIRTS', parents: [], x: 100, y: 400 },
 
-    'node_void':    { id: 'node_void',    name: 'The Void',      type: 'VOID',      tier: 3, parents: ['node_dark', 'node_spider'], x: 650, y: 300 }
+    // Branch 1: The High Road (Combat Heavy)
+    'n2a':{ id: 'n2a', name: 'Old Bridge',      type: 'OLD_BRIDGE',        parents: ['n1'], x: 250, y: 250 },
+    'n3a':{ id: 'n3a', name: 'Mossy Ruins',     type: 'MOSSY_RUINS',       parents: ['n2a'], x: 400, y: 200 },
+    
+    // Branch 2: The Low Road (Event/Merchant Heavy)
+    'n2b':{ id: 'n2b', name: 'Whispering Woods',type: 'WHISPERING_WOODS',  parents: ['n1'], x: 250, y: 550 },
+    'n3b':{ id: 'n3b', name: 'Traveler\'s Rest',type: 'TRAVELERS_REST',    parents: ['n2b'], x: 400, y: 600 },
+
+    // Convergence 1: Border to Desert
+    'n4': { id: 'n4', name: 'Canyon Pass',      type: 'CANYON_PASS',       parents: ['n3a', 'n3b'], x: 550, y: 400 },
+
+    // --- SPLIT: THE DESERT ---
+    // North Path: Dangerous Shortcuts
+    'n5a':{ id: 'n5a', name: 'Scorpion Pit',    type: 'SCORPION_PIT',      parents: ['n4'], x: 700, y: 250 },
+    'n6a':{ id: 'n6a', name: 'Sand Dunes',      type: 'SAND_DUNES',        parents: ['n5a'], x: 850, y: 200 },
+
+    // South Path: Safe Trade Route
+    'n5b':{ id: 'n5b', name: 'Desert Bazaar',   type: 'DESERT_BAZAAR',     parents: ['n4'], x: 700, y: 550 },
+    'n6b':{ id: 'n6b', name: 'Cursed Oasis',    type: 'CURSED_OASIS',      parents: ['n5b'], x: 850, y: 600 },
+
+    // Convergence 2: Border to Dead Lands
+    'n7': { id: 'n7', name: 'Foggy Graveyard',  type: 'FOGGY_GRAVEYARD',   parents: ['n6a', 'n6b'], x: 1000, y: 400 },
+
+    // --- THE DEAD LANDS (Web Structure) ---
+    'n8a':{ id: 'n8a', name: 'Haunted Hills',   type: 'HAUNTED_HILLS',     parents: ['n7'], x: 1150, y: 300 },
+    'n8b':{ id: 'n8b', name: 'Crypt Entrance',  type: 'CRYPT_ENTRANCE',    parents: ['n7'], x: 1150, y: 500 },
+    
+    'n9': { id: 'n9', name: 'Mausoleum',        type: 'MAUSOLEUM',         parents: ['n8a', 'n8b'], x: 1300, y: 400 },
+
+    // --- THE CASTLE (Gauntlet) ---
+    'n10':{ id: 'n10',name: 'Castle Gates',     type: 'CASTLE_GATES',      parents: ['n9'], x: 1450, y: 400 },
+    'n11':{ id: 'n11',name: 'Void Trader',      type: 'VOID_TRADER',       parents: ['n10'], x: 1600, y: 250 }, // Side room
+    'n12':{ id: 'n12',name: 'The Dungeons',     type: 'THE_DUNGEONS',      parents: ['n10'], x: 1600, y: 550 }, // Side room
+    
+    'n13':{ id: 'n13',name: 'Grand Hall',       type: 'GRAND_HALL',        parents: ['n11', 'n12'], x: 1750, y: 400 },
+    'n14':{ id: 'n14',name: 'Throne Room',      type: 'THRONE_ROOM',       parents: ['n13'], x: 1950, y: 400 }
 };
 
 /* --- DUNGEON NODE CONFIGURATIONS --- */
 const NODE_CONFIGS = {
-    'MERCHANT_TIER_2': {
-        icon: '💰',
-        isMerchant: true,
+    // --- REGION 1: THE GREENLANDS (Easy) ---
+    'VILLAGE_OUTSKIRTS': {
+        icon: '🏡', minCards: 4, maxCards: 5,
+        monsters: ['m_rat', 'm_goblin', 'm_thief', 'm_bat_swarm'],
+        events: ['e_chest'], bossPool: []
+    },
+    'WHISPERING_WOODS': {
+        icon: '🌲', minCards: 5, maxCards: 6,
+        monsters: ['m_goblin', 'm_wolf', 'm_bear', 'm_hornet', 'm_treant'],
+        events: ['e_trap', 'e_spring'], bossPool: ['mb_brood', 'mb_bandit_king']
+    },
+    'MOSSY_RUINS': {
+        icon: '🗿', minCards: 5, maxCards: 7,
+        monsters: ['m_slime', 'm_spider', 'm_moss_golem', 'm_bat_swarm'],
+        events: ['e_shrine'], bossPool: ['mb_giant_slime']
+    },
+    'OLD_BRIDGE': {
+        icon: '🌉', minCards: 6, maxCards: 6,
+        monsters: ['m_bandit', 'm_orc', 'm_thief', 'm_shaman'],
+        events: ['e_trap'], bossPool: ['mb_troll', 'mb_chimera']
+    },
+    
+    // --- MERCHANT 1 ---
+    'TRAVELERS_REST': {
+        icon: '🍺', isMerchant: true,
         itemPool: [
-            { id: 'l_shield', price: 20 },
-            { id: 'l_dagger', price: 20 },
-            { id: 's_mend',   price: 15 },
-            { id: 'l_goo',    price: 50 },
-            { id: 's_bolt',   price: 40 },
-            { id: 'l_cloak',  price: 80 },
-            { id: 'l_spear',  price: 60 },
-            { id: 's_web',    price: 45 }
+            { id: 'l_dagger', price: 15 }, { id: 'l_shield', price: 15 },
+            { id: 's_mend', price: 20 }, { id: 's_rush', price: 25 }
         ]
     },
-    'CAVERNS': {
-        icon: '🦇', // Bat/Cave
-        minCards: 5, maxCards: 6,
-        monsters: ['m_goblin', 'm_rat', 'm_slime'], 
-        events: ['e_trap', 'e_chest', 'e_spring'],
-        bossPool: ['mb_troll', 'mb_brood']
+
+    // --- REGION 2: THE SUN-SCORCHED SANDS (Medium) ---
+    'SAND_DUNES': {
+        icon: '🏜️', minCards: 6, maxCards: 8,
+        monsters: ['m_kobold', 'm_sandworm', 'm_scorpion', 'm_dust_devil'],
+        events: ['e_chest'], bossPool: ['mb_sandworm_q']
     },
-    'DEEP_DARK': {
-        icon: '🌑', // New Moon/Darkness
-        minCards: 6, maxCards: 8,
-        monsters: ['m_orc', 'm_spider', 'm_wolf', 'm_kobold'],
-        events: ['e_shrine', 'e_tribute'],
-        bossPool: ['mb_lich', 'mb_knight']
+    'CANYON_PASS': {
+        icon: '⛰️', minCards: 7, maxCards: 9,
+        monsters: ['m_kobold', 'm_orc', 'm_vulture', 'm_nomad'],
+        events: ['e_trap', 'e_tribute'], bossPool: []
     },
-    'VOID': {
-        icon: '🔮', // Crystal/Void
-        minCards: 8, maxCards: 10,
-        monsters: ['m_golem', 'm_assassin', 'm_ent', 'm_drake'],
-        events: ['e_tribute', 'e_trainer'],
-        bossPool: ['mb_malakor']
+    'CURSED_OASIS': {
+        icon: '🌴', minCards: 6, maxCards: 8,
+        monsters: ['m_slime', 'm_leech', 'm_sand_spirit', 'm_cactus'],
+        events: ['e_spring', 'e_shrine'], bossPool: ['mb_brood', 'mb_giant_slime'] 
     },
-    'SPIDER_NEST': {
-        icon: '🕸️', // Web
-        minCards: 5, maxCards: 7,
-        monsters: ['m_spider'], 
-        events: ['e_trap'],
-        bossPool: ['mb_brood']
+    'SCORPION_PIT': {
+        icon: '🦂', minCards: 8, maxCards: 8,
+        monsters: ['m_spider', 'm_scorpion', 'm_basilisk', 'm_mummy'],
+        events: ['e_trap'], bossPool: ['mb_scorp_king']
+    },
+
+    // --- MERCHANT 2 ---
+    'DESERT_BAZAAR': {
+        icon: '⛺', isMerchant: true,
+        itemPool: [
+            { id: 'l_spear', price: 50 }, { id: 's_web', price: 40 },
+            { id: 's_bolt', price: 45 }, { id: 'l_goo', price: 50 }
+        ]
+    },
+
+    // --- REGION 3: THE DEAD LANDS (Hard) ---
+    'FOGGY_GRAVEYARD': {
+        icon: '🪦', minCards: 8, maxCards: 10,
+        monsters: ['m_skeleton', 'm_zombie', 'm_ghoul', 'm_bat_swarm'],
+        events: ['e_shrine'], bossPool: ['mb_necromancer']
+    },
+    'HAUNTED_HILLS': {
+        icon: '👻', minCards: 8, maxCards: 10,
+        monsters: ['m_wraith', 'm_wolf', 'm_specter', 'm_banshee'],
+        events: ['e_trap'], bossPool: ['mb_lich', 'mb_vampire']
+    },
+    'CRYPT_ENTRANCE': {
+        icon: '⚰️', minCards: 9, maxCards: 11,
+        monsters: ['m_skeleton', 'm_bone_warrior', 'm_mummy', 'm_gargoyle'],
+        events: ['e_shrine'], bossPool: ['mb_lich', 'mb_necromancer']
+    },
+    'MAUSOLEUM': {
+        icon: '🏛️', minCards: 10, maxCards: 12,
+        monsters: ['m_wraith', 'm_necromancer', 'm_abomination', 'm_zombie'],
+        events: ['e_shrine'], bossPool: ['mb_lich']
+    },
+
+    // --- MERCHANT 3 ---
+    'VOID_TRADER': {
+        icon: '🔮', isMerchant: true,
+        itemPool: [
+            { id: 'l_cloak', price: 100 }, { id: 'l_blood', price: 120 },
+            { id: 's_stone', price: 80 }, { id: 's_exec', price: 90 }
+        ]
+    },
+
+    // --- REGION 4: THE DARK CASTLE (Endgame) ---
+    'CASTLE_GATES': {
+        icon: '🏰', minCards: 10, maxCards: 12,
+        monsters: ['m_guard', 'm_armor', 'm_gargoyle', 'm_orc'],
+        events: ['e_trap'], bossPool: ['mb_knight', 'mb_commander']
+    },
+    'THE_DUNGEONS': {
+        icon: '⛓️', minCards: 10, maxCards: 14,
+        monsters: ['m_rat', 'm_skeleton', 'm_executioner', 'm_imp'],
+        events: ['e_tribute'], bossPool: []
+    },
+    'GRAND_HALL': {
+        icon: '🧛', minCards: 12, maxCards: 15,
+        monsters: ['m_royal_guard', 'm_sorcerer', 'm_dark_knight', 'm_warlock'],
+        events: ['e_trainer'], bossPool: ['mb_knight', 'mb_gargoyle_p']
+    },
+    'THRONE_ROOM': {
+        icon: '👑', minCards: 1, maxCards: 1, // Just the boss
+        monsters: [],
+        events: [], bossPool: ['m_malakor', 'mb_void_dragon']
     }
 };
 
@@ -930,6 +1032,68 @@ const MONSTER_DB = {
     'm_assassin':{ id: 'm_assassin', name: 'Void Assassin', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 6, lootTable: 'tier3_void', desc: 'High Damage!' },
     'm_ent':    { id: 'm_ent',    name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, lootTable: 'tier3_void', desc: 'Ancient Wood' },
     'm_drake':  { id: 'm_drake',  name: 'Baby Drake', type: CARD_TYPES.MONSTER, hp: 18, maxHp: 18, atk: 5, lootTable: 'tier3_void', desc: 'Fierce!' },
+    
+    'm_bandit': { id: 'm_bandit', name: 'Bandit', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_standard', desc: 'Thief' },
+    'm_skeleton': { id: 'm_skeleton', name: 'Skeleton', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 3, lootTable: 'tier2_standard', desc: 'Undead' },
+    'm_sandworm': { id: 'm_sandworm', name: 'Sand Worm', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 4, lootTable: 'tier2_standard', desc: 'Burrower' },
+    'm_wraith':   { id: 'm_wraith', name: 'Wraith', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 5, lootTable: 'tier3_void', desc: 'Spirit' },
+    'm_guard':    { id: 'm_guard', name: 'Castle Guard', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 4, lootTable: 'tier2_standard', desc: 'Armored' },
+    // --- NEW EXPANSION: REGION 1 (Greenlands) ---
+    'm_bear':       { id: 'm_bear', name: 'Brown Bear', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 3, lootTable: 'tier1_standard', desc: 'High HP' },
+    'm_thief':      { id: 'm_thief', name: 'Petty Thief', type: CARD_TYPES.MONSTER, hp: 5, maxHp: 5, atk: 3, lootTable: 'tier1_standard', desc: 'Sneaky' },
+    'm_hornet':     { id: 'm_hornet', name: 'Giant Hornet', type: CARD_TYPES.MONSTER, hp: 3, maxHp: 3, atk: 5, lootTable: 'tier1_standard', desc: 'Glass Cannon' },
+    'm_treant':     { id: 'm_treant', name: 'Young Treant', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 1, lootTable: 'tier1_elite', desc: 'Bark Skin' },
+    'm_moss_golem': { id: 'm_moss_golem', name: 'Moss Golem', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 2, lootTable: 'tier1_elite', desc: 'Ruins Guard' },
+    'm_shaman':     { id: 'm_shaman', name: 'Goblin Shaman', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_standard', desc: 'Magic User' },
+    'm_bat_swarm':  { id: 'm_bat_swarm', name: 'Bat Swarm', type: CARD_TYPES.MONSTER, hp: 4, maxHp: 4, atk: 2, lootTable: 'tier1_standard', desc: 'Annoying' },
+
+    // --- NEW EXPANSION: REGION 2 (Desert) ---
+    'm_scorpion':   { id: 'm_scorpion', name: 'Scorpion', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, lootTable: 'tier2_standard', desc: 'Venomous' },
+    'm_vulture':    { id: 'm_vulture', name: 'Carrion Bird', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 4, lootTable: 'tier1_standard', desc: 'Flying' },
+    'm_mummy':      { id: 'm_mummy', name: 'Mummy', type: CARD_TYPES.MONSTER, hp: 14, maxHp: 14, atk: 2, lootTable: 'tier2_standard', desc: 'Undead' },
+    'm_nomad':      { id: 'm_nomad', name: 'Desert Nomad', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Warrior' },
+    'm_basilisk':   { id: 'm_basilisk', name: 'Basilisk', type: CARD_TYPES.MONSTER, hp: 16, maxHp: 16, atk: 3, lootTable: 'tier2_standard', desc: 'Petrifying' },
+    'm_sand_spirit':{ id: 'm_sand_spirit', name: 'Sand Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Ethereal' },
+    'm_cactus':     { id: 'm_cactus', name: 'Living Cactus', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 2, lootTable: 'tier1_elite', desc: 'Spiky' },
+    'm_dust_devil': { id: 'm_dust_devil', name: 'Dust Devil', type: CARD_TYPES.MONSTER, hp: 7, maxHp: 7, atk: 4, lootTable: 'tier2_standard', desc: 'Windy' },
+
+    // --- NEW EXPANSION: REGION 3 (Dead Lands) ---
+    'm_zombie':     { id: 'm_zombie', name: 'Zombie', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 2, lootTable: 'tier2_standard', desc: 'Relentless' },
+    'm_ghoul':      { id: 'm_ghoul', name: 'Flesh Ghoul', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 4, lootTable: 'tier2_standard', desc: 'Hungry' },
+    'm_bone_warrior':{ id: 'm_bone_warrior', name: 'Bone Warrior', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 5, lootTable: 'tier3_void', desc: 'Armed' },
+    'm_necromancer':{ id: 'm_necromancer', name: 'Necromancer', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 6, lootTable: 'tier3_void', desc: 'Summoner' },
+    'm_banshee':    { id: 'm_banshee', name: 'Banshee', type: CARD_TYPES.MONSTER, hp: 9, maxHp: 9, atk: 5, lootTable: 'tier3_void', desc: 'Screamer' },
+    'm_gargoyle':   { id: 'm_gargoyle', name: 'Gargoyle', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 3, lootTable: 'tier3_void', desc: 'Stone Skin' },
+    'm_abomination':{ id: 'm_abomination', name: 'Abomination', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 4, lootTable: 'tier3_void', desc: 'Hulking' },
+    'm_specter':    { id: 'm_specter', name: 'Specter', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 6, lootTable: 'tier3_void', desc: 'Ghostly' },
+
+    // --- NEW EXPANSION: REGION 4 (Castle) ---
+    'm_armor':      { id: 'm_armor', name: 'Dark Armor', type: CARD_TYPES.MONSTER, hp: 22, maxHp: 22, atk: 3, lootTable: 'tier3_void', desc: 'Animated' },
+    'm_warlock':    { id: 'm_warlock', name: 'Cult Warlock', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 7, lootTable: 'tier3_void', desc: 'Dark Magic' },
+    'm_royal_guard':{ id: 'm_royal_guard', name: 'Royal Guard', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 5, lootTable: 'tier3_void', desc: 'Elite' },
+    'm_imp':        { id: 'm_imp', name: 'Chaos Imp', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 6, lootTable: 'tier2_standard', desc: 'Fast' },
+    'm_executioner':{ id: 'm_executioner', name: 'Executioner', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, lootTable: 'tier3_void', desc: 'Headsman' },
+    'm_sorcerer':   { id: 'm_sorcerer', name: 'Void Sorcerer', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 6, lootTable: 'tier3_void', desc: 'Caster' },
+    'm_dark_knight':{ id: 'm_dark_knight', name: 'Dark Knight', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 6, lootTable: 'tier3_void', desc: 'Champion' },
+
+// --- NEW BOSSES ---
+    // Tier 1 (Greenlands/Ruins)
+    'mb_bandit_king': { id: 'mb_bandit_king', name: 'Bandit King', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 4, isBoss: true, desc: 'BOSS: Leader' },
+    'mb_giant_slime': { id: 'mb_giant_slime', name: 'King Slime', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 3, isBoss: true, desc: 'BOSS: Massive' },
+    'mb_chimera':     { id: 'mb_chimera', name: 'Chimera', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 5, isBoss: true, desc: 'BOSS: Hybrid' },
+
+    // Tier 2 (Desert)
+    'mb_sandworm_q':  { id: 'mb_sandworm_q', name: 'Sandworm Queen', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, isBoss: true, desc: 'BOSS: Devourer' },
+    'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, desc: 'BOSS: Venomous' },
+
+    // Tier 3 (Dead Lands)
+    'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, desc: 'BOSS: Dark Magic' },
+    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, desc: 'BOSS: Immortal' },
+
+    // Tier 4 (Castle/Endgame)
+    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, isBoss: true, desc: 'BOSS: Armored' },
+    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, isBoss: true, desc: 'BOSS: Stone God' },
+    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, isBoss: true, desc: 'BOSS: Apex' },
 
     // Bosses
     'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
@@ -2037,7 +2201,7 @@ function killMonster(index) {
 
         // Reward: Boss Relic & Heal
         if(Math.random() < 0.1){
-            let reward = { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 10, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' };
+            let reward = { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 50, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' };
             state.inventory.push(reward);
             log(`Looted: ${reward.name}`, "#2ecc71");
         }
