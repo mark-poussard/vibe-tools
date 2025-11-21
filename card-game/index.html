@@ -725,6 +725,59 @@ const BOSSES = {
     ]
 };
 
+/* --- EVENT MANAGER (STORE PATTERN) --- */
+const EVENTS = {
+    GAME_UPDATED: 'game_updated',       // Hand, Row, Deck, Discard changed
+    HERO_UPDATED: 'hero_updated',       // HP, AP, Gold, Block, Stats changed
+    INVENTORY_UPDATED: 'inv_updated',   // Equipment/Inventory changed
+    MAP_UPDATED: 'map_updated'          // Nodes unlocked/completed
+};
+
+const EventManager = {
+    listeners: {},
+    on(event, callback) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+    },
+    emit(event, data) {
+        if (this.listeners[event]) {
+            this.listeners[event].forEach(cb => cb(data));
+        }
+    }
+};
+
+// Setup UI Subscribers
+function initUIListeners() {
+    // When Game State changes (Turn loop), redraw the Game Screen
+    EventManager.on(EVENTS.GAME_UPDATED, () => {
+        if (document.getElementById('game-container').style.display === 'flex') {
+            render();
+        }
+    });
+
+    // When Hero Stats change, update Game Bar AND Hero Screen
+    EventManager.on(EVENTS.HERO_UPDATED, () => {
+        // Update Game Top Bar (if visible)
+        if (document.getElementById('game-container').style.display === 'flex') {
+            render(); // This updates stats bar
+        }
+        // Update Hero Screen (if visible)
+        if (document.getElementById('hero-screen').style.display === 'flex') {
+            renderHeroScreen();
+        }
+    });
+
+    // When Inventory changes, redraw Hero Screen
+    EventManager.on(EVENTS.INVENTORY_UPDATED, () => {
+        renderHeroScreen();
+    });
+
+    // When Map changes, redraw Nodes
+    EventManager.on(EVENTS.MAP_UPDATED, () => {
+        renderWorldMap();
+    });
+}
+
 /* --- STATE --- */
 
 let state = {
@@ -813,7 +866,7 @@ function showMap() {
     document.getElementById('overlay').style.display = 'none';
 
     // Render Graph
-    renderWorldMap();
+    EventManager.emit(EVENTS.MAP_UPDATED); // Renders graph
     saveGame();
 
     // Init Drag Logic (Call once or check if init)
@@ -829,7 +882,9 @@ function showMap() {
 
 function showHeroScreen() {
     switchScreen('hero-screen');
-    renderHeroScreen();
+    // Force update based on current state
+    EventManager.emit(EVENTS.HERO_UPDATED);
+    EventManager.emit(EVENTS.INVENTORY_UPDATED);
 }
 
 function closeHeroScreen() {
@@ -845,8 +900,9 @@ function sellItem(index) {
     state.gold += val;
     state.inventory.splice(index, 1);
     
-    log(`Sold ${item.name} for ${val} Gold.`); // Logs to console if visible, or just updates state
-    renderHeroScreen();
+    log(`Sold ${item.name} for ${val} Gold.`);
+    EventManager.emit(EVENTS.HERO_UPDATED);
+    EventManager.emit(EVENTS.INVENTORY_UPDATED);
 }
 
 function showDeckScreen() {
@@ -939,7 +995,8 @@ function mapEquipItem(invIndex) {
         state.hero.maxAp += item.apBonus;
     }
     
-    renderHeroScreen();
+    EventManager.emit(EVENTS.HERO_UPDATED); // Stats might change (HP/AP bonus)
+    EventManager.emit(EVENTS.INVENTORY_UPDATED);
 }
 
 function mapUnequipItem(equipIndex) {
@@ -957,7 +1014,8 @@ function mapUnequipItem(equipIndex) {
 
     state.equipped.splice(equipIndex, 1);
     state.inventory.push(item);
-    renderHeroScreen();
+    EventManager.emit(EVENTS.HERO_UPDATED); // Stats might change (HP/AP bonus)
+    EventManager.emit(EVENTS.INVENTORY_UPDATED);
 }
 
 function renderHeroScreen() {
@@ -1184,7 +1242,7 @@ function enterDungeonNode(nodeId) {
     }
 
     log(`Entered: ${node.name}`);
-    render();
+    EventManager.emit(EVENTS.GAME_UPDATED);
 }
 
 function buildDungeonTier(tierNum) {
@@ -1280,7 +1338,7 @@ function exploreDungeon() {
     let card = state.dungeonDeck.shift();
     state.adventureRow.push(card);
     log("You explore deeper...");
-    render();
+    EventManager.emit(EVENTS.GAME_UPDATED);
 }
 
 function selectCard(index) {
@@ -1316,7 +1374,7 @@ function selectCard(index) {
     }
 
     // 5. Manual Target Required (Highlight card)
-    render();
+    EventManager.emit(EVENTS.GAME_UPDATED);
 }
 
 function playCard(target) {
@@ -1394,8 +1452,9 @@ function playCard(target) {
             if(item.block) addBlock(item.block);
         });
 
-        // 3. Render Updates
-        render();
+        // 3. State Updated
+        EventManager.emit(EVENTS.GAME_UPDATED);
+        EventManager.emit(EVENTS.HERO_UPDATED); // In case block/stats changed
 
         // 4. Check for Auto-End Turn OR Dungeon Clear
         // We do this last so the card completely resolves before the state resets
@@ -1469,7 +1528,9 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             state.inventory.push(item);
             
             log(`The fall knocked off your ${item.name}!`, "red");
-            render(); // Update UI to show item is gone
+            // Update UI to show item is gone
+            EventManager.emit(EVENTS.GAME_UPDATED); 
+            EventManager.emit(EVENTS.INVENTORY_UPDATED);
         } else {
             log("You stumbled, but had nothing equipped to lose.");
         }
@@ -1545,7 +1606,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     function spawnEventMonster(id) {
         const monster = JSON.parse(JSON.stringify(EVENT_MONSTERS[id]));
         state.adventureRow[cardIndex] = monster;
-        render();
+        EventManager.emit(EVENTS.GAME_UPDATED);
     }
 }
 
@@ -1621,9 +1682,10 @@ function dungeonComplete() {
     log("Dungeon Cleared!", "gold");
     
     // Mark Node as Complete
-    if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
-        state.completedNodes.push(state.currentNodeId);
-    }
+        if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
+            state.completedNodes.push(state.currentNodeId);
+            EventManager.emit(EVENTS.MAP_UPDATED);
+        }
 
     // Delay slightly then go to map
     setTimeout(() => {
@@ -1647,11 +1709,13 @@ function continueGame() {
 function addBlock(amount) {
     state.hero.block += amount;
     log(`Gained ${amount} Block.`);
+    EventManager.emit(EVENTS.HERO_UPDATED);
 }
 
 function healHero(amount) {
     state.hero.hp = Math.min(state.hero.maxHp, state.hero.hp + amount);
     log(`Healed for <span class="log-gain">${amount}</span> HP.`);
+    EventManager.emit(EVENTS.HERO_UPDATED);
 }
 
 function endTurn() {
@@ -1701,7 +1765,7 @@ function endTurn() {
 
     state.turn++;
     state.selectedCardIndex = -1;
-    render();
+    EventManager.emit(EVENTS.GAME_UPDATED);
 }
 
 function checkWinCondition() {}
@@ -1879,6 +1943,9 @@ function resetProgress() {
         location.reload();
     }
 }
+
+// Init Event System
+initUIListeners();
 
 // Start Game
 if (!loadGame()) {
