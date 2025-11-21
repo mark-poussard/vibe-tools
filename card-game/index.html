@@ -814,46 +814,76 @@ const COMMON_EVENTS = [
 ];
 
 const MAP_GRAPH = {
-    // x/y are pixels relative to the map-world container
-    'node_caverns': { id: 'node_caverns', name: 'The Caverns', tier: 1, parents: [], x: 150, y: 300 },
-    'node_dark':    { id: 'node_dark',    name: 'The Deep Dark', tier: 2, parents: ['node_caverns'], x: 400, y: 150 },
-    'node_void':    { id: 'node_void',    name: 'The Void',      tier: 3, parents: ['node_dark'], x: 650, y: 300 }
+    'node_caverns': { id: 'node_caverns', name: 'The Caverns', type: 'CAVERNS', tier: 1, parents: [], x: 150, y: 300 },
+    
+    'node_dark':    { id: 'node_dark',    name: 'The Deep Dark', type: 'DEEP_DARK', tier: 2, parents: ['node_caverns'], x: 400, y: 150 },
+    
+    'node_spider':  { id: 'node_spider',  name: 'Spider Nest',   type: 'SPIDER_NEST', tier: 2, parents: ['node_caverns'], x: 400, y: 450 },
+
+    'node_void':    { id: 'node_void',    name: 'The Void',      type: 'VOID',      tier: 3, parents: ['node_dark', 'node_spider'], x: 650, y: 300 }
 };
 
-const TIER_POOLS = {
-    1: [ 
-        { id: 'm_goblin', name: 'Goblin', type: CARD_TYPES.MONSTER, hp: 4, maxHp: 4, atk: 2, lootTable: 'tier1_standard', desc: 'Common Enemy' },
-        { id: 'm_rat', name: 'Giant Rat', type: CARD_TYPES.MONSTER, hp: 3, maxHp: 3, atk: 3, lootTable: 'tier1_standard', desc: 'Fast Enemy' },
-        { id: 'm_slime', name: 'Acid Slime', type: CARD_TYPES.MONSTER, hp: 5, maxHp: 5, atk: 1, lootTable: 'tier1_standard', desc: 'Sticky' },
-        { id: 'm_kobold', name: 'Kobold', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_elite', desc: 'Elite Scout' }
-    ],
-    2: [ 
-        { id: 'm_orc', name: 'Orc', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 4, lootTable: 'tier2_standard', desc: 'Heavy Hitter' },
-        { id: 'm_spider', name: 'Cave Spider', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 2, lootTable: 'tier2_standard', desc: 'Poisonous' },
-        { id: 'm_wolf', name: 'Dire Wolf', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Fast Biter' },
-        { id: 'm_cultist', name: 'Dark Cultist', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Glass Cannon' }
-    ],
-    3: [ 
-        { id: 'm_golem', name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, lootTable: 'tier3_void', desc: 'Tank' },
-        { id: 'm_assassin', name: 'Void Assassin', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 6, lootTable: 'tier3_void', desc: 'High Damage!' },
-        { id: 'm_ent', name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, lootTable: 'tier3_void', desc: 'Ancient Wood' },
-        { id: 'm_drake', name: 'Baby Drake', type: CARD_TYPES.MONSTER, hp: 18, maxHp: 18, atk: 5, lootTable: 'tier3_void', desc: 'Fierce!' }
-    ]
+/* --- DUNGEON NODE CONFIGURATIONS --- */
+const NODE_CONFIGS = {
+    'CAVERNS': {
+        icon: '🦇', // Bat/Cave
+        minCards: 5, maxCards: 6,
+        monsters: ['m_goblin', 'm_rat', 'm_slime'], 
+        events: ['e_trap', 'e_chest', 'e_spring'],
+        bossPool: ['mb_troll', 'mb_brood']
+    },
+    'DEEP_DARK': {
+        icon: '🌑', // New Moon/Darkness
+        minCards: 6, maxCards: 8,
+        monsters: ['m_orc', 'm_spider', 'm_wolf', 'm_kobold'],
+        events: ['e_shrine', 'e_tribute'],
+        bossPool: ['mb_lich', 'mb_knight']
+    },
+    'VOID': {
+        icon: '🔮', // Crystal/Void
+        minCards: 8, maxCards: 10,
+        monsters: ['m_golem', 'm_assassin', 'm_ent', 'm_drake'],
+        events: ['e_tribute', 'e_trainer'],
+        bossPool: ['m_malakor']
+    },
+    'SPIDER_NEST': {
+        icon: '🕸️', // Web
+        minCards: 5, maxCards: 7,
+        monsters: ['m_spider'], 
+        events: ['e_trap'],
+        bossPool: ['mb_brood']
+    }
 };
 
-const BOSSES = {
-    1: [ // Gatekeepers to Tier 2
-        { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
-        { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' }
-    ],
-    2: [ // Gatekeepers to Tier 3
-        { id: 'mb_lich', name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
-        { id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' }
-    ],
-    3: [ // Gatekeepers to Tier 3
-        { id: 'm_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, desc: 'FINAL BOSS' }
-    ]
+const MONSTER_DB = {
+    // Tier 1
+    'm_goblin': { id: 'm_goblin', name: 'Goblin', type: CARD_TYPES.MONSTER, hp: 4, maxHp: 4, atk: 2, lootTable: 'tier1_standard', desc: 'Common Enemy' },
+    'm_rat':    { id: 'm_rat',    name: 'Giant Rat', type: CARD_TYPES.MONSTER, hp: 3, maxHp: 3, atk: 3, lootTable: 'tier1_standard', desc: 'Fast Enemy' },
+    'm_slime':  { id: 'm_slime',  name: 'Acid Slime', type: CARD_TYPES.MONSTER, hp: 5, maxHp: 5, atk: 1, lootTable: 'tier1_standard', desc: 'Sticky' },
+    'm_kobold': { id: 'm_kobold', name: 'Kobold', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_elite', desc: 'Elite Scout' },
+    
+    // Tier 2
+    'm_orc':    { id: 'm_orc',    name: 'Orc', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 4, lootTable: 'tier2_standard', desc: 'Heavy Hitter' },
+    'm_spider': { id: 'm_spider', name: 'Cave Spider', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 2, lootTable: 'tier2_standard', desc: 'Poisonous' },
+    'm_wolf':   { id: 'm_wolf',   name: 'Dire Wolf', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Fast Biter' },
+    'm_cultist':{ id: 'm_cultist',name: 'Dark Cultist', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Glass Cannon' },
+
+    // Tier 3
+    'm_golem':  { id: 'm_golem',  name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, lootTable: 'tier3_void', desc: 'Tank' },
+    'm_assassin':{ id: 'm_assassin', name: 'Void Assassin', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 6, lootTable: 'tier3_void', desc: 'High Damage!' },
+    'm_ent':    { id: 'm_ent',    name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, lootTable: 'tier3_void', desc: 'Ancient Wood' },
+    'm_drake':  { id: 'm_drake',  name: 'Baby Drake', type: CARD_TYPES.MONSTER, hp: 18, maxHp: 18, atk: 5, lootTable: 'tier3_void', desc: 'Fierce!' },
+
+    // Bosses
+    'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
+    'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
+    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
+    'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
+    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, desc: 'FINAL BOSS' }
 };
+
+const EVENT_DB = {}; 
+COMMON_EVENTS.forEach(e => EVENT_DB[e.id] = e); // Quick mapping helper
 
 /* --- STATE --- */
 
@@ -1363,13 +1393,14 @@ function renderWorldMap() {
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
 
+        const config = NODE_CONFIGS[node.type];
         // Logic for appearance/interaction
         if (isCompleted) {
             el.classList.add('completed');
-            el.innerHTML = "✓";
+            el.innerHTML = config.icon;
         } else if (isUnlocked) {
             el.classList.add('unlocked');
-            el.innerHTML = node.tier;
+            el.innerHTML = config.icon;
         } else {
             el.classList.add('locked');
             el.innerHTML = "🔒";
@@ -1399,7 +1430,7 @@ function enterDungeonNode(nodeId) {
     state.currentNodeId = nodeId;
     state.tier = node.tier; // Still needed for buildDungeonTier logic
     
-    state.dungeonDeck = buildDungeonTier(node.tier);
+    state.dungeonDeck = buildDungeonFromConfig(node.type);
     state.adventureRow = [];
     state.turn = 1;
 
@@ -1425,27 +1456,31 @@ function enterDungeonNode(nodeId) {
     EventManager.emit(EVENTS.GAME_UPDATED);
 }
 
-function buildDungeonTier(tierNum) {
+function buildDungeonFromConfig(configKey) {
     let segment = [];
-    const monsterPool = TIER_POOLS[tierNum];
-    
-    // Add 5 Monsters from the pool
-    for(let i=0; i<5; i++) {
-        segment.push({...monsterPool[Math.floor(Math.random() * monsterPool.length)]});
-    }
-    
-    // Add 2 Random Events (Filtered by Tier)
-    const availableEvents = COMMON_EVENTS.filter(e => e.minTier <= tierNum);
-    
-    if (availableEvents.length > 0) {
-        for(let i=0; i<2; i++) {
-            segment.push({...availableEvents[Math.floor(Math.random() * availableEvents.length)]});
+    const config = NODE_CONFIGS[configKey];
+    if (!config) { console.error("Missing config:", configKey); return []; }
+
+    // 1. Determine Length
+    const cardCount = Math.floor(Math.random() * (config.maxCards - config.minCards + 1)) + config.minCards;
+
+    // 2. Fill with Monsters & Events
+    // Simple Logic: 70% Monster, 30% Event
+    for(let i=0; i<cardCount; i++) {
+        if (Math.random() > 0.3 || config.events.length === 0) {
+            // Add Monster
+            const mId = config.monsters[Math.floor(Math.random() * config.monsters.length)];
+            segment.push({...MONSTER_DB[mId]});
+        } else {
+            // Add Event
+            const eId = config.events[Math.floor(Math.random() * config.events.length)];
+            segment.push({...EVENT_DB[eId]});
         }
     }
 
     shuffle(segment);
 
-    // Ensure the first card is NOT an event so the player isn't blocked immediately
+    // 3. Safety Check (No Event at start)
     if (segment.length > 0 && segment[0].type === CARD_TYPES.EVENT) {
         const safeIndex = segment.findIndex(c => c.type === CARD_TYPES.MONSTER);
         if (safeIndex !== -1) {
@@ -1453,10 +1488,11 @@ function buildDungeonTier(tierNum) {
         }
     }
 
-    // Add Boss at the bottom
-    const bossPool = BOSSES[tierNum];
-    const boss = {...bossPool[Math.floor(Math.random() * bossPool.length)]};
-    segment.push(boss);
+    // 4. Add Boss
+    if (config.bossPool && config.bossPool.length > 0) {
+        const bId = config.bossPool[Math.floor(Math.random() * config.bossPool.length)];
+        segment.push({...MONSTER_DB[bId]});
+    }
 
     return segment;
 }
@@ -1789,7 +1825,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
 
     // Helper to swap event with monster
     function spawnEventMonster(id) {
-        const monster = JSON.parse(JSON.stringify(EVENT_MONSTERS[id]));
+        const monster = JSON.parse(JSON.stringify(MONSTER_DB[id] || EVENT_MONSTERS[id]));
         state.adventureRow[cardIndex] = monster;
         EventManager.emit(EVENTS.GAME_UPDATED);
     }
