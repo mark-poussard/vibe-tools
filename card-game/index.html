@@ -412,6 +412,40 @@
             align-items: center;
             z-index: 100;
         }
+
+        /* Event Specific Overlay */
+        #event-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 90;
+        }
+        
+        /* Explicit Ordering */
+        #event-overlay h2 { order: 1; }
+        #event-card-container { order: 2; }
+        
+        #event-overlay .card {
+            transform: scale(1.5); 
+            box-shadow: 0 0 30px rgba(230, 126, 34, 0.6);
+            
+            /* Fix Layout: Add margin to reserve space for the visual expansion.
+               Card grows ~25% upwards and downwards (50% total scale). 
+               120px height * 0.25 = 30px. We add 40px for safety. */
+            margin: 40px; 
+        }
+        
+        #event-overlay h2 {
+            color: white;
+            margin: 0; /* Let gap handle spacing */
+            text-shadow: 0 2px 4px black;
+            order: -1; /* Force to top */
+        }
     </style>
 </head>
 <body>
@@ -528,6 +562,12 @@
             <div id="manager-col-grid" class="card-grid"></div>
         </div>
     </div>
+</div>
+
+<!-- Event Overlay -->
+<div id="event-overlay">
+    <h2>Event Encounter</h2>
+    <div id="event-card-container"></div>
 </div>
 
 <!-- Game Overlay (Win/Loss) -->
@@ -2061,6 +2101,9 @@ function processEffects(effects, targetIndex) {
 
 // --- EVENT RESOLUTION ---
 function resolveEventChoice(cardIndex, choiceIndex) {
+    // Verify card exists (edge case safety)
+    if (!state.adventureRow[cardIndex]) return;
+
     const eventCard = state.adventureRow[cardIndex];
     const choice = eventCard.choices[choiceIndex];
 
@@ -2175,10 +2218,15 @@ function resolveEventChoice(cardIndex, choiceIndex) {
 
     render();
 
-    // Check for Auto-End Turn after event resolves
+    // Check for Auto-End Turn OR Dungeon Clear
     if (state.adventureRow.length === 0) {
-        log("Zone cleared. Ending turn...", "#95a5a6");
-        endTurn();
+        if (state.dungeonDeck.length === 0) {
+            // ALL threats removed (including deck)
+            dungeonComplete();
+        } else {
+            log("Zone cleared. Ending turn...", "#95a5a6");
+            endTurn();
+        }
     }
 
     // Helper to clear the event from the row
@@ -2405,8 +2453,31 @@ function render() {
     const advContainer = document.getElementById('adventure-row');
     
     // Check logic for button state
-    const hasEvent = state.adventureRow.some(c => c.type === CARD_TYPES.EVENT);
+    const eventIndex = state.adventureRow.findIndex(c => c.type === CARD_TYPES.EVENT);
+    const hasEvent = eventIndex !== -1;
     const isFull = state.adventureRow.length >= 5;
+
+    // --- EVENT OVERLAY LOGIC ---
+    const evtOverlay = document.getElementById('event-overlay');
+    const evtContainer = document.getElementById('event-card-container');
+    
+    if (hasEvent) {
+        // Show Overlay
+        evtOverlay.style.display = 'flex';
+        evtContainer.innerHTML = '';
+        
+        // Render the Event Card into the overlay
+        // We pass the index so the buttons work correctly
+        const eventCard = createCardElement(state.adventureRow[eventIndex], eventIndex);
+        
+        // Prevent clicking the card body itself (optional aesthetic tweak)
+        eventCard.style.pointerEvents = "auto"; 
+        
+        evtContainer.appendChild(eventCard);
+    } else {
+        // Hide Overlay
+        evtOverlay.style.display = 'none';
+    }
     const disabledAttr = (hasEvent || isFull || state.dungeonDeck.length === 0) ? 'disabled' : '';
     const btnColor = hasEvent ? '#e67e22' : '#7f8c8d'; // Visual cue
 
