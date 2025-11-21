@@ -207,7 +207,7 @@
         .destroy-btn { width: 20px; height: 20px; font-size: 12px; }
 
         /* --- Map & Menus --- */
-        #map-screen, #hero-selection, #hero-screen, #deck-screen {
+        #map-screen, #hero-selection, #hero-screen, #deck-screen, #merchant-screen {
             display: flex;
             flex-direction: column;
             padding: 20px;
@@ -336,6 +336,22 @@
             padding: 5px;
         }
 
+        .merchant-panel {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #f1c40f;
+            border-radius: 8px;
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+        .merchant-price {
+            position: absolute; bottom: 2px; right: 2px;
+            background: rgba(0,0,0,0.8); color: #f1c40f;
+            padding: 2px 4px; border-radius: 4px; font-size: 10px;
+        }
+
         /* Grids for managers */
         .card-grid {
             display: grid;
@@ -440,6 +456,31 @@
         <div style="flex-grow: 1; overflow-y: auto;">
             <div style="font-size:1em; margin-bottom:10px; color:var(--highlight); position: sticky; top:0; background: var(--bg-color); padding: 5px;">Inventory</div>
             <div id="hero-screen-inventory" class="card-grid" style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Merchant Screen -->
+<div id="merchant-screen">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 style="color:#f1c40f;">Traveling Merchant</h1>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <strong style="color:#f1c40f; font-size:1.2em;">Gold: <span id="merchant-gold">0</span></strong>
+            <button onclick="closeMerchantScreen()">Leave Shop</button>
+        </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:10px; flex:1; overflow:hidden;">
+        <!-- Buy Section -->
+        <div class="merchant-panel">
+            <h2 style="margin:0 0 5px 0; font-size:14px; color:#2ecc71;">Buy Items</h2>
+            <div id="merchant-buy-grid" class="card-grid" style="overflow-y:auto;"></div>
+        </div>
+
+        <!-- Sell Section -->
+        <div class="merchant-panel">
+            <h2 style="margin:0 0 5px 0; font-size:14px; color:#e74c3c;">Sell Your Goods</h2>
+            <div id="merchant-sell-grid" class="card-grid" style="overflow-y:auto;"></div>
         </div>
     </div>
 </div>
@@ -817,6 +858,8 @@ const MAP_GRAPH = {
     'node_caverns': { id: 'node_caverns', name: 'The Caverns', type: 'CAVERNS', tier: 1, parents: [], x: 150, y: 300 },
     
     'node_dark':    { id: 'node_dark',    name: 'The Deep Dark', type: 'DEEP_DARK', tier: 2, parents: ['node_caverns'], x: 400, y: 150 },
+    // Branch A-2 (Merchant) - Accessible after Dark
+    'node_shop':    { id: 'node_shop',    name: 'Dark Market',   type: 'MERCHANT_TIER_2', tier: 2, parents: ['node_dark'], x: 525, y: 150 },
     
     'node_spider':  { id: 'node_spider',  name: 'Spider Nest',   type: 'SPIDER_NEST', tier: 2, parents: ['node_caverns'], x: 400, y: 450 },
 
@@ -825,6 +868,20 @@ const MAP_GRAPH = {
 
 /* --- DUNGEON NODE CONFIGURATIONS --- */
 const NODE_CONFIGS = {
+    'MERCHANT_TIER_2': {
+        icon: '💰',
+        isMerchant: true,
+        itemPool: [
+            { id: 'l_shield', price: 20 },
+            { id: 'l_dagger', price: 20 },
+            { id: 's_mend',   price: 15 },
+            { id: 'l_goo',    price: 50 },
+            { id: 's_bolt',   price: 40 },
+            { id: 'l_cloak',  price: 80 },
+            { id: 'l_spear',  price: 60 },
+            { id: 's_web',    price: 45 }
+        ]
+    },
     'CAVERNS': {
         icon: '🦇', // Bat/Cave
         minCards: 5, maxCards: 6,
@@ -994,6 +1051,12 @@ const Screens = {
         onEnter: () => {
             EventManager.emit(EVENTS.HERO_UPDATED);
             EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        }
+    },
+    MERCHANT: {
+        id: 'merchant-screen',
+        onEnter: () => {
+            renderMerchantScreen();
         }
     },
     DECK_MANAGER: {
@@ -1426,6 +1489,15 @@ function renderWorldMap() {
 
 function enterDungeonNode(nodeId) {
     const node = MAP_GRAPH[nodeId];
+    const config = NODE_CONFIGS[node.type];
+    
+    // Handle Merchant Node
+    if (config.isMerchant) {
+        state.currentNodeId = nodeId;
+        ScreenManager.show('MERCHANT');
+        log(`Entered: ${node.name}`);
+        return;
+    }
     
     state.currentNodeId = nodeId;
     state.tier = node.tier; // Still needed for buildDungeonTier logic
@@ -1454,6 +1526,118 @@ function enterDungeonNode(nodeId) {
 
     log(`Entered: ${node.name}`);
     EventManager.emit(EVENTS.GAME_UPDATED);
+}
+
+function buyMerchantItem(itemId, price) {
+    if (state.gold >= price) {
+        state.gold -= price;
+        
+        // Create fresh copy
+        const item = JSON.parse(JSON.stringify(ITEM_DB[itemId]));
+        
+        // Add to appropriate storage
+        if (item.type === CARD_TYPES.LOOT) {
+            state.inventory.push(item);
+        } else {
+            state.collection.push(item);
+        }
+        
+        renderMerchantScreen();
+        log(`Bought ${item.name} for ${price}g.`);
+    } else {
+        alert("Not enough Gold!");
+    }
+}
+
+function sellMerchantItem(source, index) {
+    let item;
+    if (source === 'inventory') {
+        item = state.inventory.splice(index, 1)[0];
+    } else {
+        item = state.collection.splice(index, 1)[0];
+    }
+    
+    const val = item.value || 0;
+    state.gold += val;
+    
+    renderMerchantScreen();
+    log(`Sold ${item.name} for ${val}g.`);
+}
+
+function renderMerchantScreen() {
+    document.getElementById('merchant-gold').innerText = state.gold;
+
+    // 1. Render Buy Grid (Infinite Stock)
+    const buyGrid = document.getElementById('merchant-buy-grid');
+    buyGrid.innerHTML = '';
+    
+    // Get current merchant config
+    const node = MAP_GRAPH[state.currentNodeId];
+    const config = NODE_CONFIGS[node.type];
+
+    config.itemPool.forEach(offer => {
+        const baseItem = ITEM_DB[offer.id];
+        const price = offer.price;
+
+        let wrapper = document.createElement('div');
+        wrapper.style.position = 'relative';
+        
+        let div = createCardElement(baseItem);
+        
+        // Add Price Tag
+        let priceTag = document.createElement('div');
+        priceTag.className = 'merchant-price';
+        priceTag.innerText = `${price}g`;
+        div.appendChild(priceTag);
+
+        div.onclick = () => buyMerchantItem(offer.id, price);
+        div.style.cursor = 'pointer';
+
+        // Overlay if too expensive
+        if (state.gold < price) {
+            div.style.opacity = '0.5';
+        }
+
+        wrapper.appendChild(div);
+        buyGrid.appendChild(wrapper);
+    });
+
+    // 2. Render Sell Grid (Inventory + Collection)
+    const sellGrid = document.getElementById('merchant-sell-grid');
+    sellGrid.innerHTML = '';
+
+    // Helper to render sellable item
+    const renderSellable = (item, source, idx) => {
+        let div = createCardElement(item);
+        div.onclick = () => sellMerchantItem(source, idx);
+        div.style.cursor = 'pointer';
+        
+        let valTag = document.createElement('div');
+        valTag.className = 'merchant-price';
+        valTag.style.color = '#e74c3c'; // Red for sell
+        valTag.innerText = `Sell: ${item.value || 0}g`;
+        div.appendChild(valTag);
+        
+        sellGrid.appendChild(div);
+    };
+
+    state.inventory.forEach((item, idx) => renderSellable(item, 'inventory', idx));
+    state.collection.forEach((item, idx) => renderSellable(item, 'collection', idx));
+
+    if(state.inventory.length === 0 && state.collection.length === 0) {
+        sellGrid.innerHTML = '<span style="opacity:0.5; padding:10px;">Nothing to sell.</span>';
+    }
+}
+
+function closeMerchantScreen() {
+    // Mark node as complete when leaving shop
+    if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
+        state.completedNodes.push(state.currentNodeId);
+        EventManager.emit(EVENTS.MAP_UPDATED);
+    }
+    
+    ScreenManager.show('MAP');
+    saveGame();
 }
 
 function buildDungeonFromConfig(configKey) {
