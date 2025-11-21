@@ -305,6 +305,31 @@
 
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
 
+        /* Hero Selection Specifics */
+        .hero-select-container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            padding: 20px;
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+        
+        /* Make Hero Selection cards slightly larger and interactive */
+        .hero-select-container .card {
+            transform: scale(1.2);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .hero-select-container .card:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 15px var(--highlight);
+            z-index: 10;
+        }
+
         .deck-manager-container {
             display: flex;
             flex-direction: column; /* Vertical stack */
@@ -578,7 +603,7 @@ const CARD_TYPES = {
 const HEROES = [
     { 
         id: 'h_ironclad', 
-        name: 'Ironclad', 
+        name: 'Paladin', 
         type: CARD_TYPES.HERO, 
         hp: 30, maxHp: 30, 
         ap: 2, maxAp: 2, 
@@ -588,7 +613,7 @@ const HEROES = [
     },
     { 
         id: 'h_shadow', 
-        name: 'Shadow', 
+        name: 'Rogue', 
         type: CARD_TYPES.HERO, 
         hp: 25, maxHp: 25, 
         ap: 3, maxAp: 3, 
@@ -598,7 +623,7 @@ const HEROES = [
     },
     { 
         id: 'h_weaver', 
-        name: 'Weaver', 
+        name: 'Mage', 
         type: CARD_TYPES.HERO, 
         hp: 20, maxHp: 20, 
         ap: 3, maxAp: 3, 
@@ -612,13 +637,13 @@ const HEROES = [
 const ITEM_DB = {
     // --- TIER 1 COMMON ---
     'l_dagger': { id: 'l_dagger', name: 'Rusty Dagger', type: CARD_TYPES.LOOT, rarity: 'common', value: 10, atkBuff: 1, desc: '+1 DMG' },
-    'l_shield': { id: 'l_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 10, block: 1, desc: '+1 Block on Play' },
+    'l_shield': { id: 'l_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 10, block: 1, desc: '+1 Block / Turn' },
     's_bite':   { id: 's_bite',   name: 'Rabid Bite', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, dmg: 2, desc: 'Deal 2 DMG' },
     's_claw':   { id: 's_claw',   name: 'Feral Claw', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, dmg: 3, desc: 'Deal 3 DMG' },
     's_mend':   { id: 's_mend',   name: 'Mend',       type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, heal: 4, desc: 'Heal 4 HP' },
 
     // --- TIER 1 RARE ---
-    'l_goo':    { id: 'l_goo',    name: 'Slime Shield', type: CARD_TYPES.LOOT, rarity: 'rare', value: 25, block: 2, desc: '+2 Block on Play' },
+    'l_goo':    { id: 'l_goo',    name: 'Slime Shield', type: CARD_TYPES.LOOT, rarity: 'rare', value: 25, block: 2, desc: '+2 Block / Turn' },
     'l_spear':  { id: 'l_spear',  name: 'Short Spear',  type: CARD_TYPES.LOOT, rarity: 'rare', value: 25, atkBuff: 2, desc: '+2 DMG' },
     's_web':    { id: 's_web',    name: 'Web Shot',     type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, dmg: 5, desc: 'Deal 5 DMG' },
 
@@ -633,10 +658,10 @@ const ITEM_DB = {
     // --- TIER 3 LEGENDARY ---
     's_stone':  { id: 's_stone',  name: 'Stone Form',   type: CARD_TYPES.SKILL, rarity: 'legendary', cost: 2, block: 15, desc: 'Gain 15 Block' },
     'l_bark':   { id: 'l_bark',   name: 'Bark Skin',    type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, hpBonus: 5, desc: '+5 Max HP' },
-    'l_scale':  { id: 'l_scale',  name: 'Dragon Scale', type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, block: 3, desc: '+3 Block on Play' },
+    'l_scale':  { id: 'l_scale',  name: 'Dragon Scale', type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, block: 3, desc: '+3 Block / Turn' },
     
     // --- STARTING ITEMS ---
-    'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block on Play' },
+    'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block / Turn' },
     'i_cloak':  { id: 'i_cloak',  name: 'Cloak',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, apBonus: 1, desc: '+1 Max AP' },
     'i_wand':   { id: 'i_wand',   name: 'Ember',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, desc: '+1 DMG' },
 
@@ -650,7 +675,7 @@ const ITEM_DB = {
                   effects: [{ type: 'DAMAGE', val: 3, target: 'ENEMY' }], desc: 'Deal 3 DMG' },
     
     's_mend':   { id: 's_mend',   name: 'Mend',       type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
-                  effects: [{ type: 'HEAL', val: 4, target: 'SELF' }], desc: 'Heal 4 HP' },
+                  effects: [{ type: 'HEAL', val: 3, target: 'SELF' }], desc: 'Heal 3 HP' },
 
     // Tier 1 Rare
     's_web':    { id: 's_web',    name: 'Web Shot',     type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
@@ -710,11 +735,11 @@ const ITEM_DB = {
     's_fast':   { id: 's_fast', name: 'Fast Hands', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
                   effects: [{ type: 'DRAW', val: 2, target: 'SELF' }], desc: 'Draw 2 Cards' },
 
-    's_bash':   { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, rarity: 'common', cost: 2, 
+    's_bash':   { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
                   effects: [
-                      { type: 'DAMAGE', val: 5, target: 'ENEMY' },
-                      { type: 'BLOCK', val: 5, target: 'SELF' }
-                  ], desc: '5 DMG & 5 Block' },
+                      { type: 'DAMAGE', val: 3, target: 'ENEMY' },
+                      { type: 'BLOCK', val: 3, target: 'SELF' }
+                  ], desc: '3 DMG & 3 Block' },
 
     's_bolt':   { id: 's_bolt',   name: 'Dark Bolt',    type: CARD_TYPES.SKILL, rarity: 'rare', cost: 2, 
                   effects: [{ type: 'DAMAGE', val: 12, target: 'ENEMY' }], desc: 'Deal 12 DMG' },
@@ -726,8 +751,9 @@ const ITEM_DB = {
 
 const HERO_DECKS = {
     'h_ironclad': [
-        ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'],
+        ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'],
         ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'],
+        ITEM_DB['s_mend'],
         ITEM_DB['s_bash']
     ],
     'h_shadow': [
@@ -1651,6 +1677,11 @@ function enterDungeonNode(nodeId) {
     state.hero.ap = state.hero.maxAp;
     state.hero.block = 0;
 
+    // Apply Start-of-Turn Equipment Effects (Turn 1)
+    state.equipped.forEach(item => {
+        if(item.block) state.hero.block += item.block;
+    });
+
     ScreenManager.show('GAME');
 
     drawCards(5);
@@ -1972,9 +2003,6 @@ function playCard(target) {
         state.selectedCardIndex = -1;
         
         // 2. Trigger Item Passives
-        state.equipped.forEach(item => {
-            if(item.block) addBlock(item.block);
-        });
 
         // 3. State Updated
         EventManager.emit(EVENTS.GAME_UPDATED);
@@ -2314,12 +2342,22 @@ function endTurn() {
 
     state.hero.ap = state.hero.maxAp;
     state.hero.block = 0; 
-    
-    while(state.hand.length > 0) {
-        state.discard.push(state.hand.pop());
-    }
 
-    drawCards(5);
+    // Apply Start-of-Turn Equipment Effects
+    state.equipped.forEach(item => {
+        if(item.block) {
+            // Direct modification to avoid excessive logging/events during transition
+            state.hero.block += item.block; 
+        }
+    });
+    if(state.hero.block > 0) log(`Equipment: Gained ${state.hero.block} Block.`);
+    
+    // Keep unplayed cards in hand (Persistence)
+    // Draw up to hand limit (5)
+    const cardsNeeded = Math.max(0, 5 - state.hand.length);
+    if (cardsNeeded > 0) {
+        drawCards(cardsNeeded);
+    }
 
     // If the row is completely empty (no monsters/events), the dungeon sends a new threat
     if (state.adventureRow.length === 0) {
