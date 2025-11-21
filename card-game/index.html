@@ -567,27 +567,6 @@ const HEROES = [
     }
 ];
 
-const BASE_STRIKE = { id: 's1', name: 'Strike', type: CARD_TYPES.SKILL, cost: 1, dmg: 3, desc: 'Deal 3 DMG' };
-const BASE_DEFEND = { id: 's2', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, block: 3, desc: 'Gain 3 Block' };
-
-const HERO_DECKS = {
-    'h_ironclad': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
-        { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, cost: 2, dmg: 5, block: 5, desc: '5 DMG & 5 Block' }
-    ],
-    'h_shadow': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
-        { id: 's_fast', name: 'Fast Hands', type: CARD_TYPES.SKILL, cost: 0, draw: 2, desc: 'Draw 2 cards' }
-    ],
-    'h_weaver': [
-        BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE, BASE_STRIKE,
-        BASE_DEFEND, BASE_DEFEND, BASE_DEFEND, BASE_DEFEND,
-        { id: 's_bolt', name: 'Dark Bolt', type: CARD_TYPES.SKILL, cost: 2, dmg: 12, desc: 'Deal 12 DMG' }
-    ]
-};
-
 /* --- DATABASE (ITEMS & SKILLS) --- */
 const ITEM_DB = {
     // --- TIER 1 COMMON ---
@@ -618,7 +597,108 @@ const ITEM_DB = {
     // --- STARTING ITEMS ---
     'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block on Play' },
     'i_cloak':  { id: 'i_cloak',  name: 'Cloak',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, apBonus: 1, desc: '+1 Max AP' },
-    'i_wand':   { id: 'i_wand',   name: 'Ember',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, desc: '+1 DMG' }
+    'i_wand':   { id: 'i_wand',   name: 'Ember',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, desc: '+1 DMG' },
+
+    // --- SKILLS (Converted to Effect System) ---
+    
+    // Tier 1 Common
+    's_bite':   { id: 's_bite',   name: 'Rabid Bite', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'DAMAGE', val: 2, target: 'ENEMY' }], desc: 'Deal 2 DMG' },
+    
+    's_claw':   { id: 's_claw',   name: 'Feral Claw', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'DAMAGE', val: 3, target: 'ENEMY' }], desc: 'Deal 3 DMG' },
+    
+    's_mend':   { id: 's_mend',   name: 'Mend',       type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
+                  effects: [{ type: 'HEAL', val: 4, target: 'SELF' }], desc: 'Heal 4 HP' },
+
+    // Tier 1 Rare
+    's_web':    { id: 's_web',    name: 'Web Shot',     type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
+                  effects: [{ type: 'DAMAGE', val: 5, target: 'ENEMY' }], desc: 'Deal 5 DMG' },
+
+    // Tier 2 Common
+    's_smash':  { id: 's_smash',  name: 'Big Smash',    type: CARD_TYPES.SKILL, rarity: 'common', cost: 2, 
+                  effects: [{ type: 'DAMAGE', val: 8, target: 'ENEMY' }], desc: 'Deal 8 DMG' },
+
+    // Tier 2 Rare
+    's_drain':  { id: 's_drain',  name: 'Void Spike',   type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
+                  effects: [
+                      { type: 'DAMAGE', val: 6, target: 'ENEMY' },
+                      { type: 'HEAL', val: 2, target: 'SELF' } // Added logic for drain
+                  ], desc: 'Deal 6 DMG & Heal 2' },
+
+    // Tier 3 Legendary
+    's_stone':  { id: 's_stone',  name: 'Stone Form',   type: CARD_TYPES.SKILL, rarity: 'legendary', cost: 2, 
+                  effects: [{ type: 'BLOCK', val: 15, target: 'SELF' }], desc: 'Gain 15 Block' },
+
+    // --- LIBRARY SKILLS (From Chests/Trainer) ---
+    's_rush':   { id: 's_rush', name: 'Adrenaline', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'GAIN_AP', val: 2, target: 'SELF' }], desc: 'Gain 2 AP' },
+
+    's_exec':   { id: 's_exec', name: 'Execution', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 3, 
+                  effects: [{ type: 'DAMAGE', val: 15, target: 'ENEMY' }], desc: 'Deal 15 DMG' },
+
+    's_step':   { id: 's_step', name: 'Quick Step', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'BLOCK', val: 2, target: 'SELF' }], desc: 'Gain 2 Block' },
+
+    's_wall':   { id: 's_wall', name: 'Heavy Plate', type: CARD_TYPES.SKILL, rarity: 'common', cost: 2, 
+                  effects: [{ type: 'BLOCK', val: 10, target: 'SELF' }], desc: 'Gain 10 Block' },
+
+    's_shiv':   { id: 's_shiv', name: 'Shiv', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'DAMAGE', val: 3, target: 'ENEMY' }], desc: 'Deal 3 DMG' },
+
+    's_wild':   { id: 's_wild', name: 'Reckless Swing', type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
+                  effects: [{ type: 'DAMAGE', val: 8, target: 'ENEMY' }], desc: 'Deal 8 DMG' },
+
+    's_holy':   { id: 's_holy', name: 'Holy Light', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 2, 
+                  effects: [{ type: 'HEAL', val: 8, target: 'SELF' }], desc: 'Heal 8 HP' },
+
+    's_perf':   { id: 's_perf', name: 'Perfect Guard', type: CARD_TYPES.SKILL, rarity: 'legendary', cost: 3, 
+                  effects: [{ type: 'BLOCK', val: 20, target: 'SELF' }], desc: 'Gain 20 Block' },
+
+    's_plan':   { id: 's_plan', name: 'Planning', type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
+                  effects: [{ type: 'DRAW', val: 2, target: 'SELF' }], desc: 'Draw 2 Cards' },
+
+    // Trainer Exclusive Skills
+    's_heavy':  { id: 's_heavy', name: 'Heavy Strike', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 2, 
+                  effects: [{ type: 'DAMAGE', val: 10, target: 'ENEMY' }], desc: 'Deal 10 DMG' },
+
+    's_iron':   { id: 's_iron', name: 'Iron Skin', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
+                  effects: [{ type: 'BLOCK', val: 8, target: 'SELF' }], desc: 'Gain 8 Block' },
+    
+    // Hero Starting Skills (Explicit Copies for reference in Decks)
+    's_fast':   { id: 's_fast', name: 'Fast Hands', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+                  effects: [{ type: 'DRAW', val: 2, target: 'SELF' }], desc: 'Draw 2 Cards' },
+
+    's_bash':   { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, rarity: 'common', cost: 2, 
+                  effects: [
+                      { type: 'DAMAGE', val: 5, target: 'ENEMY' },
+                      { type: 'BLOCK', val: 5, target: 'SELF' }
+                  ], desc: '5 DMG & 5 Block' },
+
+    's_bolt':   { id: 's_bolt',   name: 'Dark Bolt',    type: CARD_TYPES.SKILL, rarity: 'rare', cost: 2, 
+                  effects: [{ type: 'DAMAGE', val: 12, target: 'ENEMY' }], desc: 'Deal 12 DMG' },
+
+    's_strike': { id: 's_strike', name: 'Strike', type: CARD_TYPES.SKILL, cost: 1, effects: [{type:'DAMAGE', val:3, target:'ENEMY'}], desc: 'Deal 3 DMG' },
+
+    's_defend': { id: 's_defend', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, effects: [{type:'BLOCK', val:3, target:'SELF'}], desc: 'Gain 3 Block' }
+};
+
+const HERO_DECKS = {
+    'h_ironclad': [
+        ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'],
+        ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'],
+        ITEM_DB['s_bash']
+    ],
+    'h_shadow': [
+        ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'],
+        ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'],
+        ITEM_DB['s_fast']
+    ],
+    'h_weaver': [
+        ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'], ITEM_DB['s_strike'],
+        ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'], ITEM_DB['s_defend'],
+        ITEM_DB['s_bolt']
+    ]
 };
 
 /* --- LOOT TABLES --- */
@@ -908,7 +988,7 @@ function startGame(heroIndex) {
     saveGame();
 
     log(`You selected ${state.hero.name}. The void awaits.`);
-    if(state.hero.startItem) log(`Equipped starting item: ${STARTING_ITEMS[state.hero.startItem].name}`);
+    if(state.hero.startItem) log(`Equipped starting item: ${ITEM_DB[state.hero.startItem].name}`);
 }
 
 function showMap() {
@@ -1403,16 +1483,17 @@ function selectCard(index) {
     state.selectedCardIndex = index;
     const card = state.hand[index];
 
-    // 3. Auto-Play: Self-Target (Loot or Non-Damage Skills)
-    // Note: Hybrid cards (Dmg + Block) are treated as Attacks, so they skip this.
-    if (card.type === CARD_TYPES.LOOT || (card.type === CARD_TYPES.SKILL && !card.dmg)) {
+    // Analyze Card Intent
+    const hasEnemyEffect = card.type === CARD_TYPES.SKILL && card.effects && card.effects.some(e => e.target === 'ENEMY');
+
+    // 3. Auto-Play: Self-Target (Loot or Pure Buffs)
+    if (card.type === CARD_TYPES.LOOT || (card.type === CARD_TYPES.SKILL && !hasEnemyEffect)) {
         playCard('hero');
         return;
     }
 
     // 4. Auto-Play: Attack (If exactly 1 Monster is present)
-    if (card.type === CARD_TYPES.SKILL && card.dmg) {
-        // Find valid targets (ignore Events)
+    if (hasEnemyEffect) {
         const monsterIndices = state.adventureRow
             .map((c, i) => c.type === CARD_TYPES.MONSTER ? i : -1)
             .filter(i => i !== -1);
@@ -1444,46 +1525,19 @@ function playCard(target) {
 
     let success = false;
 
-    if (card.type === CARD_TYPES.SKILL) {
-        // 1. Handle Damage (Must target Enemy)
-        if (card.dmg) {
-            if (target === 'hero') return; 
-            if (state.adventureRow[target].type === CARD_TYPES.EVENT) {
-                log("Cannot attack an Event.", "red");
+    if (card.effects) {
+        // Validate Target for Hybrid Cards (e.g. if card has ANY enemy target effect, we need a valid target)
+        const requiresEnemy = card.effects.some(e => e.target === 'ENEMY');
+        
+        if (requiresEnemy) {
+            if (target === 'hero' || state.adventureRow[target].type !== CARD_TYPES.MONSTER) {
+                log("Must target an enemy!", "red");
                 return;
             }
-            dealDamage(target, card.dmg);
-            success = true;
-        } 
-        
-        // 2. Handle Self-Effects (Block/Heal/AP)
-        // These trigger if: 
-        // A) It's a pure buff card (no dmg) and we targeted 'hero'
-        // B) It's a hybrid card (has dmg) and we successfully hit an enemy (success is true)
-        if (card.block || card.heal || card.gainAp || card.draw) {
-            if (!card.dmg && target !== 'hero') return; // Pure buff must target hero
-            if (card.dmg && !success) return; // Hybrid failed to hit target
+        }
 
-            if (card.block) addBlock(card.block);
-            if (card.heal) healHero(card.heal);
-            if (card.gainAp) { state.hero.ap += card.gainAp; log(`Gained ${card.gainAp} AP.`); }
-            if (card.draw) {
-                drawCards(card.draw);
-                log(`Drew ${card.draw} cards.`);
-            }
-            success = true;
-        }
-    } else if (card.type === CARD_TYPES.LOOT) {
-        if (target !== 'hero') return;
-        
-        // Check Slot Limit
-        if (state.equipped.length >= 3) {
-            log("Slots full! Destroy an item first.", "red");
-            return;
-        }
-        
-        equipItem(card);
-        success = true;
+        // Execute Logic
+        success = processEffects(card.effects, target);
     }
 
     if (success) {
@@ -1527,6 +1581,33 @@ function playCard(target) {
             endTurn();
         }
     }
+}
+
+function processEffects(effects, targetIndex) {
+    let success = false;
+
+    effects.forEach(eff => {
+        // TARGET VALIDATION
+        if (eff.target === 'ENEMY') {
+            // Check if target is valid enemy
+            if (targetIndex === 'hero' || state.adventureRow[targetIndex].type !== CARD_TYPES.MONSTER) return;
+            
+            if (eff.type === 'DAMAGE') {
+                dealDamage(targetIndex, eff.val);
+                success = true;
+            }
+        }
+        
+        if (eff.target === 'SELF') {
+            if (eff.type === 'BLOCK') addBlock(eff.val);
+            if (eff.type === 'HEAL') healHero(eff.val);
+            if (eff.type === 'GAIN_AP') { state.hero.ap += eff.val; log(`Gained ${eff.val} AP.`); }
+            if (eff.type === 'DRAW') { drawCards(eff.val); log(`Drew ${eff.val} cards.`); }
+            success = true; // Self effects always succeed if played
+        }
+    });
+
+    return success;
 }
 
 // --- EVENT RESOLUTION ---
@@ -1939,7 +2020,17 @@ function createCardElement(data, index) {
         statsHtml = `<div class="card-stats"><span>⚡${data.ap}</span><span>❤️${data.hp}</span></div>`;
     } else if (data.type === CARD_TYPES.SKILL || data.type === CARD_TYPES.CURSE) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
-        statsHtml = `<div class="card-stats"><span>⚡${data.cost}</span></div>`;
+        
+        // Generate mini-icons based on effects
+        let icons = `<span>⚡${data.cost}</span>`;
+        if (data.effects) {
+             data.effects.forEach(e => {
+                 if(e.type === 'DAMAGE') icons += ` <span>⚔️${e.val}</span>`;
+                 if(e.type === 'BLOCK') icons += ` <span>🛡️${e.val}</span>`;
+                 if(e.type === 'HEAL') icons += ` <span>💚${e.val}</span>`;
+             });
+        }
+        statsHtml = `<div class="card-stats">${icons}</div>`;
     } else if (data.type === CARD_TYPES.LOOT) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
         // Display Gold Value
