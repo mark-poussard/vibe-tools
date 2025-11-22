@@ -2181,7 +2181,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
                 if(reward.type === CARD_TYPES.LOOT){
                     state.inventory.push(reward);
                 } else {
-                    state.collection.push(reward); // Or inventory if Loot
+                    state.deck.push(reward); // Or inventory if Loot
                 }
                 log(`You found: ${reward.name}!`);
             }
@@ -2192,13 +2192,13 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 4. Weapon Master
     else if (choice.effect === 'train_str') {
         let card = { id: 's_heavy', name: 'Heavy Strike', type: CARD_TYPES.SKILL, cost: 2, dmg: 10, desc: 'Deal 10 DMG' };
-        state.collection.push(card);
+        state.deck.push(card);
         log("Learned Heavy Strike.");
         removeEvent();
     }
     else if (choice.effect === 'train_def') {
         let card = { id: 's_iron', name: 'Iron Skin', type: CARD_TYPES.SKILL, cost: 1, block: 8, desc: 'Gain 8 Block' };
-        state.collection.push(card);
+        state.deck.push(card);
         log("Learned Iron Skin.");
         removeEvent();
     }
@@ -2296,7 +2296,7 @@ function killMonster(index) {
                     if(lootCard.type === CARD_TYPES.LOOT){
                         state.inventory.push(lootCard);
                     } else {
-                        state.collection.push(lootCard);
+                        state.deck.push(lootCard);
                     }
                     // Log with Rarity Color
                     const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
