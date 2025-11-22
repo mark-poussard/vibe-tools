@@ -634,7 +634,9 @@ const CARD_TYPES = {
     SKILL: 'skill',
     LOOT: 'loot',
     EVENT: 'event',
-    CURSE: 'curse'
+    CURSE: 'curse',
+    QUEST: 'quest',
+    CONSUMABLE: 'consumable'
 };
 
 const HEROES = [
@@ -701,6 +703,15 @@ const ITEM_DB = {
     'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block / Turn' },
     'i_cloak':  { id: 'i_cloak',  name: 'Cloak',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, apBonus: 1, desc: '+1 Max AP' },
     'i_wand':   { id: 'i_wand',   name: 'Ember',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, desc: '+1 DMG' },
+
+// --- CONSUMABLES ---
+    'c_potion_s': { id: 'c_potion_s', name: 'Health Potion', type: CARD_TYPES.CONSUMABLE, rarity: 'common', value: 15, heal: 10, desc: 'Restore 10 HP' },
+    'c_str_brew': { id: 'c_str_brew', name: 'Strength Brew', type: CARD_TYPES.CONSUMABLE, rarity: 'rare', value: 30, buffAtk: 2, desc: '+2 DMG next Dungeon' },
+    'c_iron_skin':{ id: 'c_iron_skin', name: 'Iron Flask',   type: CARD_TYPES.CONSUMABLE, rarity: 'rare', value: 30, buffBlock: 2, desc: '+2 Start Block next Dungeon' },
+
+    // --- QUEST ITEMS ---
+    'q_old_key':  { id: 'q_old_key',  name: 'Rusty Key',     type: CARD_TYPES.QUEST, rarity: 'rare', value: 0, desc: 'Opens locked chests' },
+    'q_letter':   { id: 'q_letter',   name: 'Royal Letter',  type: CARD_TYPES.QUEST, rarity: 'legendary', value: 0, desc: 'Seal of the King' },
 
     // --- SKILLS (Converted to Effect System) ---
     
@@ -889,7 +900,8 @@ const COMMON_EVENTS = [
     {
         id: 'e_chest', name: 'Wooden Chest', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Is it breathing?',
         choices: [
-            { label: 'Open (Loot or Mimic)', effect: 'chest_open' },
+            { label: 'Use Rusty Key', effect: 'chest_unlock', reqItem: 'q_old_key' },
+            { label: 'Smash Lock', effect: 'chest_smash' },
             { label: 'Leave', effect: 'leave' }
         ]
     },
@@ -988,7 +1000,8 @@ const NODE_CONFIGS = {
         icon: '🍺', isMerchant: true,
         itemPool: [
             { id: 'l_dagger', price: 15 }, { id: 'l_shield', price: 15 },
-            { id: 's_mend', price: 20 }, { id: 's_rush', price: 25 }
+            { id: 's_mend', price: 20 }, { id: 's_rush', price: 25 }, 
+            { id: 'q_old_key', price: 50 }, { id: 'c_potion_s', price: 10 }
         ]
     },
 
@@ -1199,7 +1212,9 @@ let state = {
     currentNodeId: null, // The node currently being played
     collection: [], // Cards removed from deck
     inventory: [],
-    gold: 0
+    gold: 0,
+    // Track temporary buffs from consumables (reset after dungeon)
+    buffs: { atk: 0, block: 0, maxHp: 0 } 
 };
 
 /* --- EVENT MANAGER (STORE PATTERN) --- */
@@ -1487,26 +1502,55 @@ function renderDeckManager() {
     });
 }
 
-function mapEquipItem(invIndex) {
-    if (state.equipped.length >= 3) {
-        alert("Slots full! Unequip something first.");
+function useInventoryItem(invIndex) {
+    const item = state.inventory[invIndex];
+
+    // 1. Handle LOOT (Equip)
+    if (item.type === CARD_TYPES.LOOT) {
+        if (state.equipped.length >= 3) {
+            alert("Slots full! Unequip something first.");
+            return;
+        }
+        // Move to equipped
+        state.inventory.splice(invIndex, 1)[0];
+        state.equipped.push(item);
+        
+        // Apply Passive Stats
+        if (item.hpBonus) {
+            state.hero.maxHp += item.hpBonus;
+            state.hero.hp += item.hpBonus;
+        }
+        if (item.apBonus) state.hero.maxAp += item.apBonus;
+        
+        renderHeroScreen();
         return;
     }
-    const item = state.inventory.splice(invIndex, 1)[0];
-    state.equipped.push(item);
-    
-    // Apply HP Bonus immediately if exists
-    if (item.hpBonus) {
-        state.hero.maxHp += item.hpBonus;
-        state.hero.hp += item.hpBonus;
+
+    // 2. Handle CONSUMABLE (Use)
+    if (item.type === CARD_TYPES.CONSUMABLE) {
+        // Apply Immediate Effects
+        if (item.heal) {
+            healHero(item.heal);
+        }
+        // Apply Dungeon Buffs
+        if (item.buffAtk) state.buffs.atk += item.buffAtk;
+        if (item.buffBlock) state.buffs.block += item.buffBlock;
+        if (item.buffMaxHp) state.buffs.maxHp += item.buffMaxHp; // (If you add this prop later)
+
+        // Remove from inventory
+        state.inventory.splice(invIndex, 1);
+        log(`Used ${item.name}.`);
+        
+        // Update Event system
+        EventManager.emit(EVENTS.HERO_UPDATED);
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        return;
     }
 
-    if (item.apBonus) {
-        state.hero.maxAp += item.apBonus;
+    // 3. Handle QUEST (Info)
+    if (item.type === CARD_TYPES.QUEST) {
+        alert(`${item.name}: ${item.desc}`);
     }
-    
-    EventManager.emit(EVENTS.HERO_UPDATED); // Stats might change (HP/AP bonus)
-    EventManager.emit(EVENTS.INVENTORY_UPDATED);
 }
 
 function mapUnequipItem(equipIndex) {
@@ -1556,13 +1600,24 @@ function renderHeroScreen() {
     invContainer.innerHTML = '';
     state.inventory.forEach((item, idx) => {
         // Render Card
+        // Render Card
         let div = createCardElement(item);
-        div.style.borderTop = "5px solid #f1c40f"; 
         div.style.flex = "0 0 auto"; 
         
-        // Click to Equip
-        div.onclick = () => mapEquipItem(idx);
-        div.title = "Click to Equip";
+        // Styling & Interaction based on Type
+        if (item.type === CARD_TYPES.LOOT) {
+            div.style.borderTop = "5px solid #f1c40f"; // Gold (Equip)
+            div.title = "Click to Equip";
+        } else if (item.type === CARD_TYPES.CONSUMABLE) {
+            div.style.borderTop = "5px solid #2ecc71"; // Green (Use)
+            div.title = "Click to Consume";
+        } else if (item.type === CARD_TYPES.QUEST) {
+            div.style.borderTop = "5px solid #9b59b6"; // Purple (Key Item)
+            div.style.cursor = "help";
+            div.title = "Key Item";
+        }
+
+        div.onclick = () => useInventoryItem(idx);
         
         invContainer.appendChild(div);
     });
@@ -1732,6 +1787,8 @@ function enterDungeonNode(nodeId) {
     state.equipped.forEach(item => {
         if(item.block) state.hero.block += item.block;
     });
+    // Apply Consumable Buffs (Start Block)
+    if (state.buffs != null && state.buffs.block != null) state.hero.block += state.buffs.block;
 
     ScreenManager.show('GAME');
 
@@ -1759,10 +1816,10 @@ function buyMerchantItem(itemId, price) {
         const item = JSON.parse(JSON.stringify(ITEM_DB[itemId]));
         
         // Add to appropriate storage
-        if (item.type === CARD_TYPES.LOOT) {
-            state.inventory.push(item);
-        } else {
+        if (item.type === CARD_TYPES.SKILL) {
             state.collection.push(item);
+        } else {
+            state.inventory.push(item);
         }
         
         renderMerchantScreen();
@@ -2169,21 +2226,41 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         removeEvent();
     }
 
-    // 3. Suspicious Chest
-    else if (choice.effect === 'chest_open') {
+    // 3. Locked Chest
+    else if (choice.effect === 'chest_unlock') {
+        // Remove Key
+        const keyIndex = state.inventory.findIndex(i => i.id === 'q_old_key');
+        if (keyIndex > -1) {
+            state.inventory.splice(keyIndex, 1);
+            log("Used Rusty Key.");
+            EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        }
+        // 100% Loot, no Mimic
+        const reward = rollLoot('chest_random');
+        if(reward) {
+            if (reward.type === CARD_TYPES.LOOT) {
+                state.inventory.push(reward);
+            } else {
+                state.discard.push(reward);
+            }
+            log(`You unlocked the chest and found: ${reward.name}!`);
+        }
+        removeEvent();
+    }
+    else if (choice.effect === 'chest_smash') {
+        // 50/50 Risk
         if(Math.random() > 0.5) {
             log("It's a trap! MIMIC!", "red");
             spawnEventMonster('m_mimic');
         } else {
-            // Pick random skill from library
             const reward = rollLoot('chest_random');
             if(reward) {
-                if(reward.type === CARD_TYPES.LOOT){
+                if (reward.type === CARD_TYPES.LOOT) {
                     state.inventory.push(reward);
                 } else {
-                    state.deck.push(reward); // Or inventory if Loot
+                    state.discard.push(reward);
                 }
-                log(`You found: ${reward.name}!`);
+                log(`You smashed it open and found: ${reward.name}!`);
             }
             removeEvent();
         }
@@ -2255,6 +2332,11 @@ function dealDamage(monsterIndex, amount) {
     let bonus = 0;
     state.equipped.forEach(item => { if(item.atkBuff) bonus += item.atkBuff; });
     
+    // Add Consumable Buffs
+    if(state.buffs != null && state.buffs.atk != null){
+        bonus += (state.buffs.atk || 0);
+    }
+
     let totalDmg = amount + bonus;
     monster.hp -= totalDmg;
     
@@ -2339,6 +2421,9 @@ function continueGame() {
     while(state.discard.length > 0) state.deck.push(state.discard.pop());
     
     state.adventureRow = [];
+
+    // Reset Temporary Buffs
+    state.buffs = { atk: 0, block: 0, maxHp: 0 };
     
     ScreenManager.show('MAP');
 }
@@ -2558,7 +2643,19 @@ function createCardElement(data, index) {
         let buttons = '';
         if(data.choices) {
             data.choices.forEach((choice, choiceIdx) => {
-                buttons += `<button class="choice-btn" onclick="event.stopPropagation(); resolveEventChoice(${index}, ${choiceIdx})">${choice.label}</button>`;
+                // Check Quest Item Requirement
+                let disabled = '';
+                let label = choice.label;
+                
+                if (choice.reqItem) {
+                    const hasItem = state.inventory.some(i => i.id === choice.reqItem);
+                    if (!hasItem) {
+                        disabled = 'disabled';
+                        label = `🔒 ${choice.label} (Missing Item)`;
+                    }
+                }
+
+                buttons += `<button class="choice-btn" ${disabled} onclick="event.stopPropagation(); resolveEventChoice(${index}, ${choiceIdx})">${label}</button>`;
             });
         }
         bodyHtml = `<div class="card-desc">${data.desc}${buttons}</div>`;
