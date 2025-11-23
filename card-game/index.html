@@ -826,25 +826,28 @@ const LOOT_TABLES = {
         { id: 's_claw',   weight: 20 },
         { id: 's_mend',   weight: 10 },
         { id: 'l_goo',    weight: 5 }, // Rare chance
-        { id: 'l_spear',  weight: 5 }  // Rare chance
+        { id: 'l_spear',  weight: 5 },  // Rare chance,
+        { id: null,       weight: 100 } // ~50% chance of nothing (Total weight 200)
     ],
     'tier1_elite': [
         { id: 'l_goo',    weight: 30 },
         { id: 'l_spear',  weight: 30 },
         { id: 's_web',    weight: 30 },
-        { id: 'l_shield', weight: 10 }
+        { id: 'l_shield', weight: 10 },
+        { id: null,       weight: 100 }
     ],
     'tier2_standard': [
         { id: 's_smash',  weight: 30 },
         { id: 'l_amulet', weight: 30 },
         { id: 's_bolt',   weight: 10 },
-        { id: 'l_dagger', weight: 30 } // Fallback
+        { id: null,       weight: 100 } // Fallback
     ],
     'tier3_void': [
         { id: 's_stone',  weight: 30 },
         { id: 'l_bark',   weight: 30 },
         { id: 'l_scale',  weight: 30 },
-        { id: 'l_cloak',  weight: 10 }
+        { id: 'l_cloak',  weight: 10 },
+        { id: null,       weight: 100 }
     ],
     'chest_random': [
         { id: 'l_cloak',  weight: 10 },
@@ -856,7 +859,8 @@ const LOOT_TABLES = {
         { id: 'l_boss_relic', weight: 10 }, // 10% Chance
         { id: 'l_blood',      weight: 30 },
         { id: 'l_scale',      weight: 30 },
-        { id: 's_stone',      weight: 30 }
+        { id: 's_stone',      weight: 30 },
+        { id: null,           weight: 100 }
     ]
 };
 
@@ -872,7 +876,7 @@ function rollLoot(tableId) {
     for (let entry of table) {
         random -= entry.weight;
         if (random < 0) {
-            // Return a Copy of the item from DB
+            if (entry.id === null) return null; // Drop nothing
             return JSON.parse(JSON.stringify(ITEM_DB[entry.id]));
         }
     }
@@ -2359,31 +2363,20 @@ function killMonster(index) {
     let m = state.adventureRow[index];
     log(`${m.name} defeated!`);
 
-    // Loot Chance scales with danger (number of OTHER monsters in the row)
-    // Base: 10% + 10% per other monster. 
-    // 0 others = 10%, 4 others = 50%
-    const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
-    const dropChance = 0.10 + (otherMonsters * 0.10);
-
-    log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
-
-    if (Math.random() < dropChance) {
-        if (m.lootTable) {
-            const lootCard = rollLoot(m.lootTable);
-            
-            if (lootCard) {
-                if(lootCard.type === CARD_TYPES.LOOT){
-                    state.inventory.push(lootCard);
-                } else {
-                    state.deck.push(lootCard);
-                }
-                // Log with Rarity Color
-                const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
-                log(`Looted: <span style="color:${colors[lootCard.rarity]}">${lootCard.name}</span>`);
-                
-                // Emit updates (Pub/Sub pattern)
-                EventManager.emit(EVENTS.INVENTORY_UPDATED);
+    if (m.lootTable) {
+        const lootCard = rollLoot(m.lootTable);
+        if (lootCard) {
+            if(lootCard.type === CARD_TYPES.SKILL){
+                state.deck.push(lootCard);
+            } else {
+                state.inventory.push(lootCard);
             }
+            // Log with Rarity Color
+            const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
+            log(`Looted: <span style="color:${colors[lootCard.rarity]}">${lootCard.name}</span>`);
+            
+            // Emit updates (Pub/Sub pattern)
+            EventManager.emit(EVENTS.INVENTORY_UPDATED);
         }
     } else {
         log("No loot found.");
