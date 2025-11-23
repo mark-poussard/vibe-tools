@@ -1180,29 +1180,30 @@ const MONSTER_DB = {
 
 // --- NEW BOSSES ---
     // Tier 1 (Greenlands/Ruins)
-    'mb_bandit_king': { id: 'mb_bandit_king', name: 'Bandit King', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 4, isBoss: true, desc: 'BOSS: Leader' },
-    'mb_giant_slime': { id: 'mb_giant_slime', name: 'King Slime', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 3, isBoss: true, desc: 'BOSS: Massive' },
-    'mb_chimera':     { id: 'mb_chimera', name: 'Chimera', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 5, isBoss: true, desc: 'BOSS: Hybrid' },
+    'mb_bandit_king': { id: 'mb_bandit_king', name: 'Bandit King', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 4, isBoss: true, goldReward: 3, desc: 'BOSS: Leader' },
+    'mb_giant_slime': { id: 'mb_giant_slime', name: 'King Slime', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 3, isBoss: true, goldReward: 3, desc: 'BOSS: Massive' },
+    'mb_chimera':     { id: 'mb_chimera', name: 'Chimera', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Hybrid' },
 
     // Tier 2 (Desert)
-    'mb_sandworm_q':  { id: 'mb_sandworm_q', name: 'Sandworm Queen', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, isBoss: true, desc: 'BOSS: Devourer' },
-    'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, desc: 'BOSS: Venomous' },
+    'mb_sandworm_q':  { id: 'mb_sandworm_q', name: 'Sandworm Queen', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Devourer' },
+    'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, goldReward: 5, desc: 'BOSS: Venomous' },
 
     // Tier 3 (Dead Lands)
-    'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, desc: 'BOSS: Dark Magic' },
-    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, desc: 'BOSS: Immortal' },
+    'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, goldReward: 10, desc: 'BOSS: Dark Magic' },
+    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, goldReward: 10, desc: 'BOSS: Immortal' },
 
     // Tier 4 (Castle/Endgame)
-    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Armored' },
-    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Stone God' },
-    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Apex' },
+    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Armored' },
+    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Stone God' },
+    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, goldReward: 20, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Apex' },
 
     // Bosses
-    'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
-    'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
-    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, desc: 'BOSS: Gatekeeper' },
-    'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
-    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, desc: 'FINAL BOSS' }
+    // Bosses
+    'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
+    'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
+    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
+    'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
+    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, desc: 'FINAL BOSS' }
 };
 
 const EVENT_DB = {}; 
@@ -2362,6 +2363,13 @@ function dealDamage(monsterIndex, amount) {
 function killMonster(index) {
     let m = state.adventureRow[index];
     log(`${m.name} defeated!`);
+
+    // 0. Gold Drop Logic
+    if (m.goldReward) {
+        state.gold += m.goldReward;
+        log(`Gained ${m.goldReward} Gold.`, "#f1c40f");
+        EventManager.emit(EVENTS.HERO_UPDATED);
+    }
 
     if (m.lootTable) {
         const lootCard = rollLoot(m.lootTable);
