@@ -1825,7 +1825,7 @@ function buyMerchantItem(itemId, price) {
         
         // Add to appropriate storage
         if (item.type === CARD_TYPES.SKILL) {
-            state.collection.push(item);
+            state.deck.push(item);
         } else {
             state.inventory.push(item);
         }
