@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Web Coder</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --border-color: #3f3f46;
+            --danger-color: #ef4444;
+            --success-color: #22c55e;
+            --header-height: 60px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden; /* App-like feel */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout & Views */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Tablet/Desktop constraint */
+            margin: 0 auto;
+        }
+
+        .view {
+            display: none;
+            padding: var(--spacing-md);
+            padding-bottom: 80px; /* Space for potential FABs or scrolling */
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Headers */
+        .app-header {
+            height: var(--header-height);
+            background-color: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        label {
+            display: block;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary-color);
+        }
+
+        .help-text {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:active {
+            background-color: var(--primary-hover);
+        }
+
+        /* Cards (Upcoming usage) */
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+        }
+
+        /* Editor Layout */
+        .editor-layout {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - var(--header-height));
+        }
+
+        /* Tabs */
+        .tab-nav {
+            display: flex;
+            background: var(--surface-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        /* Editor Content Areas */
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* AI Chat UI */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing-md);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-bottom-left-radius: 2px;
+        }
+        
+        .message.system {
+            align-self: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .chat-input-area {
+            padding: var(--spacing-md);
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .model-selector {
+            padding: 8px;
+            background: var(--bg-color);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .diff-summary {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid var(--success-color);
+            padding: 10px;
+            border-radius: var(--radius);
+            margin-top: 10px;
+        }
+
+        /* Manual Code Editor */
+        .code-editor-container {
+            display: flex;
+            flex: 1;
+            background-color: #1e1e1e;
+            overflow: hidden;
+            position: relative;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .line-numbers {
+            background-color: #252526;
+            color: #858585;
+            padding: 10px 5px;
+            text-align: right;
+            border-right: 1px solid #333;
+            user-select: none;
+            overflow: hidden;
+            width: 45px;
+            line-height: 1.5;
+        }
+
+        .code-area {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            border: none;
+            resize: none;
+            padding: 10px;
+            white-space: pre;
+            overflow: auto;
+            outline: none;
+            line-height: 1.5;
+            tab-size: 2;
+        }
+
+        /* Preview Iframe */
+        iframe.preview-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white; /* Web pages usually expect white bg */
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary-color);
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+
+        /* Floating Action Button */
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: pointer;
+            border: none;
+            font-size: 24px;
+            transition: transform 0.2s;
+            z-index: 90;
+        }
+        .fab:active { transform: scale(0.95); }
+
+        /* Project List */
+        .project-list {
+            padding-bottom: 80px;
+        }
+        
+        .project-card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .project-info h3 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+        
+        .project-info p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+        .icon-btn:hover { color: var(--text-primary); }
+        .icon-btn.danger { color: var(--danger-color); }
+
+        /* Header Actions */
+        .header-actions {
+            position: absolute;
+            right: var(--spacing-md);
+            display: flex;
+            gap: 8px;
+        }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            backdrop-filter: blur(2px);
+        }
+        
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            width: 90%;
+            max-width: 400px;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.open .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: var(--spacing-lg);
+        }
+        
+        /* Toast Notification */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            pointer-events: none;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .toast {
+            background-color: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            margin-top: 10px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+
+    <!-- App Header -->
+    <header class="app-header">
+        <span class="header-title">Web Coder</span>
+    </header>
+
+    <main id="app">
+        
+        <!-- SCREEN: SETUP -->
+        <section id="screen-setup" class="view active">
+            <div class="card" style="margin-bottom: 30px;">
+                <h2 style="margin-bottom: 10px; font-size: 1.1rem;">Configuration</h2>
+                <p class="help-text" style="margin-bottom: 0;">
+                    Your keys are stored locally on your device.
+                </p>
+            </div>
+
+            <form id="setup-form">
+                <!-- GitHub Config -->
+                <div class="form-group">
+                    <label for="gh-token">GitHub Personal Access Token</label>
+                    <input type="password" id="gh-token" placeholder="ghp_..." autocomplete="off">
+                    <div class="help-text">
+                        Must have <code>repo</code> scope permissions. 
+                        <a href="https://github.com/settings/tokens" target="_blank" style="color: var(--primary-color)">Generate here</a>.
+                    </div>
+                </div>
+
+                <!-- Google AI Config -->
+                <div class="form-group">
+                    <label for="ai-key">Google AI Studio API Key</label>
+                    <input type="password" id="ai-key" placeholder="AIza..." autocomplete="off">
+                    <div class="help-text">
+                        Required for AI coding assistance.
+                        <a href="https://aistudio.google.com/" target="_blank" style="color: var(--primary-color)">Get key here</a>.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Configuration</button>
+            </form>
+        </section>
+
+        <!-- SCREEN: PROJECTS VIEW -->
+        <section id="screen-projects" class="view">
+            <!-- Custom Header for Projects specific view -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 1.2rem;">My Projects</h2>
+                <div>
+                    <button class="icon-btn" id="btn-import-export" title="Import/Export">⇄</button>
+                    <button class="icon-btn" id="btn-settings" title="Settings">⚙️</button>
+                </div>
+            </div>
+
+            <div id="project-list-container" class="project-list">
+                <!-- Projects injected here via JS -->
+            </div>
+
+            <div style="text-align: center; color: var(--text-secondary); margin-top: 40px;" id="empty-state" class="hidden">
+                <p>No projects found.</p>
+                <p style="font-size: 0.9rem">Tap + to add a GitHub repository.</p>
+            </div>
+
+            <button class="fab" id="btn-add-project">+</button>
+        </section>
+
+        <!-- MODAL: Add Project -->
+        <div id="modal-add-project" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">New Project</div>
+                <form id="form-add-project">
+                    <div class="form-group">
+                        <label>Project Name</label>
+                        <input type="text" id="inp-proj-name" required placeholder="e.g. Landing Page">
+                    </div>
+                    <div class="form-group">
+                        <label>GitHub Repository URL</label>
+                        <input type="text" id="inp-proj-url" required placeholder="https://github.com/user/repo">
+                    </div>
+                    <div class="form-group">
+                        <label>File Path</label>
+                        <input type="text" id="inp-proj-path" value="index.html" placeholder="src/index.html">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Delete Confirmation -->
+        <div id="modal-delete-confirm" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">Delete Project?</div>
+                <p>Are you sure you want to remove this project from Web Coder? This will not affect the GitHub repository.</p>
+                <div class="modal-actions">
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
+                    <button type="button" id="btn-confirm-delete" class="btn" style="background-color: var(--danger-color); color: white;">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Import/Export -->
+        <div id="modal-io" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">Data Management</div>
+                <p style="margin-bottom: 15px; color: var(--text-secondary);">Backup or restore your project list JSON.</p>
+                
+                <button id="btn-download-json" class="btn btn-primary" style="margin-bottom: 10px;">Download Projects JSON</button>
+                
+                <div style="position: relative; overflow: hidden; margin-top: 10px;">
+                    <button class="btn" style="background: var(--surface-color); border: 1px solid var(--border-color);">Import JSON File</button>
+                    <input type="file" id="inp-import-json" accept=".json" style="position: absolute; top:0; left:0; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: PROJECT EDITOR -->
+        <section id="screen-editor" class="view" style="padding: 0; max-width: none;">
+            <div class="editor-layout">
+                <!-- Sticky Editor Header -->
+                <div class="app-header" style="justify-content: space-between; padding: 0 15px;">
+                    <button class="icon-btn" onclick="App.navigateTo('projects')">←</button>
+                    <span id="editor-title" style="font-size: 1rem;">Project Name</span>
+                    <button class="icon-btn" id="btn-save-trigger" style="color: var(--success-color); font-weight:bold;">Save</button>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="App.switchTab('ai')">AI Coder</button>
+                    <button class="tab-btn" onclick="App.switchTab('preview')">Preview</button>
+                    <button class="tab-btn" onclick="App.switchTab('manual')" style="opacity: 0.5;">Code</button>
+                </div>
+
+                <!-- Tab: AI Coder -->
+                <div id="tab-ai" class="tab-content active">
+                    <div id="chat-history" class="chat-container">
+                        <div class="message system">Welcome. Select a model and describe your changes.</div>
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <select id="model-select" class="model-selector">
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Smart)</option>
+                        </select>
+                        <div style="display:flex; gap: 8px;">
+                            <textarea id="ai-prompt" rows="2" placeholder="e.g., Change the background to blue..." style="resize:none;"></textarea>
+                            <button id="btn-send-prompt" class="btn btn-primary" style="width: auto;">
+                                <span>➤</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Preview -->
+                <div id="tab-preview" class="tab-content">
+                    <iframe id="preview-frame" class="preview-frame"></iframe>
+                </div>
+
+                <!-- Tab: Manual Code Editor -->
+                <div id="tab-manual" class="tab-content">
+                    <div class="code-editor-container">
+                        <div id="line-numbers" class="line-numbers">1</div>
+                        <textarea id="manual-code-area" class="code-area" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODAL: Commit Changes -->
+        <div id="modal-commit" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">Commit Changes</div>
+                <form id="form-commit">
+                    <div class="form-group">
+                        <label>Commit Message</label>
+                        <textarea id="commit-msg" rows="3" required></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
+                        <button type="submit" id="btn-push" class="btn btn-primary">Push to GitHub</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <script>
+        /**
+         * GitHub API Helper
+         */
+        const GitHubAPI = {
+            baseUrl: 'https://api.github.com',
+            
+            async getFile(token, owner, repo, path) {
+                const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`;
+                const response = await fetch(url, {
+                    headers: { 
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                // Handle new file case
+                if (response.status === 404) {
+                    return { 
+                        content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>New Project</title>\n</head>\n<body>\n  <h1>Hello World</h1>\n</body>\n</html>', 
+                        sha: null 
+                    };
+                }
+
+                if (!response.ok) throw new Error('Failed to fetch file');
+                const data = await response.json();
+                const content = new TextDecoder().decode(Uint8Array.from(atob(data.content), c => c.charCodeAt(0)));
+                return { content, sha: data.sha };
+            },
+
+            async updateFile(token, owner, repo, path, content, sha, message) {
+                const url = `${this.baseUrl}/repos/${owner}/${repo}/contents/${path}`;
+                const encoded = btoa(new TextEncoder().encode(content).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+                
+                const payload = {
+                    message: message,
+                    content: encoded
+                };
+
+                // Only include SHA if updating an existing file
+                if (sha) {
+                    payload.sha = sha;
+                }
+
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Failed to push commit');
+                return await response.json();
+            }
+        };
+
+        /**
+         * Google AI Helper
+         */
+        const GoogleAI = {
+            baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+
+            async listModels(apiKey) {
+                try {
+                    const response = await fetch(`${this.baseUrl}/models?key=${apiKey}`);
+                    if (!response.ok) return [];
+                    const data = await response.json();
+                    // Filter for Gemini models that support content generation
+                    return data.models.filter(m => 
+                        m.name.includes('gemini') && 
+                        m.supportedGenerationMethods && 
+                        m.supportedGenerationMethods.includes('generateContent')
+                    );
+                } catch (e) {
+                    console.error("Failed to fetch models", e);
+                    return [];
+                }
+            },
+            
+            async generate(apiKey, model, systemPrompt, userPrompt) {
+                const url = `${this.baseUrl}/models/${model}:generateContent?key=${apiKey}`;
+                const payload = {
+                    contents: [{
+                        parts: [
+                            { text: systemPrompt },
+                            { text: userPrompt }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json" 
+                    }
+                };
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) throw new Error('AI Request failed');
+                const data = await response.json();
+                
+                try {
+                    const text = data.candidates[0].content.parts[0].text;
+                    // Clean potential markdown wrappers
+                    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    return JSON.parse(jsonStr);
+                } catch (e) {
+                    throw new Error('Failed to parse AI response');
+                }
+            }
+        };
+
+        /**
+         * Application State & Logic
+         */
+        const App = {
+            state: {
+                config: { githubToken: '', aiApiKey: '', preferredModel: '' },
+                projects: [],
+                projectToDelete: null,
+                // Editor State
+                currentProject: null,
+                fileData: { content: '', sha: '', pendingContent: '', commitMsg: '' },
+                isLoading: false
+            },
+            
+            // ... [Previous Constants and init/loadState/router methods remain exactly the same] ...
+            STORAGE_KEY_CONFIG: 'webcoder_config',
+            STORAGE_KEY_PROJECTS: 'webcoder_projects',
+
+            init() { this.loadState(); this.router(); this.bindEvents(); },
+            loadState() {
+                const c = localStorage.getItem(this.STORAGE_KEY_CONFIG);
+                if(c) this.state.config = JSON.parse(c);
+                const p = localStorage.getItem(this.STORAGE_KEY_PROJECTS);
+                if(p) this.state.projects = JSON.parse(p);
+            },
+            router() { /* ... same as before ... */ 
+                if (!this.state.config.githubToken) this.navigateTo('setup');
+                else {
+                     const hash = window.location.hash.replace('#', '');
+                     if(hash === 'setup') this.navigateTo('setup');
+                     else this.navigateTo('projects');
+                }
+            },
+            
+            saveConfig() { /* ... same ... */ 
+                localStorage.setItem(this.STORAGE_KEY_CONFIG, JSON.stringify(this.state.config));
+                this.navigateTo('projects');
+            },
+            saveProjects() { /* ... same ... */ 
+                localStorage.setItem(this.STORAGE_KEY_PROJECTS, JSON.stringify(this.state.projects));
+            },
+
+            navigateTo(screenId) {
+                document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+                const target = document.getElementById(`screen-${screenId}`);
+                if (target) {
+                    target.classList.add('active');
+                    this.onViewEnter(screenId);
+                }
+            },
+
+            async onViewEnter(screenId) {
+                if (screenId === 'projects') this.renderProjects();
+                // Editor setup handled by openEditor
+            },
+            
+            // ... [Previous renderProjects, addProject, deleteProject methods remain same] ...
+            renderProjects() {
+                 const container = document.getElementById('project-list-container');
+                 container.innerHTML = '';
+                 this.state.projects.forEach(proj => {
+                    const div = document.createElement('div');
+                    div.className = 'project-card';
+                    div.innerHTML = `
+                        <div class="project-info">
+                            <h3>${this.escapeHtml(proj.name)}</h3>
+                            <p>${proj.repoOwner}/${proj.repoName}</p>
+                        </div>
+                        <div class="project-actions">
+                            <button class="icon-btn" onclick="App.openEditor('${proj.id}')">✏️</button>
+                            <button class="icon-btn danger" onclick="App.confirmDelete('${proj.id}')">🗑️</button>
+                        </div>`;
+                    container.appendChild(div);
+                 });
+                 if(this.state.projects.length===0) document.getElementById('empty-state').classList.remove('hidden');
+                 else document.getElementById('empty-state').classList.add('hidden');
+            },
+            addProject(name, url, path) {
+                try {
+                    const urlObj = new URL(url);
+                    const parts = urlObj.pathname.split('/').filter(p => p.length > 0);
+                    this.state.projects.push({
+                        id: crypto.randomUUID(), name, repoUrl: url, 
+                        repoOwner: parts[0], repoName: parts[1], filePath: path || 'index.html'
+                    });
+                    this.saveProjects(); this.closeModals(); this.renderProjects();
+                } catch(e) { this.showToast("Invalid URL"); }
+            },
+            confirmDelete(id) { this.state.projectToDelete = id; this.openModal('modal-delete-confirm'); },
+            deleteProject() { 
+                this.state.projects = this.state.projects.filter(p => p.id !== this.state.projectToDelete);
+                this.saveProjects(); this.closeModals(); this.renderProjects();
+            },
+
+            /* --- Editor Logic --- */
+
+            async openEditor(id) {
+                const project = this.state.projects.find(p => p.id === id);
+                if (!project) return;
+                
+                this.state.currentProject = project;
+                this.state.fileData = { content: '', sha: '', pendingContent: '', commitMsg: '' };
+                
+                // UI Setup
+                document.getElementById('editor-title').textContent = project.name;
+                document.getElementById('chat-history').innerHTML = '<div class="message system">Loading latest file from GitHub...</div>';
+                document.getElementById('preview-frame').srcdoc = '';
+                
+                this.navigateTo('editor');
+                this.switchTab('ai');
+                this.loadModels();
+
+                // Fetch File
+                try {
+                    const data = await GitHubAPI.getFile(
+                        this.state.config.githubToken, 
+                        project.repoOwner, 
+                        project.repoName, 
+                        project.filePath
+                    );
+                    
+                    this.state.fileData.content = data.content;
+                    this.state.fileData.pendingContent = data.content;
+                    this.state.fileData.sha = data.sha;
+                    
+                    if (data.sha === null) {
+                        this.addChatMessage('system', 'File not found on GitHub. Initialized new template. Commit to create it.');
+                    } else {
+                        this.addChatMessage('system', 'File loaded. Ready for instructions.');
+                    }
+                    
+                    this.updatePreview();
+                } catch (e) {
+                    this.addChatMessage('system', 'Error loading file: ' + e.message);
+                }
+            },
+
+            async loadModels() {
+                const select = document.getElementById('model-select');
+                // Keep existing options briefly or show loading state if needed
+                
+                const models = await GoogleAI.listModels(this.state.config.aiApiKey);
+                
+                if (models.length > 0) {
+                    select.innerHTML = ''; // Clear hardcoded defaults
+                    models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.name; // e.g. models/gemini-1.5-pro
+                        opt.textContent = m.displayName + ` (${m.version})`;
+                        select.appendChild(opt);
+                    });
+                }
+
+                // Restore preference
+                if (this.state.config.preferredModel) {
+                    // Check if the preferred model is in the list, otherwise select first
+                    if (Array.from(select.options).some(o => o.value === this.state.config.preferredModel)) {
+                        select.value = this.state.config.preferredModel;
+                    }
+                }
+            },
+
+            switchTab(tabName) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                const buttons = document.querySelectorAll('.tab-btn');
+                if(tabName === 'ai') buttons[0].classList.add('active');
+                if(tabName === 'preview') {
+                    buttons[1].classList.add('active');
+                    this.updatePreview(); 
+                }
+                if(tabName === 'manual') {
+                    buttons[2].classList.add('active');
+                    // Sync Manual Editor with current state (AI might have changed it)
+                    this.updateManualEditor(); 
+                }
+                
+                document.getElementById(`tab-${tabName}`).classList.add('active');
+            },
+
+            updatePreview() {
+                const frame = document.getElementById('preview-frame');
+                // Use pending content if changes exist, otherwise original
+                frame.srcdoc = this.state.fileData.pendingContent || this.state.fileData.content;
+            },
+
+            updateManualEditor() {
+                const textarea = document.getElementById('manual-code-area');
+                // Only update value if it differs to prevent cursor jumping if already focused
+                if (textarea.value !== this.state.fileData.pendingContent) {
+                    textarea.value = this.state.fileData.pendingContent || '';
+                }
+                this.renderLineNumbers();
+            },
+
+            renderLineNumbers() {
+                const textarea = document.getElementById('manual-code-area');
+                const lineNumbersEle = document.getElementById('line-numbers');
+                const lines = textarea.value.split('\n').length;
+                
+                // Optimized: only rebuild if line count changes significantly
+                if (lineNumbersEle.childElementCount !== lines) {
+                    lineNumbersEle.innerHTML = Array(lines).fill(0).map((_, i) => `<div>${i + 1}</div>`).join('');
+                }
+            },
+            
+            handleManualInput(e) {
+                const text = e.target.value;
+                this.state.fileData.pendingContent = text;
+                // If user edits manually, reset the AI commit message suggestion or keep generic
+                if (!this.state.fileData.commitMsg) {
+                    this.state.fileData.commitMsg = "Manual update to index.html";
+                }
+                this.renderLineNumbers();
+            },
+
+            async sendPrompt() {
+                if (this.state.isLoading) return;
+                
+                const input = document.getElementById('ai-prompt');
+                const userText = input.value.trim();
+                const model = document.getElementById('model-select').value;
+                if (!userText) return;
+
+                // UI Updates
+                this.addChatMessage('user', userText);
+                input.value = '';
+                this.state.isLoading = true;
+                const loadingMsgId = this.addChatMessage('system', 'AI is coding... <span class="spinner"></span>');
+
+                try {
+                    const systemPrompt = `
+                        You are a web expert. 
+                        Target File: ${this.state.currentProject.filePath}.
+                        Current Content: 
+                        ${this.state.fileData.pendingContent}
+                        
+                        Output ONLY JSON:
+                        {
+                            "commit_message": "Short git commit message",
+                            "operations": [
+                                { "type": "replace", "search_string": "exact unique text to find", "replacement_string": "new code" }
+                            ]
+                        }
+                        Do not use markdown.
+                    `;
+
+                    const result = await GoogleAI.generate(this.state.config.aiApiKey, model, systemPrompt, userText);
+                    
+                    // Apply Diffs
+                    let newContent = this.state.fileData.pendingContent;
+                    let successCount = 0;
+                    
+                    result.operations.forEach(op => {
+                        if (newContent.includes(op.search_string)) {
+                            newContent = newContent.replace(op.search_string, op.replacement_string);
+                            successCount++;
+                        }
+                    });
+
+                    if (successCount === 0 && result.operations.length > 0) {
+                        throw new Error("Could not find code to replace. AI context might be stale.");
+                    }
+
+                    // Store pending changes
+                    this.state.fileData.pendingContent = newContent;
+                    this.state.fileData.commitMsg = result.commit_message;
+
+                    // Update UI
+                    document.getElementById(loadingMsgId).innerHTML = `
+                        AI Finished.
+                        <div class="diff-summary">
+                            <strong>${result.commit_message}</strong><br>
+                            Applied ${successCount}/${result.operations.length} changes.
+                        </div>
+                        <button class="btn btn-primary" onclick="App.switchTab('preview')" style="margin-top:10px; font-size:0.8rem; padding:8px;">Check Preview</button>
+                    `;
+
+                } catch (e) {
+                    document.getElementById(loadingMsgId).textContent = "Error: " + e.message;
+                } finally {
+                    this.state.isLoading = false;
+                }
+            },
+
+            addChatMessage(type, html) {
+                const div = document.createElement('div');
+                div.className = `message ${type}`;
+                div.id = 'msg-' + Date.now();
+                div.innerHTML = html;
+                const container = document.getElementById('chat-history');
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+                return div.id;
+            },
+
+            /* --- Commit Logic --- */
+
+            openCommitModal() {
+                if (this.state.fileData.pendingContent === this.state.fileData.content) {
+                    this.showToast("No changes to commit.");
+                    return;
+                }
+                document.getElementById('commit-msg').value = this.state.fileData.commitMsg || "Update index.html";
+                this.openModal('modal-commit');
+            },
+
+            async commitChanges() {
+                const btn = document.getElementById('btn-push');
+                const msg = document.getElementById('commit-msg').value;
+                const originalText = btn.textContent;
+                
+                try {
+                    btn.textContent = "Pushing...";
+                    btn.disabled = true;
+
+                    const res = await GitHubAPI.updateFile(
+                        this.state.config.githubToken,
+                        this.state.currentProject.repoOwner,
+                        this.state.currentProject.repoName,
+                        this.state.currentProject.filePath,
+                        this.state.fileData.pendingContent,
+                        this.state.fileData.sha,
+                        msg
+                    );
+
+                    this.state.fileData.sha = res.content.sha;
+                    this.state.fileData.content = this.state.fileData.pendingContent;
+                    
+                    this.closeModals();
+                    this.showToast("Changes pushed successfully!");
+                    this.addChatMessage('system', '✅ Changes committed to GitHub.');
+
+                } catch (e) {
+                    this.showToast("Commit failed: " + e.message);
+                } finally {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            },
+
+            // ... [Previous Modal utilities & Helper methods] ...
+            openModal(id) { document.getElementById(id).classList.add('open'); },
+            closeModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); this.state.projectToDelete=null; },
+            escapeHtml(t) { return t.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); },
+            showToast(m) {
+                const c = document.getElementById('toast-container'); const t = document.createElement('div');
+                t.className='toast'; t.textContent=m; c.appendChild(t); void t.offsetWidth; t.classList.add('show');
+                setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300)},3000);
+            },
+            /* --- Event Bindings --- */
+            bindEvents() {
+                // ... [Previous bindings] ...
+                const setupForm = document.getElementById('setup-form');
+                if(setupForm) setupForm.addEventListener('submit', (e)=>{e.preventDefault(); 
+                    const t=document.getElementById('gh-token').value.trim(), k=document.getElementById('ai-key').value.trim();
+                    if(!t||!k)return this.showToast("Keys required"); this.state.config={githubToken:t,aiApiKey:k}; this.saveConfig();
+                });
+                document.getElementById('btn-settings').onclick = ()=>this.navigateTo('setup');
+                document.getElementById('btn-add-project').onclick = ()=>this.openModal('modal-add-project');
+                document.getElementById('btn-import-export').onclick = ()=>this.openModal('modal-io');
+                document.getElementById('form-add-project').addEventListener('submit',(e)=>{e.preventDefault();
+                    this.addProject(document.getElementById('inp-proj-name').value, document.getElementById('inp-proj-url').value, document.getElementById('inp-proj-path').value);
+                });
+                document.getElementById('btn-confirm-delete').onclick = ()=>this.deleteProject();
+                document.getElementById('btn-download-json').onclick = () => this.exportProjects();
+                document.getElementById('inp-import-json').onchange = (e) => {if(e.target.files.length) this.importProjects(e.target.files[0])};
+
+                // NEW Editor Bindings
+                document.getElementById('btn-send-prompt').onclick = () => this.sendPrompt();
+                document.getElementById('btn-save-trigger').onclick = () => this.openCommitModal();
+                document.getElementById('form-commit').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.commitChanges();
+                });
+
+                // NEW: Model Selector Change
+                document.getElementById('model-select').addEventListener('change', (e) => {
+                    this.state.config.preferredModel = e.target.value;
+                    // Silent save to local storage without navigation
+                    localStorage.setItem(this.STORAGE_KEY_CONFIG, JSON.stringify(this.state.config));
+                });
+
+                // Manual Editor Bindings
+                const codeArea = document.getElementById('manual-code-area');
+                
+                // 1. Sync content and line numbers on typing
+                codeArea.addEventListener('input', (e) => this.handleManualInput(e));
+                
+                // 2. Sync Scroll (Vertical) between textarea and line numbers
+                codeArea.addEventListener('scroll', (e) => {
+                    document.getElementById('line-numbers').scrollTop = e.target.scrollTop;
+                });
+
+                // 3. Enable Tab Key (Insert 2 spaces)
+                codeArea.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = codeArea.selectionStart;
+                        const end = codeArea.selectionEnd;
+                        
+                        // Insert 2 spaces
+                        codeArea.value = codeArea.value.substring(0, start) + "  " + codeArea.value.substring(end);
+                        
+                        // Move cursor
+                        codeArea.selectionStart = codeArea.selectionEnd = start + 2;
+                        
+                        // Update state immediately
+                        this.handleManualInput({ target: codeArea });
+                    }
+                });
+            },
+            
+            // Re-adding import/export helpers missed in copy paste logic
+            exportProjects() {
+                const b = new Blob([JSON.stringify(this.state.projects,null,2)],{type:'application/json'});
+                const u = URL.createObjectURL(b), a=document.createElement('a'); a.href=u; a.download='webcoder.json'; a.click();
+            },
+            importProjects(f) {
+                const r = new FileReader(); r.onload=e=>{
+                    try { this.state.projects=JSON.parse(e.target.result); this.saveProjects(); this.closeModals(); this.showToast("Imported"); }
+                    catch(x){ this.showToast("Bad JSON");}
+                }; r.readAsText(f);
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
+
+    </script>
+</body>
+</html>
