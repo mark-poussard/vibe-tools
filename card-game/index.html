@@ -2467,7 +2467,7 @@ function endTurn() {
         return;
     }
 
-    state.hero.ap = state.hero.maxAp;
+    state.hero.ap = Math.max(state.hero.ap, state.hero.maxAp);
     state.hero.block = 0; 
 
     // Apply Start-of-Turn Equipment Effects
