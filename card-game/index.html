@@ -644,8 +644,8 @@ const HEROES = [
         id: 'h_ironclad', 
         name: 'Paladin', 
         type: CARD_TYPES.HERO, 
-        hp: 30, maxHp: 30, 
-        ap: 2, maxAp: 2, 
+        hp: 20, maxHp: 20, 
+        ap: 3, maxAp: 3, 
         block: 0, 
         desc: 'Tanky. Starts with Shield.',
         startItem: 'i_shield'
@@ -654,7 +654,7 @@ const HEROES = [
         id: 'h_shadow', 
         name: 'Rogue', 
         type: CARD_TYPES.HERO, 
-        hp: 25, maxHp: 25, 
+        hp: 20, maxHp: 20, 
         ap: 3, maxAp: 3, 
         block: 0, 
         desc: 'Agile. Acts fast.',
@@ -698,6 +698,7 @@ const ITEM_DB = {
     's_stone':  { id: 's_stone',  name: 'Stone Form',   type: CARD_TYPES.SKILL, rarity: 'legendary', cost: 2, block: 15, desc: 'Gain 15 Block' },
     'l_bark':   { id: 'l_bark',   name: 'Bark Skin',    type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, hpBonus: 5, desc: '+5 Max HP' },
     'l_scale':  { id: 'l_scale',  name: 'Dragon Scale', type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, block: 3, desc: '+3 Block / Turn' },
+    'l_boss_relic': { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 50, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' },
     
     // --- STARTING ITEMS ---
     'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block / Turn' },
@@ -850,6 +851,12 @@ const LOOT_TABLES = {
         { id: 'l_spear',  weight: 20 },
         { id: 's_mend',   weight: 40 },
         { id: 'l_goo',    weight: 30 }
+    ],
+    'tier4_boss_loot': [
+        { id: 'l_boss_relic', weight: 10 }, // 10% Chance
+        { id: 'l_blood',      weight: 30 },
+        { id: 'l_scale',      weight: 30 },
+        { id: 's_stone',      weight: 30 }
     ]
 };
 
@@ -949,9 +956,9 @@ const MAP_GRAPH = {
     'n5a':{ id: 'n5a', name: 'Scorpion Pit',    type: 'SCORPION_PIT',      parents: ['n4'], x: 700, y: 250 },
     'n6a':{ id: 'n6a', name: 'Sand Dunes',      type: 'SAND_DUNES',        parents: ['n5a'], x: 850, y: 200 },
 
-    // South Path: Safe Trade Route
-    'n5b':{ id: 'n5b', name: 'Desert Bazaar',   type: 'DESERT_BAZAAR',     parents: ['n4'], x: 700, y: 550 },
-    'n6b':{ id: 'n6b', name: 'Cursed Oasis',    type: 'CURSED_OASIS',      parents: ['n5b'], x: 850, y: 600 },
+    // South Path: Safe Trade Route// South Path: Safe Trade Route
+    'n5b':{ id: 'n5b', name: 'Cursed Oasis',    type: 'CURSED_OASIS',      parents: ['n4'], x: 700, y: 550 },
+    'n6b':{ id: 'n6b', name: 'Desert Bazaar',   type: 'DESERT_BAZAAR',     parents: ['n5b'], x: 850, y: 600 },
 
     // Convergence 2: Border to Dead Lands
     'n7': { id: 'n7', name: 'Foggy Graveyard',  type: 'FOGGY_GRAVEYARD',   parents: ['n6a', 'n6b'], x: 1000, y: 400 },
@@ -1102,6 +1109,7 @@ const MONSTER_DB = {
     'm_spider': { id: 'm_spider', name: 'Cave Spider', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 2, lootTable: 'tier2_standard', desc: 'Poisonous' },
     'm_wolf':   { id: 'm_wolf',   name: 'Dire Wolf', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Fast Biter' },
     'm_cultist':{ id: 'm_cultist',name: 'Dark Cultist', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Glass Cannon' },
+    'm_leech':  { id: 'm_leech',  name: 'Void Leech', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 2, lootTable: 'tier2_standard', desc: 'Life Drainer' },
 
     // Tier 3
     'm_golem':  { id: 'm_golem',  name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, lootTable: 'tier3_void', desc: 'Tank' },
@@ -1181,9 +1189,9 @@ const MONSTER_DB = {
     'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, desc: 'BOSS: Immortal' },
 
     // Tier 4 (Castle/Endgame)
-    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, isBoss: true, desc: 'BOSS: Armored' },
-    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, isBoss: true, desc: 'BOSS: Stone God' },
-    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, isBoss: true, desc: 'BOSS: Apex' },
+    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Armored' },
+    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Stone God' },
+    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Apex' },
 
     // Bosses
     'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, desc: 'BOSS: Gatekeeper' },
@@ -2351,46 +2359,34 @@ function killMonster(index) {
     let m = state.adventureRow[index];
     log(`${m.name} defeated!`);
 
-    // Tier Transition
-    if (m.isBoss) {
-        log(`Boss Defeated!`, "gold");
+    // Loot Chance scales with danger (number of OTHER monsters in the row)
+    // Base: 10% + 10% per other monster. 
+    // 0 others = 10%, 4 others = 50%
+    const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
+    const dropChance = 0.10 + (otherMonsters * 0.10);
 
-        // Reward: Boss Relic & Heal
-        if(Math.random() < 0.1){
-            let reward = { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 50, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' };
-            state.inventory.push(reward);
-            log(`Looted: ${reward.name}`, "#2ecc71");
+    log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
+
+    if (Math.random() < dropChance) {
+        if (m.lootTable) {
+            const lootCard = rollLoot(m.lootTable);
+            
+            if (lootCard) {
+                if(lootCard.type === CARD_TYPES.LOOT){
+                    state.inventory.push(lootCard);
+                } else {
+                    state.deck.push(lootCard);
+                }
+                // Log with Rarity Color
+                const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
+                log(`Looted: <span style="color:${colors[lootCard.rarity]}">${lootCard.name}</span>`);
+                
+                // Emit updates (Pub/Sub pattern)
+                EventManager.emit(EVENTS.INVENTORY_UPDATED);
+            }
         }
     } else {
-        // Loot Chance scales with danger (number of OTHER monsters in the row)
-        // Base: 10% + 10% per other monster. 
-        // 0 others = 10%, 4 others = 50%
-        const otherMonsters = state.adventureRow.filter((c, i) => i !== index && c.type === CARD_TYPES.MONSTER).length;
-        const dropChance = 0.10 + (otherMonsters * 0.10);
-
-        log(`Drop Chance: ${Math.floor(dropChance * 100)}%`, "#7f8c8d");
-
-        if (Math.random() < dropChance) {
-            if (m.lootTable) {
-                const lootCard = rollLoot(m.lootTable);
-                
-                if (lootCard) {
-                    if(lootCard.type === CARD_TYPES.LOOT){
-                        state.inventory.push(lootCard);
-                    } else {
-                        state.deck.push(lootCard);
-                    }
-                    // Log with Rarity Color
-                    const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
-                    log(`Looted: <span style="color:${colors[lootCard.rarity]}">${lootCard.name}</span>`);
-                    
-                    // Emit updates (Pub/Sub pattern)
-                    EventManager.emit(EVENTS.INVENTORY_UPDATED);
-                }
-            }
-        } else {
-            log("No loot found.");
-        }
+        log("No loot found.");
     }
     
     state.adventureRow.splice(index, 1);
