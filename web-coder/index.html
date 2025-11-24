@@ -1209,17 +1209,50 @@
                 }
             },
 
-            // Save to localStorage and Render
+            // Save to localStorage, render, and trim history if needed.
             persistChatMessage(projectId, msgObj) {
                 if (!this.state.projectHistory[projectId]) this.state.projectHistory[projectId] = [];
                 
                 msgObj.id = Date.now().toString();
                 msgObj.timestamp = Date.now();
                 
-                this.state.projectHistory[projectId].push(msgObj);
+                let projectHistory = this.state.projectHistory[projectId];
+                projectHistory.push(msgObj);
+
+                let wasTrimmed = false;
+                // Trim history only when an AI message is added, representing the end of a "turn".
+                if (msgObj.role === 'ai') {
+                    const historyLimit = 5; // 5 prompts and outputs
+                    const userMessageIndices = projectHistory
+                        .map((msg, index) => msg.role === 'user' ? index : -1)
+                        .filter(index => index !== -1);
+
+                    if (userMessageIndices.length > historyLimit) {
+                        const amountToTrim = userMessageIndices.length - historyLimit;
+                        const cutOffIndex = userMessageIndices[amountToTrim];
+                        
+                        const newHistory = projectHistory.slice(cutOffIndex);
+                        this.state.projectHistory[projectId] = newHistory;
+                        projectHistory = newHistory; // Also update the local variable for re-rendering
+                        wasTrimmed = true;
+                    }
+                }
+                
                 localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
                 
-                return this.renderChatMessage(msgObj);
+                if (wasTrimmed) {
+                    // Re-render entire chat history if it was trimmed
+                    const chatContainer = document.getElementById('chat-history');
+                    chatContainer.innerHTML = '';
+                    projectHistory.forEach(msg => this.renderChatMessage(msg));
+                    
+                    // The function is expected to return the ID of the rendered message.
+                    // Since we re-rendered, the last one is the one we just added.
+                    return projectHistory[projectHistory.length - 1]?.id;
+                } else {
+                    // No trimming, just render the single new message as before
+                    return this.renderChatMessage(msgObj);
+                }
             },
 
             // Render to DOM (used by loadState and persistChatMessage)
