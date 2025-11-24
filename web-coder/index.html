@@ -161,7 +161,15 @@
         .editor-layout {
             display: flex;
             flex-direction: column;
-            height: calc(100vh - var(--header-height));
+            /* Changed from fixed calc to 100% to adapt when global header is hidden */
+            height: 100%; 
+        }
+
+        /* Update: Editor header doesn't need to be sticky if the container doesn't scroll. 
+           It is a flex item now. We remove sticky to prevent z-index context issues. */
+        .editor-layout .app-header {
+            position: relative;
+            flex-shrink: 0; /* Prevent header from shrinking */
         }
 
         /* Tabs */
@@ -837,6 +845,14 @@
             },
 
             navigateTo(screenId) {
+                // Toggle Global Header based on screen
+                const globalHeader = document.querySelector('body > .app-header');
+                if (screenId === 'editor') {
+                    globalHeader.style.display = 'none';
+                } else {
+                    globalHeader.style.display = 'flex';
+                }
+
                 document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
                 const target = document.getElementById(`screen-${screenId}`);
                 if (target) {
