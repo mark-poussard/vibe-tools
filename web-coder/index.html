@@ -324,17 +324,16 @@
         .diff-view {
             font-family: monospace;
             font-size: 0.8rem;
-            white-space: pre-wrap;
-            word-break: break-all;
             border: 1px solid var(--border-color);
             border-radius: var(--radius);
             margin-top: 10px;
-            overflow: hidden;
+            overflow-x: auto; /* Allow horizontal scrolling */
         }
         .diff-view pre {
             padding: 8px;
             margin: 0;
             line-height: 1.3;
+            white-space: pre; /* Prevent wrapping to enable scroll */
         }
         .diff-view .removed {
             background-color: rgba(239, 68, 68, 0.1);
