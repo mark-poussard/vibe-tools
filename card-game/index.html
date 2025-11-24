@@ -63,6 +63,15 @@
             display: none; /* Controlled by JS */
         }
 
+        #game-main-area {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0; /* Prevents flexbox overflow issues */
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
         /* Stats Bar (Compact) */
         #stats-bar {
             background: var(--ui-panel);
@@ -626,24 +635,26 @@
         </div>
     </div>
 
-    <!-- Row 2: Adventure (Scrollable) -->
-    <div id="adventure-row" class="scroll-row">
-        <!-- Monsters injected here -->
-    </div>
+    <div id="game-main-area">
+        <!-- Row 2: Adventure (Scrollable) -->
+        <div id="adventure-row" class="scroll-row">
+            <!-- Monsters injected here -->
+        </div>
 
-    <!-- Row 3: Hero & Equip -->
-    <div id="hero-area">
-        <div id="hero-card-container">
-            <!-- Hero Card -->
-        </div>
-        <div style="flex-grow:1; overflow:hidden;">
-            <div class="area-label" style="margin-bottom:2px;">Equipped</div>
-            <div id="equipment-slots">
-                <!-- Equipped Items -->
+        <!-- Row 3: Hero & Equip -->
+        <div id="hero-area">
+            <div id="hero-card-container">
+                <!-- Hero Card -->
             </div>
-        </div>
-        <div id="end-turn-container">
-            <button id="end-turn-btn" onclick="endTurn()">END<br>TURN</button>
+            <div style="flex-grow:1; overflow:hidden;">
+                <div class="area-label" style="margin-bottom:2px;">Equipped</div>
+                <div id="equipment-slots">
+                    <!-- Equipped Items -->
+                </div>
+            </div>
+            <div id="end-turn-container">
+                <button id="end-turn-btn" onclick="endTurn()">END<br>TURN</button>
+            </div>
         </div>
     </div>
 
