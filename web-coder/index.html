@@ -263,6 +263,25 @@
             font-style: italic;
         }
 
+        .message-actions {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-xs {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2);
+            color: var(--text-secondary);
+        }
+        .btn-xs:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
         .chat-input-area {
             padding: var(--spacing-md);
             background-color: var(--surface-color);
@@ -861,6 +880,7 @@
             state: {
                 config: { githubToken: '', aiApiKey: '', preferredModel: '' },
                 projects: [],
+                projectHistory: {}, // { projectId: [ {role, text, snapshot...} ] }
                 projectToDelete: null,
                 // Editor State
                 currentProject: null,
@@ -871,6 +891,7 @@
             // ... [Previous Constants and init/loadState/router methods remain exactly the same] ...
             STORAGE_KEY_CONFIG: 'webcoder_config',
             STORAGE_KEY_PROJECTS: 'webcoder_projects',
+            STORAGE_KEY_HISTORY: 'webcoder_history',
 
             init() { this.loadState(); this.router(); this.bindEvents(); },
             loadState() {
@@ -878,6 +899,8 @@
                 if(c) this.state.config = JSON.parse(c);
                 const p = localStorage.getItem(this.STORAGE_KEY_PROJECTS);
                 if(p) this.state.projects = JSON.parse(p);
+                const h = localStorage.getItem(this.STORAGE_KEY_HISTORY);
+                if(h) this.state.projectHistory = JSON.parse(h);
             },
             router() { /* ... same as before ... */ 
                 if (!this.state.config.githubToken) this.navigateTo('setup');
@@ -967,7 +990,17 @@
                 
                 // UI Setup
                 document.getElementById('editor-title').textContent = project.name;
-                document.getElementById('chat-history').innerHTML = '<div class="message system">Loading latest file from GitHub...</div>';
+                const chatContainer = document.getElementById('chat-history');
+                chatContainer.innerHTML = ''; // Clear previous
+                
+                // Load History
+                const history = this.state.projectHistory[id] || [];
+                if (history.length === 0) {
+                    chatContainer.innerHTML = '<div class="message system">Loading latest file from GitHub...</div>';
+                } else {
+                    history.forEach(msg => this.renderChatMessage(msg));
+                }
+
                 document.getElementById('preview-frame').srcdoc = '';
                 
                 this.navigateTo('editor');
@@ -1076,12 +1109,16 @@
                 if (!userText) return;
 
                 // UI Updates
-                this.addChatMessage('user', userText);
+                this.persistChatMessage(this.state.currentProject.id, { role: 'user', text: userText });
                 input.value = '';
                 this.state.isLoading = true;
+                // Temporary loading message (not persisted)
                 const loadingMsgId = this.addChatMessage('system', 'AI is coding... <span class="spinner"></span>');
 
                 try {
+                    // Capture state BEFORE changes for Undo
+                    const preChangeContent = this.state.fileData.pendingContent;
+
                     // Simplified System Prompt (Schema handles structure)
                     const systemPrompt = `
                         You are a professional web developer.
@@ -1123,9 +1160,11 @@
                     this.state.fileData.commitMsg = result.commit_message;
                     this.state.fileData.lastAiResponseJson = result;
 
-                    // Update UI
-                    document.getElementById(loadingMsgId).innerHTML = `
-                        AI Finished.
+                    // Remove temporary loading message
+                    document.getElementById(loadingMsgId).remove();
+
+                    // Construct Success Message
+                    const aiMsgContent = `
                         <div class="diff-summary">
                             <strong>${result.commit_message}</strong><br>
                             Applied ${successCount}/${result.operations.length} changes.
@@ -1136,6 +1175,13 @@
                         </div>
                     `;
 
+                    // Persist AI response WITH undo snapshot
+                    this.persistChatMessage(this.state.currentProject.id, { 
+                        role: 'ai', 
+                        text: aiMsgContent, 
+                        snapshot: preChangeContent 
+                    });
+
                 } catch (e) {
                     document.getElementById(loadingMsgId).textContent = "Error: " + e.message;
                 } finally {
@@ -1143,15 +1189,73 @@
                 }
             },
 
-            addChatMessage(type, html) {
+            // Save to localStorage and Render
+            persistChatMessage(projectId, msgObj) {
+                if (!this.state.projectHistory[projectId]) this.state.projectHistory[projectId] = [];
+                
+                // Add timestamp and ID
+                msgObj.id = Date.now().toString();
+                msgObj.timestamp = Date.now();
+                
+                this.state.projectHistory[projectId].push(msgObj);
+                localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
+                
+                return this.renderChatMessage(msgObj);
+            },
+
+            // Render to DOM (used by loadState and persistChatMessage)
+            renderChatMessage(msgObj) {
+                return this.addChatMessage(msgObj.role, msgObj.text, msgObj.snapshot, msgObj.id);
+            },
+
+            // Low level DOM append
+            addChatMessage(type, html, snapshot = null, id = null) {
                 const div = document.createElement('div');
                 div.className = `message ${type}`;
-                div.id = 'msg-' + Date.now();
+                div.id = id || 'msg-' + Date.now();
                 div.innerHTML = html;
+                
+                // Add Undo Button if snapshot exists and message is from AI
+                if (snapshot && type === 'ai') {
+                    const actionDiv = document.createElement('div');
+                    actionDiv.className = 'message-actions';
+                    actionDiv.innerHTML = `<button class="btn-xs" onclick="App.undoChange('${div.id}')">↺ Undo Changes</button>`;
+                    div.appendChild(actionDiv);
+                }
+
                 const container = document.getElementById('chat-history');
                 container.appendChild(div);
                 container.scrollTop = container.scrollHeight;
                 return div.id;
+            },
+
+            undoChange(msgId) {
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId];
+                const msgIndex = history.findIndex(m => m.id === msgId);
+                
+                if (msgIndex === -1) return;
+                
+                const msg = history[msgIndex];
+                if (!msg.snapshot) return this.showToast("No restore point found.");
+
+                // Restore Content
+                this.state.fileData.pendingContent = msg.snapshot;
+                this.updatePreview();
+                this.updateManualEditor();
+                
+                // Visual feedback
+                this.showToast("Changes reverted to state before this prompt.");
+                this.addChatMessage('system', '↺ Reverted code to previous state.');
+
+                // Remove snapshot from history to prevent double undo (optional, keeps history clean)
+                // We keep the message but remove the snapshot capability to indicate it's done.
+                delete history[msgIndex].snapshot;
+                localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
+                
+                // Remove button from UI
+                const btn = document.querySelector(`#${msgId} .btn-xs`);
+                if(btn) btn.remove();
             },
 
             showAiOutput() {
