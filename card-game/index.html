@@ -781,7 +781,7 @@ const ITEM_DB = {
                   effects: [{ type: 'BLOCK', val: 8, target: 'SELF' }], desc: 'Gain 8 Block' },
     
     // Hero Starting Skills (Explicit Copies for reference in Decks)
-    's_fast':   { id: 's_fast', name: 'Fast Hands', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
+    's_fast':   { id: 's_fast', name: 'Quick Draw', type: CARD_TYPES.SKILL, rarity: 'common', cost: 0, 
                   effects: [{ type: 'DRAW', val: 2, target: 'SELF' }], desc: 'Draw 2 Cards' },
 
     's_bash':   { id: 's_bash', name: 'Shield Bash', type: CARD_TYPES.SKILL, rarity: 'common', cost: 1, 
@@ -1097,7 +1097,7 @@ const NODE_CONFIGS = {
     'THRONE_ROOM': {
         icon: '👑', minCards: 1, maxCards: 1, // Just the boss
         monsters: [],
-        events: [], bossPool: ['m_malakor', 'mb_void_dragon']
+        events: [], bossPool: ['mb_malakor', 'mb_void_dragon']
     }
 };
 
@@ -1950,8 +1950,10 @@ function buildDungeonFromConfig(configKey) {
         // Check if we should add event (30% chance) AND we have unique events left
         if ((Math.random() > 0.3 || availableEvents.length === 0)) {
             // Add Monster
-            const mId = config.monsters[Math.floor(Math.random() * config.monsters.length)];
-            segment.push({...MONSTER_DB[mId]});
+            if (config.monsters.length > 0) {
+                const mId = config.monsters[Math.floor(Math.random() * config.monsters.length)];
+                segment.push({...MONSTER_DB[mId]});
+            }
         } else {
             // Add Event (Unique)
             const rIdx = Math.floor(Math.random() * availableEvents.length);
@@ -2281,13 +2283,13 @@ function resolveEventChoice(cardIndex, choiceIndex) {
 
     // 4. Weapon Master
     else if (choice.effect === 'train_str') {
-        let card = { id: 's_heavy', name: 'Heavy Strike', type: CARD_TYPES.SKILL, cost: 2, dmg: 10, desc: 'Deal 10 DMG' };
+        let card = JSON.parse(JSON.stringify(ITEM_DB['s_heavy']));
         state.deck.push(card);
         log("Learned Heavy Strike.");
         removeEvent();
     }
     else if (choice.effect === 'train_def') {
-        let card = { id: 's_iron', name: 'Iron Skin', type: CARD_TYPES.SKILL, cost: 1, block: 8, desc: 'Gain 8 Block' };
+        let card = JSON.parse(JSON.stringify(ITEM_DB['s_iron']));
         state.deck.push(card);
         log("Learned Iron Skin.");
         removeEvent();
