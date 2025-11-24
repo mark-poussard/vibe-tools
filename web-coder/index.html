@@ -300,6 +300,49 @@
             font-size: 0.8rem;
         }
 
+        /* Review Modal Styles */
+        .operation-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .operation-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .operation-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .operation-header label {
+            margin-bottom: 0;
+            flex-grow: 1;
+        }
+        .diff-view {
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .diff-view pre {
+            padding: 8px;
+            margin: 0;
+            line-height: 1.3;
+        }
+        .diff-view .removed {
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+        .diff-view .added {
+            background-color: rgba(34, 197, 94, 0.1);
+        }
+
         .diff-summary {
             background: rgba(34, 197, 94, 0.1);
             border: 1px solid var(--success-color);
@@ -611,13 +654,16 @@
             </div>
         </div>
 
-        <!-- MODAL: AI Output -->
-        <div id="modal-ai-output" class="modal-overlay">
+        <!-- MODAL: Review AI Changes -->
+        <div id="modal-review" class="modal-overlay">
             <div class="modal-content">
-                <div class="modal-header">AI Model Output</div>
-                <pre id="ai-output-content" style="background: var(--bg-color); padding: 10px; border-radius: var(--radius); max-height: 60vh; overflow-y: auto; white-space: pre-wrap; word-break: break-all; font-size: 0.8rem;"></pre>
+                <div class="modal-header">Review AI Changes</div>
+                <div id="review-operations-list" style="max-height: 60vh; overflow-y: auto;">
+                    <!-- Operations will be injected here -->
+                </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Close</button>
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
+                    <button type="button" id="btn-apply-selected" class="btn btn-primary">Apply Selected</button>
                 </div>
             </div>
         </div>
@@ -1108,26 +1154,18 @@
                 const model = document.getElementById('model-select').value;
                 if (!userText) return;
 
-                // UI Updates
                 this.persistChatMessage(this.state.currentProject.id, { role: 'user', text: userText });
                 input.value = '';
                 this.state.isLoading = true;
-                // Temporary loading message (not persisted)
                 const loadingMsgId = this.addChatMessage('system', 'AI is coding... <span class="spinner"></span>');
 
                 try {
-                    // Capture state BEFORE changes for Undo
                     const preChangeContent = this.state.fileData.pendingContent;
-
-                    // Simplified System Prompt (Schema handles structure)
                     const systemPrompt = `
                         You are a professional web developer.
-                        
                         TARGET FILE: ${this.state.currentProject.filePath}
-                        
                         CURRENT CONTENT: 
                         ${this.state.fileData.pendingContent}
-                        
                         INSTRUCTIONS:
                         1. Analyze the User Request and the Current Content.
                         2. Generate a list of search/replace operations to fulfill the request.
@@ -1137,49 +1175,31 @@
 
                     const result = await GoogleAI.generate(this.state.config.aiApiKey, model, systemPrompt, userText);
                     
-                    // Apply Diffs
-                    let newContent = this.state.fileData.pendingContent;
-                    let successCount = 0;
-                    
-                    // ... (Rest of the function remains the same: applying changes, updating UI) ...
+                    // Give each operation a unique ID for tracking
                     if (result.operations) {
-                        result.operations.forEach(op => {
-                            if (newContent.includes(op.search_string)) {
-                                newContent = newContent.replace(op.search_string, op.replacement_string);
-                                successCount++;
-                            }
-                        });
-                    }
-
-                    if (successCount === 0 && result.operations && result.operations.length > 0) {
-                        throw new Error("Could not find code to replace. Context might be stale.");
+                        result.operations.forEach((op, index) => op.id = `op-${Date.now()}-${index}`);
                     }
                     
-                    // Store pending changes
-                    this.state.fileData.pendingContent = newContent;
                     this.state.fileData.commitMsg = result.commit_message;
                     this.state.fileData.lastAiResponseJson = result;
 
-                    // Remove temporary loading message
                     document.getElementById(loadingMsgId).remove();
 
-                    // Construct Success Message
                     const aiMsgContent = `
                         <div class="diff-summary">
-                            <strong>${result.commit_message}</strong><br>
-                            Applied ${successCount}/${result.operations.length} changes.
+                            <strong>${result.commit_message || 'AI Response Received'}</strong><br>
+                            AI generated ${result.operations?.length || 0} change(s).
                         </div>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button class="btn btn-primary" onclick="App.switchTab('preview')" style="font-size:0.8rem; padding:8px;">Check Preview</button>
-                            <button class="btn" onclick="App.showAiOutput()" style="font-size:0.8rem; padding:8px; background: var(--surface-color); border: 1px solid var(--border-color);">Check output</button>
+                            <button class="btn btn-primary" onclick="App.showReviewModal()" style="font-size:0.8rem; padding:8px;">Review Changes</button>
                         </div>
                     `;
 
-                    // Persist AI response WITH undo snapshot
                     this.persistChatMessage(this.state.currentProject.id, { 
                         role: 'ai', 
                         text: aiMsgContent, 
-                        snapshot: preChangeContent 
+                        snapshot: preChangeContent,
+                        aiResponse: this.state.fileData.lastAiResponseJson
                     });
 
                 } catch (e) {
@@ -1193,7 +1213,6 @@
             persistChatMessage(projectId, msgObj) {
                 if (!this.state.projectHistory[projectId]) this.state.projectHistory[projectId] = [];
                 
-                // Add timestamp and ID
                 msgObj.id = Date.now().toString();
                 msgObj.timestamp = Date.now();
                 
@@ -1215,7 +1234,6 @@
                 div.id = id || 'msg-' + Date.now();
                 div.innerHTML = html;
                 
-                // Add Undo Button if snapshot exists and message is from AI
                 if (snapshot && type === 'ai') {
                     const actionDiv = document.createElement('div');
                     actionDiv.className = 'message-actions';
@@ -1239,33 +1257,112 @@
                 const msg = history[msgIndex];
                 if (!msg.snapshot) return this.showToast("No restore point found.");
 
-                // Restore Content
                 this.state.fileData.pendingContent = msg.snapshot;
                 this.updatePreview();
                 this.updateManualEditor();
                 
-                // Visual feedback
                 this.showToast("Changes reverted to state before this prompt.");
                 this.addChatMessage('system', '↺ Reverted code to previous state.');
 
-                // Remove snapshot from history to prevent double undo (optional, keeps history clean)
-                // We keep the message but remove the snapshot capability to indicate it's done.
                 delete history[msgIndex].snapshot;
                 localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
                 
-                // Remove button from UI
                 const btn = document.querySelector(`#${msgId} .btn-xs`);
                 if(btn) btn.remove();
             },
 
-            showAiOutput() {
-                const outputContainer = document.getElementById('ai-output-content');
-                if (this.state.fileData.lastAiResponseJson) {
-                    outputContainer.textContent = JSON.stringify(this.state.fileData.lastAiResponseJson, null, 2);
-                } else {
-                    outputContainer.textContent = 'No AI output available.';
+            showReviewModal() {
+                const operations = this.state.fileData.lastAiResponseJson?.operations;
+                if (!operations) {
+                    this.showToast("No AI output available to review.");
+                    return;
                 }
-                this.openModal('modal-ai-output');
+
+                const listContainer = document.getElementById('review-operations-list');
+                listContainer.innerHTML = '';
+
+                operations.forEach((op, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'operation-item';
+                    const isApplied = op.applied;
+
+                    itemDiv.innerHTML = `
+                        <div class="operation-header">
+                            ${!isApplied ? `
+                                <input type="checkbox" id="op-checkbox-${op.id}" data-op-index="${index}" checked>
+                                <label for="op-checkbox-${op.id}">Apply this change</label>
+                            ` : `
+                                <span>✅ Applied</span>
+                                <button class="btn-xs" onclick="App.revertChange(${index})">Revert</button>
+                            `}
+                        </div>
+                        <div class="diff-view">
+                            <pre class="removed">- ${this.escapeHtml(op.search_string)}</pre>
+                            <pre class="added">+ ${this.escapeHtml(op.replacement_string)}</pre>
+                        </div>
+                    `;
+                    listContainer.appendChild(itemDiv);
+                });
+
+                const applyBtn = document.getElementById('btn-apply-selected');
+                if (operations.every(op => op.applied)) {
+                    applyBtn.style.display = 'none';
+                } else {
+                    applyBtn.style.display = 'block';
+                }
+
+                this.openModal('modal-review');
+            },
+            
+            applySelectedChanges() {
+                const operations = this.state.fileData.lastAiResponseJson.operations;
+                let newContent = this.state.fileData.pendingContent;
+                let successCount = 0;
+
+                const checkboxes = document.querySelectorAll('#review-operations-list input[type="checkbox"]:checked');
+                
+                checkboxes.forEach(cb => {
+                    const opIndex = parseInt(cb.dataset.opIndex, 10);
+                    const op = operations[opIndex];
+
+                    if (!op.applied && newContent.includes(op.search_string)) {
+                        newContent = newContent.replace(op.search_string, op.replacement_string);
+                        op.applied = true;
+                        successCount++;
+                    } else if (!op.applied) {
+                        this.showToast("Could not apply a change, code may have been modified.", "error");
+                    }
+                });
+
+                if (successCount > 0) {
+                    this.state.fileData.pendingContent = newContent;
+                    this.updatePreview();
+                    this.updateManualEditor();
+                    this.showToast(`${successCount} change(s) applied.`);
+                }
+                
+                this.closeModals();
+            },
+
+            revertChange(opIndex) {
+                const op = this.state.fileData.lastAiResponseJson.operations[opIndex];
+                if (!op || !op.applied) return;
+
+                let currentContent = this.state.fileData.pendingContent;
+
+                if (currentContent.includes(op.replacement_string)) {
+                    currentContent = currentContent.replace(op.replacement_string, op.search_string);
+                    delete op.applied;
+
+                    this.state.fileData.pendingContent = currentContent;
+                    this.updatePreview();
+                    this.updateManualEditor();
+                    this.showToast("Change reverted.");
+
+                    this.showReviewModal(); 
+                } else {
+                    this.showToast("Could not revert: code block not found.");
+                }
             },
 
             /* --- Commit Logic --- */
@@ -1347,6 +1444,7 @@
                     e.preventDefault();
                     this.commitChanges();
                 });
+                document.getElementById('btn-apply-selected').onclick = () => this.applySelectedChanges();
 
                 // NEW: Model Selector Change
                 document.getElementById('model-select').addEventListener('change', (e) => {
