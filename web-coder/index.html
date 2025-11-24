@@ -762,6 +762,27 @@
         const GoogleAI = {
             baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 
+            // Define the schema for the Diff format
+            schema: {
+                type: "OBJECT",
+                properties: {
+                    commit_message: { type: "STRING" },
+                    operations: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                type: { type: "STRING", enum: ["replace"] },
+                                search_string: { type: "STRING" },
+                                replacement_string: { type: "STRING" }
+                            },
+                            required: ["type", "search_string", "replacement_string"]
+                        }
+                    }
+                },
+                required: ["commit_message", "operations"]
+            },
+
             async listModels(apiKey) {
                 // ... (no changes here) ...
                 try {
@@ -794,7 +815,8 @@
                         ]
                     }],
                     generationConfig: {
-                        responseMimeType: "application/json" 
+                        responseMimeType: "application/json",
+                        responseSchema: this.schema
                     }
                 };
 
@@ -1049,20 +1071,20 @@
                 const loadingMsgId = this.addChatMessage('system', 'AI is coding... <span class="spinner"></span>');
 
                 try {
+                    // Simplified System Prompt (Schema handles structure)
                     const systemPrompt = `
-                        You are a web expert. 
-                        Target File: ${this.state.currentProject.filePath}.
-                        Current Content: 
+                        You are a professional web developer.
+                        
+                        TARGET FILE: ${this.state.currentProject.filePath}
+                        
+                        CURRENT CONTENT: 
                         ${this.state.fileData.pendingContent}
                         
-                        Output ONLY JSON:
-                        {
-                            "commit_message": "Short git commit message",
-                            "operations": [
-                                { "type": "replace", "search_string": "exact unique text to find", "replacement_string": "new code" }
-                            ]
-                        }
-                        Do not use markdown.
+                        INSTRUCTIONS:
+                        1. Analyze the User Request and the Current Content.
+                        2. Generate a list of search/replace operations to fulfill the request.
+                        3. Ensure 'search_string' is unique enough to match only the intended lines.
+                        4. Ensure 'replacement_string' contains the full new code block.
                     `;
 
                     const result = await GoogleAI.generate(this.state.config.aiApiKey, model, systemPrompt, userText);
@@ -1071,17 +1093,20 @@
                     let newContent = this.state.fileData.pendingContent;
                     let successCount = 0;
                     
-                    result.operations.forEach(op => {
-                        if (newContent.includes(op.search_string)) {
-                            newContent = newContent.replace(op.search_string, op.replacement_string);
-                            successCount++;
-                        }
-                    });
-
-                    if (successCount === 0 && result.operations.length > 0) {
-                        throw new Error("Could not find code to replace. AI context might be stale.");
+                    // ... (Rest of the function remains the same: applying changes, updating UI) ...
+                    if (result.operations) {
+                        result.operations.forEach(op => {
+                            if (newContent.includes(op.search_string)) {
+                                newContent = newContent.replace(op.search_string, op.replacement_string);
+                                successCount++;
+                            }
+                        });
                     }
 
+                    if (successCount === 0 && result.operations && result.operations.length > 0) {
+                        throw new Error("Could not find code to replace. Context might be stale.");
+                    }
+                    
                     // Store pending changes
                     this.state.fileData.pendingContent = newContent;
                     this.state.fileData.commitMsg = result.commit_message;
