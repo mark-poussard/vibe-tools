@@ -592,6 +592,17 @@
             </div>
         </div>
 
+        <!-- MODAL: AI Output -->
+        <div id="modal-ai-output" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">AI Model Output</div>
+                <pre id="ai-output-content" style="background: var(--bg-color); padding: 10px; border-radius: var(--radius); max-height: 60vh; overflow-y: auto; white-space: pre-wrap; word-break: break-all; font-size: 0.8rem;"></pre>
+                <div class="modal-actions">
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL: Delete Confirmation -->
         <div id="modal-delete-confirm" class="modal-overlay">
             <div class="modal-content">
@@ -853,7 +864,7 @@
                 projectToDelete: null,
                 // Editor State
                 currentProject: null,
-                fileData: { content: '', sha: '', pendingContent: '', commitMsg: '' },
+                fileData: { content: '', sha: '', pendingContent: '', commitMsg: '', lastAiResponseJson: null },
                 isLoading: false
             },
             
@@ -1110,6 +1121,7 @@
                     // Store pending changes
                     this.state.fileData.pendingContent = newContent;
                     this.state.fileData.commitMsg = result.commit_message;
+                    this.state.fileData.lastAiResponseJson = result;
 
                     // Update UI
                     document.getElementById(loadingMsgId).innerHTML = `
@@ -1118,7 +1130,10 @@
                             <strong>${result.commit_message}</strong><br>
                             Applied ${successCount}/${result.operations.length} changes.
                         </div>
-                        <button class="btn btn-primary" onclick="App.switchTab('preview')" style="margin-top:10px; font-size:0.8rem; padding:8px;">Check Preview</button>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="App.switchTab('preview')" style="font-size:0.8rem; padding:8px;">Check Preview</button>
+                            <button class="btn" onclick="App.showAiOutput()" style="font-size:0.8rem; padding:8px; background: var(--surface-color); border: 1px solid var(--border-color);">Check output</button>
+                        </div>
                     `;
 
                 } catch (e) {
@@ -1137,6 +1152,16 @@
                 container.appendChild(div);
                 container.scrollTop = container.scrollHeight;
                 return div.id;
+            },
+
+            showAiOutput() {
+                const outputContainer = document.getElementById('ai-output-content');
+                if (this.state.fileData.lastAiResponseJson) {
+                    outputContainer.textContent = JSON.stringify(this.state.fileData.lastAiResponseJson, null, 2);
+                } else {
+                    outputContainer.textContent = 'No AI output available.';
+                }
+                this.openModal('modal-ai-output');
             },
 
             /* --- Commit Logic --- */
