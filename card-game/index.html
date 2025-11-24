@@ -402,6 +402,28 @@
             flex-direction: column-reverse; /* Newest at bottom */
         }
 
+                /* Settings Overlay */
+        #settings-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none; /* Controlled by JS */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 101; /* Above other overlays */
+        }
+        .setting-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 16px;
+        }
+        .danger-btn {
+            background-color: #c0392b !important;
+            color: white;
+        }
+
         /* Overlay */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -477,13 +499,14 @@
             </div>
             <div style="display:flex; flex-direction: column; gap:5px;">
                 <button onclick="showHeroScreen()" style="background-color: var(--hero-color);">Hero</button>
-                <button onclick="showDeckScreen()" style="background-color: var(--skill-color);">Deck</button>
+                                <button onclick="showDeckScreen()" style="background-color: var(--skill-color);">Deck</button>
+                <button onclick="showSettingsScreen()" style="background-color: var(--curse-color);">Settings</button>
             </div>
         </div>
 
         <!-- Bottom Bar -->
         <div style="display:flex; justify-content: flex-end;">
-            <button onclick="resetProgress()" style="background-color: #c0392b; font-size: 10px; padding: 5px;">Reset Save</button>
+            
         </div>
     </div>
 </div>
@@ -568,6 +591,17 @@
 <div id="event-overlay">
     <h2>Event Encounter</h2>
     <div id="event-card-container"></div>
+</div>
+
+<!-- Settings Overlay -->
+<div id="settings-overlay">
+    <h1>Settings</h1>
+    <div class="setting-row">
+        <label for="auto-add-toggle">Auto-add new Skills to Deck</label>
+        <input type="checkbox" id="auto-add-toggle" onchange="toggleAutoAddSetting(this.checked)">
+    </div>
+    <button onclick="resetProgress()" class="danger-btn">Reset Save Data</button>
+    <button onclick="closeSettingsScreen()">Close</button>
 </div>
 
 <!-- Game Overlay (Win/Loss) -->
@@ -1226,6 +1260,7 @@ let state = {
     collection: [], // Cards removed from deck
     inventory: [],
     gold: 0,
+    settings: { autoAddToDeck: true },
     // Track temporary buffs from consumables (reset after dungeon)
     buffs: { atk: 0, block: 0, maxHp: 0 } 
 };
@@ -1830,7 +1865,7 @@ function buyMerchantItem(itemId, price) {
         
         // Add to appropriate storage
         if (item.type === CARD_TYPES.SKILL) {
-            state.deck.push(item);
+            addSkillToPlayer(item);
         } else {
             state.inventory.push(item);
         }
@@ -2284,13 +2319,13 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 4. Weapon Master
     else if (choice.effect === 'train_str') {
         let card = JSON.parse(JSON.stringify(ITEM_DB['s_heavy']));
-        state.deck.push(card);
+        addSkillToPlayer(card);
         log("Learned Heavy Strike.");
         removeEvent();
     }
     else if (choice.effect === 'train_def') {
         let card = JSON.parse(JSON.stringify(ITEM_DB['s_iron']));
-        state.deck.push(card);
+        addSkillToPlayer(card);
         log("Learned Iron Skin.");
         removeEvent();
     }
@@ -2377,7 +2412,7 @@ function killMonster(index) {
         const lootCard = rollLoot(m.lootTable);
         if (lootCard) {
             if(lootCard.type === CARD_TYPES.SKILL){
-                state.deck.push(lootCard);
+                addSkillToPlayer(lootCard);
             } else {
                 state.inventory.push(lootCard);
             }
@@ -2679,7 +2714,12 @@ function loadGame() {
     const save = localStorage.getItem('vanguardSave');
     if (save) {
         try {
-            state = JSON.parse(save);
+                        state = JSON.parse(save);
+
+            // Backwards compatibility for saves without settings
+            if (!state.settings) {
+                state.settings = { autoAddToDeck: true };
+            }
             
             // If loaded, skip selection and go to Map
             // We reset the "run" state (hand/row) to ensure a clean load on the map
@@ -2701,6 +2741,37 @@ function loadGame() {
         }
     }
     return false;
+}
+
+function showSettingsScreen() {
+    document.getElementById('settings-overlay').style.display = 'flex';
+    // Sync toggle with current state
+    if (!state.settings) state.settings = { autoAddToDeck: true };
+    document.getElementById('auto-add-toggle').checked = state.settings.autoAddToDeck;
+}
+
+function closeSettingsScreen() {
+    document.getElementById('settings-overlay').style.display = 'none';
+    saveGame(); // Save settings when closing
+}
+
+function toggleAutoAddSetting(isChecked) {
+    if (!state.settings) state.settings = {}; // Safety init
+    state.settings.autoAddToDeck = isChecked;
+    log(`Auto-add skills to deck is now ${isChecked ? 'ON' : 'OFF'}.`);
+}
+
+function addSkillToPlayer(skillCard) {
+    // Default to true if setting is missing for some reason
+    const shouldAddToDeck = (state.settings && state.settings.autoAddToDeck !== undefined) ? state.settings.autoAddToDeck : true;
+    
+    if (shouldAddToDeck) {
+        state.deck.push(skillCard);
+        log(`Added <span style="color:var(--skill-color)">${skillCard.name}</span> to Deck.`);
+    } else {
+        state.collection.push(skillCard);
+        log(`Added <span style="color:var(--skill-color)">${skillCard.name}</span> to Collection.`);
+    }
 }
 
 function resetProgress() {
