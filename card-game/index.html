@@ -932,7 +932,10 @@ const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, c
 
 const EVENT_MONSTERS = {
     'm_ghost': { id: 'm_ghost', name: 'Vengeful Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, rewardId: 'm_ghost', desc: 'Hit by Physical' },
-    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, rewardId: 'm_goblin', desc: 'It has teeth!' }
+    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, rewardId: 'm_goblin', desc: 'It has teeth!' },
+    'm_giant_groggy': { id: 'm_giant_groggy', name: 'Groggy Giant', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, rewardId: 'm_goblin', desc: 'Disturbed!' },
+    'm_giant_awakened': { id: 'm_giant_awakened', name: 'Awakened Giant', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 8, rewardId: 'm_goblin', desc: 'Enraged!' },
+    'm_bard_angry': { id: 'm_bard_angry', name: 'Angry Bard', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, rewardId: 'm_goblin', desc: 'You monster!' }
 };
 
 // --- TIERED DATA ---
@@ -981,6 +984,79 @@ const COMMON_EVENTS = [
         choices: [
             { label: 'Drink (Heal 5 HP)', effect: 'spring_heal' },
             { label: 'Bottle (Get +1 Max HP)', effect: 'spring_max' }
+        ]
+    },
+    {
+        id: 'e_gambler', name: 'Gambler\\'s Den', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A shady figure offers a game of chance.',
+        choices: [
+            { label: 'Bet 10 Gold (50% Win)', effect: 'gamble_gold' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_fountain', name: 'Fountain of Youth', type: CARD_TYPES.EVENT, minTier: 2, desc: 'The water shimmers with life.',
+        choices: [
+            { label: 'Drink Deep (Full Heal, -1 Max HP)', effect: 'fountain_full_heal' },
+            { label: 'Sip (Heal 5 HP)', effect: 'fountain_sip' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_giant', name: 'Sleeping Giant', type: CARD_TYPES.EVENT, minTier: 2, desc: 'A colossal giant slumbers in your path.',
+        choices: [
+            { label: 'Sneak Past (50% fail)', effect: 'giant_sneak' },
+            { label: 'Poke it (Fight Groggy Giant)', effect: 'giant_attack' }
+        ]
+    },
+    {
+        id: 'e_bard', name: 'Wandering Bard', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A bard offers a song for some coin.',
+        choices: [
+            { label: 'Pay 5g for a song (+1 AP buff)', effect: 'bard_pay' },
+            { label: 'Rob the bard (Fight)', effect: 'bard_rob' },
+            { label: 'Listen for free', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_armory', name: 'Abandoned Armory', type: CARD_TYPES.EVENT, minTier: 1, desc: 'You can take one item for the next fight.',
+        choices: [
+            { label: 'Take Sword (+2 Atk Buff)', effect: 'armory_sword' },
+            { label: 'Take Shield (+2 Block Buff)', effect: 'armory_shield' }
+        ]
+    },
+    {
+        id: 'e_idol', name: 'Cursed Idol', type: CARD_TYPES.EVENT, minTier: 2, desc: 'An idol pulses with dark energy.',
+        choices: [
+            { label: 'Take Idol (Get Relic, Get Curse)', effect: 'idol_take' },
+            { label: 'Destroy it', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_hermit', name: 'Hermit\\'s Hut', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A hermit offers a trade.',
+        choices: [
+            { label: 'Trade 10 HP for a rare skill', effect: 'hermit_trade_hp' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_goblin_shop', name: 'Goblin Merchant', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A goblin offers "rare" goods.',
+        choices: [
+            { label: 'Buy Mystery Potion (15g)', effect: 'goblin_potion' },
+            { label: 'Buy Shiny Rock (10g)', effect: 'goblin_rock' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_library', name: 'Ancient Library', type: CARD_TYPES.EVENT, minTier: 2, desc: 'Scrolls of forgotten lore are scattered around.',
+        choices: [
+            { label: 'Study Combat (Get Attack Skill)', effect: 'library_combat' },
+            { label: 'Study Defense (Get Defense Skill)', effect: 'library_defense' }
+        ]
+    },
+    {
+        id: 'e_rift', name: 'Void Rift', type: CARD_TYPES.EVENT, minTier: 3, desc: 'A tear in reality hums before you.',
+        choices: [
+            { label: 'Reach Inside (Random Outcome)', effect: 'rift_touch' },
+            { label: 'Leave', effect: 'leave' }
         ]
     }
 ];
@@ -1273,7 +1349,7 @@ let state = {
     gold: 0,
     settings: { autoAddToDeck: true },
     // Track temporary buffs from consumables (reset after dungeon)
-    buffs: { atk: 0, block: 0, maxHp: 0 } 
+    buffs: { atk: 0, block: 0, maxHp: 0, ap: 0 } 
 };
 
 /* --- EVENT MANAGER (STORE PATTERN) --- */
@@ -1838,7 +1914,8 @@ function enterDungeonNode(nodeId) {
     state.adventureRow = [];
     state.turn = 1;
 
-    // Reset Combat Stats (AP/Block)
+    // Reset Combat Stats (AP/Block) & Apply Buffs
+    state.hero.maxAp += (state.buffs.ap || 0); // Temp AP buff
     state.hero.ap = state.hero.maxAp;
     state.hero.block = 0;
 
@@ -2352,6 +2429,171 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         removeEvent();
     }
 
+    // --- 10 New Events ---
+    // 6. Gambler
+    else if (choice.effect === 'gamble_gold') {
+        if(state.gold >= 10) {
+            state.gold -= 10;
+            if(Math.random() > 0.5) {
+                state.gold += 20;
+                log("You win! Gained 10 Gold.", "gold");
+            } else {
+                log("You lose! The house always wins.", "red");
+            }
+        } else {
+            log("Not enough gold to bet.");
+        }
+        removeEvent();
+    }
+    // 7. Fountain
+    else if (choice.effect === 'fountain_full_heal') {
+        state.hero.hp = state.hero.maxHp;
+        state.hero.maxHp -= 1;
+        log("You are fully healed, but feel weaker (-1 Max HP).", "green");
+        removeEvent();
+    }
+    else if (choice.effect === 'fountain_sip') {
+        healHero(5);
+        removeEvent();
+    }
+    // 8. Giant
+    else if (choice.effect === 'giant_sneak') {
+        if (Math.random() > 0.5) {
+            log("You successfully sneak past the giant.");
+            removeEvent();
+        } else {
+            log("The giant wakes up! It's enraged!", "red");
+            spawnEventMonster('m_giant_awakened');
+        }
+    }
+    else if (choice.effect === 'giant_attack') {
+        log("You poke the sleeping giant. It awakens, groggy and confused.", "orange");
+        spawnEventMonster('m_giant_groggy');
+    }
+    // 9. Bard
+    else if (choice.effect === 'bard_pay') {
+        if(state.gold >= 5) {
+            state.gold -= 5;
+            state.buffs.ap = (state.buffs.ap || 0) + 1;
+            log("The song is inspiring! +1 AP next dungeon.", "cyan");
+        } else {
+            log("You can't afford the song.");
+        }
+        removeEvent();
+    }
+    else if (choice.effect === 'bard_rob') {
+        log("You attack the bard! What have you done?", "red");
+        state.deck.push({...CURSE_CARD});
+        log("You feel the weight of your actions. Gained a Curse.", "gray");
+        spawnEventMonster('m_bard_angry');
+    }
+    // 10. Armory
+    else if (choice.effect === 'armory_sword') {
+        state.buffs.atk += 2;
+        log("You sharpen your blade. +2 ATK next dungeon.", "green");
+        removeEvent();
+    }
+    else if (choice.effect === 'armory_shield') {
+        state.buffs.block += 2;
+        log("You reinforce your shield. +2 Block next dungeon.", "green");
+        removeEvent();
+    }
+    // 11. Idol
+    else if (choice.effect === 'idol_take') {
+        let relic = { id: 'l_idol_relic', name: 'Idol of Power', type: CARD_TYPES.LOOT, value: 5, atkBuff: 2, hpBonus: -5, desc: '+2 DMG, -5 Max HP' };
+        state.inventory.push(relic);
+        state.deck.push({...CURSE_CARD});
+        log("The idol grants power, but at a cost.", "purple");
+        removeEvent();
+    }
+    // 12. Hermit
+    else if (choice.effect === 'hermit_trade_hp') {
+        if (state.hero.hp > 10) {
+            state.hero.hp -= 10;
+            // Give a random rare skill
+            const rareSkills = ['s_web', 's_drain', 's_heavy', 's_iron'];
+            const randomSkillId = rareSkills[Math.floor(Math.random() * rareSkills.length)];
+            const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
+            addSkillToPlayer(card);
+            log(`You trade vitality for knowledge. Lost 10 HP.`, "red");
+        } else {
+            log("You don't have enough HP to trade.");
+        }
+        removeEvent();
+    }
+    // 13. Goblin Merchant
+    else if (choice.effect === 'goblin_potion') {
+        if(state.gold >= 15) {
+            state.gold -= 15;
+            if(Math.random() > 0.5) {
+                let potion = { id: 'c_goblin_brew', name: 'Goblin Brew', type: CARD_TYPES.CONSUMABLE, rarity: 'common', value: 0, heal: 15, desc: 'Heals 15 HP. Smells weird.' };
+                state.inventory.push(potion);
+                log("The potion seems helpful!", "green");
+            } else {
+                state.deck.push({...CURSE_CARD, name: 'Tummy Ache'});
+                log("The potion was just swamp water. You get a curse.", "red");
+            }
+        } else { log("Not enough gold."); }
+        removeEvent();
+    }
+    else if (choice.effect === 'goblin_rock') {
+        if(state.gold >= 10) {
+            state.gold -= 10;
+            let rock = { id: 'q_shiny_rock', name: 'Shiny Rock', type: CARD_TYPES.QUEST, rarity: 'common', value: 1, desc: 'It\\'s just a rock.' };
+            state.inventory.push(rock);
+            log("You bought a shiny rock. The goblin cackles.", "gray");
+        } else { log("Not enough gold."); }
+        removeEvent();
+    }
+    // 14. Library
+    else if (choice.effect === 'library_combat') {
+        const combatSkills = ['s_smash', 's_wild', 's_exec'];
+        const randomSkillId = combatSkills[Math.floor(Math.random() * combatSkills.length)];
+        const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
+        addSkillToPlayer(card);
+        log("You learn a new combat technique.");
+        removeEvent();
+    }
+    else if (choice.effect === 'library_defense') {
+        const defenseSkills = ['s_wall', 's_step', 's_iron'];
+        const randomSkillId = defenseSkills[Math.floor(Math.random() * defenseSkills.length)];
+        const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
+        addSkillToPlayer(card);
+        log("You learn a new defensive maneuver.");
+        removeEvent();
+    }
+    // 15. Void Rift
+    else if (choice.effect === 'rift_touch') {
+        const outcome = Math.floor(Math.random() * 5);
+        if (outcome === 0) {
+            state.hero.hp -= 10;
+            log("A tendril lashes out! -10 HP.", "red");
+        } else if (outcome === 1) {
+            healHero(10);
+            log("A warm light heals you. +10 HP.", "green");
+        } else if (outcome === 2) {
+            state.gold += 25;
+            log("Gold spills from the rift! +25g.", "gold");
+        } else if (outcome === 3) {
+            const loot = rollLoot('tier3_void');
+            if (loot) {
+                if (loot.type === CARD_TYPES.SKILL) {
+                    addSkillToPlayer(loot);
+                } else {
+                    state.inventory.push(loot);
+                    const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
+                    log(`Pulled from the void: <span style="color:${colors[loot.rarity] || '#fff'}">${loot.name}</span>`);
+                }
+            } else {
+                log("You reach inside but find nothing.");
+            }
+        } else {
+            state.deck.push({...CURSE_CARD, name: 'Void Taint'});
+            log("A dark energy clings to you. Gained a curse.", "purple");
+        }
+        removeEvent();
+    }
+
     render();
 
     // Check for Auto-End Turn OR Dungeon Clear
@@ -2467,8 +2709,11 @@ function continueGame() {
     
     state.adventureRow = [];
 
+    // Revert temporary buffs before resetting them
+    state.hero.maxAp -= (state.buffs.ap || 0);
+
     // Reset Temporary Buffs
-    state.buffs = { atk: 0, block: 0, maxHp: 0 };
+    state.buffs = { atk: 0, block: 0, maxHp: 0, ap: 0 };
     
     ScreenManager.show('MAP');
 }
