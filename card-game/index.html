@@ -3009,6 +3009,7 @@ function healHero(amount) {
 function endTurn() {
     log("--- Enemy Turn ---");
     
+    let totalDamageTaken = 0;
     state.adventureRow.forEach(m => {
         if(m.type === CARD_TYPES.EVENT) return;
 
@@ -3028,9 +3029,14 @@ function endTurn() {
 
         if (dmg > 0) {
             state.hero.hp -= dmg;
+            totalDamageTaken += dmg;
             log(`${m.name} deals <span class="log-dmg">${dmg}</span> damage!`);
         }
     });
+
+    if (totalDamageTaken > 0) {
+        showNotification(`Took ${totalDamageTaken} damage`, 'loss');
+    }
 
     if (state.hero.hp <= 0) {
         gameOver();
