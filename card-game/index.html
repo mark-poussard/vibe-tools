@@ -54,6 +54,36 @@
         }
         button:active { transform: scale(0.98); }
 
+        /* --- Notification System --- */
+        #notification-area {
+            position: fixed;
+            top: -100px; /* Hidden by default */
+            left: 50%;
+            transform: translateX(-50%);
+            min-width: 200px;
+            text-align: center;
+            padding: 15px 25px;
+            border-radius: 0 0 15px 15px;
+            z-index: 2000; /* Above everything */
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: top 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            pointer-events: none; /* Let clicks pass when hidden */
+        }
+        
+        #notification-area.show {
+            top: 0;
+            pointer-events: auto;
+        }
+
+        .notify-gold { background-color: var(--highlight); color: #2c3e50; border: 2px solid #fff; }
+        .notify-loss { background-color: #c0392b; color: white; border: 2px solid #fff; }
+        .notify-skill { background-color: var(--skill-color); color: white; border: 2px solid #fff; }
+        .notify-loot { background-color: var(--loot-color); color: white; border: 2px solid #fff; }
+        .notify-item { background-color: #9b59b6; color: white; border: 2px solid #fff; }
+
         /* --- Game Screen Grid --- */
         #game-container {
             display: flex;
@@ -595,6 +625,9 @@
         </div>
     </div>
 </div>
+
+<!-- Notification Overlay -->
+<div id="notification-area" onclick="this.classList.remove('show')"></div>
 
 <!-- Event Overlay -->
 <div id="event-overlay">
@@ -1667,6 +1700,8 @@ function sellItem(index) {
     log(`Sold ${item.name} for ${val} Gold.`);
     EventManager.emit(EVENTS.HERO_UPDATED);
     EventManager.emit(EVENTS.INVENTORY_UPDATED);
+
+    showNotification(`Sold: +${val} Gold`, 'gold');
 }
 
 function showDeckScreen() {
@@ -2056,6 +2091,7 @@ function buyMerchantItem(itemId, price) {
             addSkillToPlayer(item);
         } else {
             state.inventory.push(item);
+            showNotification(`Bought: ${item.name}`, 'loot');
         }
         
         renderMerchantScreen();
@@ -2078,6 +2114,8 @@ function sellMerchantItem(source, index) {
     
     renderMerchantScreen();
     log(`Sold ${item.name} for ${val}g.`);
+
+    showNotification(`Sold: +${val} Gold`, 'gold');
 }
 
 function renderMerchantScreen() {
@@ -2209,6 +2247,24 @@ function buildDungeonFromConfig(configKey) {
 }
 
 /* --- ENGINE HELPERS --- */
+
+let notifyTimer = null;
+
+function showNotification(message, type) {
+    const el = document.getElementById('notification-area');
+    
+    // Clear previous timer to ensure singleton behavior
+    if (notifyTimer) clearTimeout(notifyTimer);
+    
+    // Set content and type
+    el.innerHTML = message;
+    el.className = `show notify-${type}`; // Reset classes
+    
+    // Auto-dismiss after 1 second
+    notifyTimer = setTimeout(() => {
+        el.classList.remove('show');
+    }, 1000);
+}
 
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -2461,6 +2517,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         let relic = { id: 'l_blood', name: 'Blood Gem', type: CARD_TYPES.LOOT, value: 5, atkBuff: 3, desc: '+3 DMG' };
         state.inventory.push(relic);
         log("You sacrificed vitality for power.");
+        showNotification("Gained: Blood Gem", "loot");
         removeEvent();
     }
 
@@ -2535,8 +2592,10 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             if(Math.random() > 0.5) {
                 state.gold += 20;
                 log("You win! Gained 10 Gold.", "gold");
+                showNotification("Won: +10 Gold", "gold");
             } else {
                 log("You lose! The house always wins.", "red");
+                showNotification("Lost: 10 Gold", "loss");
             }
         } else {
             log("Not enough gold to bet.");
@@ -2602,6 +2661,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         state.inventory.push(relic);
         state.deck.push({...CURSE_CARD});
         log("The idol grants power, but at a cost.", "purple");
+        showNotification("Gained: Idol of Power", "loot");
         removeEvent();
     }
     // 12. Hermit
@@ -2697,6 +2757,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             state.gold -= 5;
             state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_1'])));
             log("The beggar hands you a vibrating coin.", "gold");
+            showNotification("Received: Strange Coin", "item");
         } else {
             log("Not enough gold.");
         }
@@ -2710,6 +2771,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         // Give Step 2 Item
         state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_2'])));
         log(" The statue's eye pops out. You take it.", "purple");
+        showNotification("Received: Gem Eye", "item");
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
@@ -2721,6 +2783,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         // Give Step 3 Item
         state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_3'])));
         log("The tomb slides open. You find a handle.", "purple");
+        showNotification("Received: Spectral Handle", "item");
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
@@ -2732,6 +2795,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         // Give Step 4 Item
         state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_4'])));
         log("You forge the pieces together. It forms a Void Key.", "gold");
+        showNotification("Received: Void Key", "item");
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
@@ -2821,6 +2885,7 @@ function killMonster(index) {
                 addSkillToPlayer(lootCard);
             } else {
                 state.inventory.push(lootCard);
+                showNotification(`Looted: ${lootCard.name}`, 'loot');
             }
             // Log with Rarity Color
             const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
@@ -3181,6 +3246,8 @@ function addSkillToPlayer(skillCard) {
         state.collection.push(skillCard);
         log(`Added <span style="color:var(--skill-color)">${skillCard.name}</span> to Collection.`);
     }
+    
+    showNotification(`Learned: ${skillCard.name}`, 'skill');
 }
 
 function resetProgress() {
