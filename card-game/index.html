@@ -2513,9 +2513,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
         // Give a strong item
         let relic = { id: 'l_blood', name: 'Blood Gem', type: CARD_TYPES.LOOT, value: 5, atkBuff: 3, desc: '+3 DMG' };
-        state.inventory.push(relic);
         log("You sacrificed vitality for power.");
-        showNotification("Gained: Blood Gem", "loot");
+        acquireLoot(relic);
         removeEvent();
     }
 
@@ -2531,12 +2530,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         // 100% Loot, no Mimic
         const reward = rollLoot('chest_random');
         if(reward) {
-            if (reward.type === CARD_TYPES.LOOT) {
-                state.inventory.push(reward);
-            } else {
-                state.discard.push(reward);
-            }
             log(`You unlocked the chest and found: ${reward.name}!`);
+            acquireLoot(reward);
         }
         removeEvent();
     }
@@ -2548,12 +2543,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         } else {
             const reward = rollLoot('chest_random');
             if(reward) {
-                if (reward.type === CARD_TYPES.LOOT) {
-                    state.inventory.push(reward);
-                } else {
-                    state.discard.push(reward);
-                }
                 log(`You smashed it open and found: ${reward.name}!`);
+                acquireLoot(reward);
             }
             removeEvent();
         }
@@ -2561,14 +2552,14 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 4. Weapon Master
     else if (choice.effect === 'train_str') {
         let card = JSON.parse(JSON.stringify(ITEM_DB['s_heavy']));
-        addSkillToPlayer(card);
         log("Learned Heavy Strike.");
+        acquireLoot(card);
         removeEvent();
     }
     else if (choice.effect === 'train_def') {
         let card = JSON.parse(JSON.stringify(ITEM_DB['s_iron']));
-        addSkillToPlayer(card);
         log("Learned Iron Skin.");
+        acquireLoot(card);
         removeEvent();
     }
 
@@ -2656,10 +2647,9 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 11. Idol
     else if (choice.effect === 'idol_take') {
         let relic = { id: 'l_idol_relic', name: 'Idol of Power', type: CARD_TYPES.LOOT, value: 5, atkBuff: 2, hpBonus: -5, desc: '+2 DMG, -5 Max HP' };
-        state.inventory.push(relic);
         state.deck.push({...CURSE_CARD});
         log("The idol grants power, but at a cost.", "purple");
-        showNotification("Gained: Idol of Power", "loot");
+        acquireLoot(relic);
         removeEvent();
     }
     // 12. Hermit
@@ -2670,8 +2660,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             const rareSkills = ['s_web', 's_drain', 's_heavy', 's_iron'];
             const randomSkillId = rareSkills[Math.floor(Math.random() * rareSkills.length)];
             const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
-            addSkillToPlayer(card);
             log(`You trade vitality for knowledge. Lost 10 HP.`, "red");
+            acquireLoot(card);
         } else {
             log("You don't have enough HP to trade.");
         }
@@ -2683,8 +2673,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             state.gold -= 15;
             if(Math.random() > 0.5) {
                 let potion = { id: 'c_goblin_brew', name: 'Goblin Brew', type: CARD_TYPES.CONSUMABLE, rarity: 'common', value: 0, heal: 15, desc: 'Heals 15 HP. Smells weird.' };
-                state.inventory.push(potion);
                 log("The potion seems helpful!", "green");
+                acquireLoot(potion);
             } else {
                 state.deck.push({...CURSE_CARD, name: 'Tummy Ache'});
                 log("The potion was just swamp water. You get a curse.", "red");
@@ -2696,8 +2686,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         if(state.gold >= 10) {
             state.gold -= 10;
             let rock = { id: 'q_shiny_rock', name: 'Shiny Rock', type: CARD_TYPES.QUEST, rarity: 'common', value: 1, desc: 'It\'s just a rock.' };
-            state.inventory.push(rock);
             log("You bought a shiny rock. The goblin cackles.", "gray");
+            acquireLoot(rock);
         } else { log("Not enough gold."); }
         removeEvent();
     }
@@ -2706,16 +2696,16 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         const combatSkills = ['s_smash', 's_wild', 's_exec'];
         const randomSkillId = combatSkills[Math.floor(Math.random() * combatSkills.length)];
         const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
-        addSkillToPlayer(card);
         log("You learn a new combat technique.");
+        acquireLoot(card);
         removeEvent();
     }
     else if (choice.effect === 'library_defense') {
         const defenseSkills = ['s_wall', 's_step', 's_iron'];
         const randomSkillId = defenseSkills[Math.floor(Math.random() * defenseSkills.length)];
         const card = JSON.parse(JSON.stringify(ITEM_DB[randomSkillId]));
-        addSkillToPlayer(card);
         log("You learn a new defensive maneuver.");
+        acquireLoot(card);
         removeEvent();
     }
     // 15. Void Rift
@@ -2734,13 +2724,9 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         } else if (outcome === 3) {
             const loot = rollLoot('tier3_void');
             if (loot) {
-                if (loot.type === CARD_TYPES.SKILL) {
-                    addSkillToPlayer(loot);
-                } else {
-                    state.inventory.push(loot);
-                    const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
-                    log(`Pulled from the void: <span style="color:${colors[loot.rarity] || '#fff'}">${loot.name}</span>`);
-                }
+                const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
+                log(`Pulled from the void: <span style="color:${colors[loot.rarity] || '#fff'}">${loot.name}</span>`);
+                acquireLoot(loot);
             } else {
                 log("You reach inside but find nothing.");
             }
@@ -2754,9 +2740,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     else if (choice.effect === 'chain_step_1') {
         if (state.gold >= 5) {
             state.gold -= 5;
-            state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_1'])));
             log("The beggar hands you a vibrating coin.", "gold");
-            showNotification("Received: Strange Coin", "item");
+            acquireLoot(JSON.parse(JSON.stringify(ITEM_DB['q_chain_1'])));
         } else {
             log("Not enough gold.");
         }
@@ -2768,10 +2753,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         if (idx > -1) state.inventory.splice(idx, 1);
         
         // Give Step 2 Item
-        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_2'])));
         log(" The statue's eye pops out. You take it.", "purple");
-        showNotification("Received: Gem Eye", "item");
-        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        acquireLoot(JSON.parse(JSON.stringify(ITEM_DB['q_chain_2'])));
         removeEvent();
     }
     else if (choice.effect === 'chain_step_3') {
@@ -2780,10 +2763,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         if (idx > -1) state.inventory.splice(idx, 1);
         
         // Give Step 3 Item
-        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_3'])));
         log("The tomb slides open. You find a handle.", "purple");
-        showNotification("Received: Spectral Handle", "item");
-        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        acquireLoot(JSON.parse(JSON.stringify(ITEM_DB['q_chain_3'])));
         removeEvent();
     }
     else if (choice.effect === 'chain_step_4') {
@@ -2792,10 +2773,8 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         if (idx > -1) state.inventory.splice(idx, 1);
         
         // Give Step 4 Item
-        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_4'])));
         log("You forge the pieces together. It forms a Void Key.", "gold");
-        showNotification("Received: Void Key", "item");
-        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        acquireLoot(JSON.parse(JSON.stringify(ITEM_DB['q_chain_4'])));
         removeEvent();
     }
     else if (choice.effect === 'unlock_node') {
@@ -2886,24 +2865,38 @@ function killMonster(index) {
     if (m.lootTable) {
         const lootCard = rollLoot(m.lootTable);
         if (lootCard) {
-            if(lootCard.type === CARD_TYPES.SKILL){
-                addSkillToPlayer(lootCard);
-            } else {
-                state.inventory.push(lootCard);
-                showNotification(`Looted: ${lootCard.name}`, 'loot');
-            }
-            // Log with Rarity Color
-            const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
-            log(`Looted: <span style="color:${colors[lootCard.rarity]}">${lootCard.name}</span>`);
-            
-            // Emit updates (Pub/Sub pattern)
-            EventManager.emit(EVENTS.INVENTORY_UPDATED);
+            acquireLoot(lootCard);
+        } else {
+            log("No loot found.");
         }
     } else {
         log("No loot found.");
     }
     
     state.adventureRow.splice(index, 1);
+}
+
+function acquireLoot(lootCard) {
+    if (!lootCard) {
+        return; // Silently fail if no loot
+    }
+
+    if (lootCard.type === CARD_TYPES.SKILL) {
+        addSkillToPlayer(lootCard); // This already handles logging and notifications
+    } else {
+        state.inventory.push(lootCard);
+        
+        let notificationType = 'loot';
+        if (lootCard.type === CARD_TYPES.QUEST || lootCard.type === CARD_TYPES.CONSUMABLE) {
+            notificationType = 'item';
+        }
+        showNotification(`Looted: ${lootCard.name}`, notificationType);
+
+        const colors = { common: '#bdc3c7', rare: '#3498db', legendary: '#f1c40f' };
+        log(`Looted: <span style="color:${colors[lootCard.rarity] || '#fff'}">${lootCard.name}</span>`);
+
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+    }
 }
 
 function dungeonComplete() {
