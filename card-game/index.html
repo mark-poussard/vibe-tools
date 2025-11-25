@@ -973,7 +973,7 @@ const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, c
 
 const EVENT_MONSTERS = {
     'm_ghost': { id: 'm_ghost', name: 'Vengeful Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, rewardId: 'm_ghost', desc: 'Hit by Physical' },
-    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, rewardId: 'm_goblin', desc: 'It has teeth!' },
+    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, lootTable: 'chest_random', desc: 'It has teeth!' },
     'm_giant_groggy': { id: 'm_giant_groggy', name: 'Groggy Giant', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, rewardId: 'm_goblin', desc: 'Disturbed!' },
     'm_giant_awakened': { id: 'm_giant_awakened', name: 'Awakened Giant', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 8, rewardId: 'm_goblin', desc: 'Enraged!' },
     'm_bard_angry': { id: 'm_bard_angry', name: 'Angry Bard', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, rewardId: 'm_goblin', desc: 'You monster!' }
@@ -2458,6 +2458,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // --- Original Events ---
     if (choice.effect === 'pray') {
         healHero(10);
+        showNotification('Healed +10 HP', 'loot');
         state.discard.push({...CURSE_CARD});
         log("You were healed, but cursed.");
         removeEvent();
@@ -2566,6 +2567,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 5. Spring
     else if (choice.effect === 'spring_heal') {
         healHero(5);
+        showNotification('Healed +5 HP', 'loot');
         removeEvent();
     }
     else if (choice.effect === 'spring_max') {
@@ -2595,11 +2597,13 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     else if (choice.effect === 'fountain_full_heal') {
         state.hero.hp = state.hero.maxHp;
         state.hero.maxHp -= 1;
+        showNotification('Fully Healed!', 'loot');
         log("You are fully healed, but feel weaker (-1 Max HP).", "green");
         removeEvent();
     }
     else if (choice.effect === 'fountain_sip') {
         healHero(5);
+        showNotification('Healed +5 HP', 'loot');
         removeEvent();
     }
     // 8. Giant
@@ -2717,6 +2721,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             showNotification("Took 10 Damage", "loss");
         } else if (outcome === 1) {
             healHero(10);
+            showNotification('Healed +10 HP', 'loot');
             log("A warm light heals you. +10 HP.", "green");
         } else if (outcome === 2) {
             state.gold += 25;
