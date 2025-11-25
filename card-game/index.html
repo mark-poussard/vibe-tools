@@ -2479,6 +2479,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     else if (choice.effect === 'trap_dmg') {
         state.hero.hp -= 5;
         log("You hit the ground hard. Took 5 DMG.", "red");
+        showNotification("Took 5 Damage", "loss");
         removeEvent();
     }
     else if (choice.effect === 'trap_unequip') {
@@ -2726,6 +2727,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         if (outcome === 0) {
             state.hero.hp -= 10;
             log("A tendril lashes out! -10 HP.", "red");
+            showNotification("Took 10 Damage", "loss");
         } else if (outcome === 1) {
             healHero(10);
             log("A warm light heals you. +10 HP.", "green");
@@ -2875,6 +2877,7 @@ function killMonster(index) {
     if (m.goldReward) {
         state.gold += m.goldReward;
         log(`Gained ${m.goldReward} Gold.`, "#f1c40f");
+        showNotification(`Gained: +${m.goldReward} Gold`, 'gold');
         EventManager.emit(EVENTS.HERO_UPDATED);
     }
 
