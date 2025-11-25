@@ -1136,8 +1136,9 @@ const COMMON_EVENTS = [
     // Chain Step 5 (The Dungeons - Requires Key - Unlocks Node)
     {
         id: 'e_chain_5', name: 'The Flickering Gateway', type: CARD_TYPES.EVENT, minTier: 4, desc: 'A wall of reality glitches in front of you.',
+        targetNode: 'n_secret',
         choices: [
-            { label: 'Insert Void Key', effect: 'unlock_secret_node', reqItem: 'q_chain_4' },
+            { label: 'Insert Void Key', effect: 'unlock_node', reqItem: 'q_chain_4' },
             { label: 'Touch it', effect: 'trap_dmg' },
             { label: 'Walk away', effect: 'leave' }
         ]
@@ -1186,7 +1187,7 @@ const MAP_GRAPH = {
     'n14':{ id: 'n14',name: 'Throne Room',      type: 'THRONE_ROOM',       parents: ['n13'], x: 1950, y: 400 },
 
     // --- SECRET NODE ---
-    'n_secret': { id: 'n_secret', name: '???', type: 'SECRET_VOID', parents: ['n12'], x: 1800, y: 700 }, // Hidden until unlocked
+    'n_secret': { id: 'n_secret', name: '???', type: 'SECRET_VOID', parents: ['n12'], x: 1800, y: 700, isSecret: true }, // Hidden until unlocked
 };
 
 /* --- DUNGEON NODE CONFIGURATIONS --- */
@@ -1635,7 +1636,7 @@ function startGame(heroIndex) {
 
     // Initialize State
     state.hero = JSON.parse(JSON.stringify(HEROES[heroIndex]));
-    state.secretNodeUnlocked = false; // Add this line
+    state.unlockedSecretNodes = [];
     // Load unique hero deck
     state.deck = JSON.parse(JSON.stringify(HERO_DECKS[state.hero.id]));
     
@@ -1967,7 +1968,7 @@ function renderWorldMap() {
     // 1. Draw Lines (Parents -> Children)
     Object.values(MAP_GRAPH).forEach(node => {
         // HIDE SECRET NODE CONNECTION
-        if (node.id === 'n_secret' && !state.secretNodeUnlocked) return; 
+        if (node.isSecret && !state.unlockedSecretNodes.includes(node.id)) return; 
 
         node.parents.forEach(parentId => {
             const parent = MAP_GRAPH[parentId];
@@ -1988,7 +1989,7 @@ function renderWorldMap() {
         const isCompleted = state.completedNodes.includes(node.id);
         
         // HIDE SECRET NODE VISUAL
-        if (node.id === 'n_secret' && !state.secretNodeUnlocked) return;
+        if (node.isSecret && !state.unlockedSecretNodes.includes(node.id)) return; 
 
         const el = document.createElement('div');
         el.className = `map-node-visual`;
@@ -2797,14 +2798,19 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
-    else if (choice.effect === 'unlock_secret_node') {
+    else if (choice.effect === 'unlock_node') {
         // Remove Key
         const idx = state.inventory.findIndex(i => i.id === 'q_chain_4');
         if (idx > -1) state.inventory.splice(idx, 1);
         
         // Unlock Node
-        state.secretNodeUnlocked = true;
-        log("The reality wall shatters! A new path is revealed.", "#e74c3c");
+        const targetNodeId = eventCard.targetNode;
+        if (targetNodeId && !state.unlockedSecretNodes.includes(targetNodeId)) {
+            state.unlockedSecretNodes.push(targetNodeId);
+            log("The reality wall shatters! A new path is revealed.", "#e74c3c");
+            EventManager.emit(EVENTS.MAP_UPDATED);
+        }
+        
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
@@ -3193,6 +3199,14 @@ function loadGame() {
             if (!state.settings) {
                 state.settings = { autoAddToDeck: true };
             }
+            
+            // Backwards compatibility for secret nodes
+            if (state.secretNodeUnlocked === true) {
+                state.unlockedSecretNodes = ['n_secret'];
+            } else if (!state.unlockedSecretNodes) {
+                state.unlockedSecretNodes = [];
+            }
+            delete state.secretNodeUnlocked;
             
             // If loaded, skip selection and go to Map
             // We reset the "run" state (hand/row) to ensure a clean load on the map
