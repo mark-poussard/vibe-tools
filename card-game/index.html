@@ -745,6 +745,9 @@ const ITEM_DB = {
     'l_scale':  { id: 'l_scale',  name: 'Dragon Scale', type: CARD_TYPES.LOOT, rarity: 'legendary', value: 80, block: 3, desc: '+3 Block / Turn' },
     'l_boss_relic': { id: 'l_boss_relic', name: 'Boss Relic', type: CARD_TYPES.LOOT, value: 50, atkBuff: 2, hpBonus: 5, desc: '+2 DMG & +5 Max HP' },
     
+    // --- SECRET BOSS LOOT ---
+    'l_infinity_blade': { id: 'l_infinity_blade', name: 'Infinity Blade', type: CARD_TYPES.LOOT, rarity: 'legendary', value: 300, atkBuff: 5, apBonus: 1, desc: '+5 DMG, +1 AP. Godly.' },
+
     // --- STARTING ITEMS ---
     'i_shield': { id: 'i_shield', name: 'Buckler', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 1, desc: '+1 Block / Turn' },
     'i_cloak':  { id: 'i_cloak',  name: 'Cloak',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, apBonus: 1, desc: '+1 Max AP' },
@@ -758,6 +761,12 @@ const ITEM_DB = {
     // --- QUEST ITEMS ---
     'q_old_key':  { id: 'q_old_key',  name: 'Rusty Key',     type: CARD_TYPES.QUEST, rarity: 'rare', value: 0, desc: 'Opens locked chests' },
     'q_letter':   { id: 'q_letter',   name: 'Royal Letter',  type: CARD_TYPES.QUEST, rarity: 'legendary', value: 0, desc: 'Seal of the King' },
+
+// --- SECRET CHAIN ITEMS ---
+    'q_chain_1': { id: 'q_chain_1', name: 'Strange Coin', type: CARD_TYPES.QUEST, rarity: 'rare', value: 0, desc: 'It vibrates softly.' },
+    'q_chain_2': { id: 'q_chain_2', name: 'Gem Eye', type: CARD_TYPES.QUEST, rarity: 'rare', value: 0, desc: 'It looks around wildly.' },
+    'q_chain_3': { id: 'q_chain_3', name: 'Spectral Handle', type: CARD_TYPES.QUEST, rarity: 'legendary', value: 0, desc: 'Cold to the touch.' },
+    'q_chain_4': { id: 'q_chain_4', name: 'Void Key', type: CARD_TYPES.QUEST, rarity: 'legendary', value: 0, desc: 'Opens the unknown.' },
 
     // --- SKILLS (Converted to Effect System) ---
     
@@ -906,7 +915,10 @@ const LOOT_TABLES = {
         { id: 'l_scale',      weight: 30 },
         { id: 's_stone',      weight: 30 },
         { id: null,           weight: 400 }
-    ]
+    ],
+    'secret_boss_loot': [
+        { id: 'l_infinity_blade', weight: 100 }
+    ],
 };
 
 function rollLoot(tableId) {
@@ -987,7 +999,7 @@ const COMMON_EVENTS = [
         ]
     },
     {
-        id: 'e_gambler', name: 'Gambler\\'s Den', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A shady figure offers a game of chance.',
+        id: 'e_gambler', name: "Gambler's Den", type: CARD_TYPES.EVENT, minTier: 1, desc: 'A shady figure offers a game of chance.',
         choices: [
             { label: 'Bet 10 Gold (50% Win)', effect: 'gamble_gold' },
             { label: 'Leave', effect: 'leave' }
@@ -1031,7 +1043,7 @@ const COMMON_EVENTS = [
         ]
     },
     {
-        id: 'e_hermit', name: 'Hermit\\'s Hut', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A hermit offers a trade.',
+        id: 'e_hermit', name: 'Hermit\'s Hut', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A hermit offers a trade.',
         choices: [
             { label: 'Trade 10 HP for a rare skill', effect: 'hermit_trade_hp' },
             { label: 'Leave', effect: 'leave' }
@@ -1055,8 +1067,50 @@ const COMMON_EVENTS = [
     {
         id: 'e_rift', name: 'Void Rift', type: CARD_TYPES.EVENT, minTier: 3, desc: 'A tear in reality hums before you.',
         choices: [
-            { label: 'Reach Inside (Random Outcome)', effect: 'rift_touch' },
+            { label: 'Reach Inside', effect: 'rift_touch' },
             { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    // Chain Step 1 (Start - Greenlands)
+    {
+        id: 'e_chain_1', name: 'The Old Beggar', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A hooded figure extends a trembling hand.',
+        choices: [
+            { label: 'Give 5 Gold', effect: 'chain_step_1' },
+            { label: 'Ignore', effect: 'leave' }
+        ]
+    },
+    // Chain Step 2 (Desert - Requires Coin)
+    {
+        id: 'e_chain_2', name: 'Buried Statue', type: CARD_TYPES.EVENT, minTier: 2, desc: 'A one-eyed statue protrudes from the sand.',
+        choices: [
+            { label: 'Insert Strange Coin', effect: 'chain_step_2', reqItem: 'q_chain_1' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    // Chain Step 3 (Dead Lands - Requires Gem)
+    {
+        id: 'e_chain_3', name: 'Whispering Tomb', type: CARD_TYPES.EVENT, minTier: 3, desc: 'A grave has a slot shaped like an eye.',
+        choices: [
+            { label: 'Place Gem Eye', effect: 'chain_step_3', reqItem: 'q_chain_2' },
+            { label: 'Desecrate', effect: 'fight' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    // Chain Step 4 (Castle - Requires Handle)
+    {
+        id: 'e_chain_4', name: 'Forgotten Smithy', type: CARD_TYPES.EVENT, minTier: 3, desc: 'A ghostly anvil sits before a blade without a hilt.',
+        choices: [
+            { label: 'Attach Spectral Handle', effect: 'chain_step_4', reqItem: 'q_chain_3' },
+            { label: 'Search for scrap', effect: 'leave' }
+        ]
+    },
+    // Chain Step 5 (The Dungeons - Requires Key - Unlocks Node)
+    {
+        id: 'e_chain_5', name: 'The Flickering Gateway', type: CARD_TYPES.EVENT, minTier: 4, desc: 'A wall of reality glitches in front of you.',
+        choices: [
+            { label: 'Insert Void Key', effect: 'unlock_secret_node', reqItem: 'q_chain_4' },
+            { label: 'Touch it', effect: 'trap_dmg' },
+            { label: 'Walk away', effect: 'leave' }
         ]
     }
 ];
@@ -1100,11 +1154,20 @@ const MAP_GRAPH = {
     'n12':{ id: 'n12',name: 'The Dungeons',     type: 'THE_DUNGEONS',      parents: ['n10'], x: 1600, y: 550 }, // Side room
     
     'n13':{ id: 'n13',name: 'Grand Hall',       type: 'GRAND_HALL',        parents: ['n11', 'n12'], x: 1750, y: 400 },
-    'n14':{ id: 'n14',name: 'Throne Room',      type: 'THRONE_ROOM',       parents: ['n13'], x: 1950, y: 400 }
+    'n14':{ id: 'n14',name: 'Throne Room',      type: 'THRONE_ROOM',       parents: ['n13'], x: 1950, y: 400 },
+
+    // --- SECRET NODE ---
+    'n_secret': { id: 'n_secret', name: '???', type: 'SECRET_VOID', parents: ['n12'], x: 1800, y: 700 }, // Hidden until unlocked
 };
 
 /* --- DUNGEON NODE CONFIGURATIONS --- */
 const NODE_CONFIGS = {
+    'SECRET_VOID': {
+        icon: '👁️', minCards: 0, maxCards: 0,
+        monsters: [],
+        events: [], bossPool: ['g_secret_boss'] // A hard challenge
+    },
+
     // --- REGION 1: THE GREENLANDS (Easy) ---
     'VILLAGE_OUTSKIRTS': {
         icon: '🏡', minCards: 4, maxCards: 5,
@@ -1119,7 +1182,7 @@ const NODE_CONFIGS = {
     'MOSSY_RUINS': {
         icon: '🗿', minCards: 5, maxCards: 7,
         monsters: ['m_slime', 'm_spider', 'm_moss_golem', 'm_bat_swarm'],
-        events: ['e_shrine'], bossPool: ['mb_giant_slime']
+        events: ['e_shrine', 'e_chain_1'], bossPool: ['mb_giant_slime']
     },
     'OLD_BRIDGE': {
         icon: '🌉', minCards: 6, maxCards: 6,
@@ -1141,7 +1204,7 @@ const NODE_CONFIGS = {
     'SAND_DUNES': {
         icon: '🏜️', minCards: 6, maxCards: 8,
         monsters: ['m_kobold', 'm_sandworm', 'm_scorpion', 'm_dust_devil'],
-        events: ['e_chest'], bossPool: ['mb_sandworm_q']
+        events: ['e_chest', 'e_chain_2'], bossPool: ['mb_sandworm_q']
     },
     'CANYON_PASS': {
         icon: '⛰️', minCards: 7, maxCards: 9,
@@ -1177,7 +1240,7 @@ const NODE_CONFIGS = {
     'HAUNTED_HILLS': {
         icon: '👻', minCards: 8, maxCards: 10,
         monsters: ['m_wraith', 'm_wolf', 'm_specter', 'm_banshee'],
-        events: ['e_trap'], bossPool: ['mb_lich', 'mb_vampire']
+        events: ['e_trap', 'e_chain_3'], bossPool: ['mb_lich', 'mb_vampire']
     },
     'CRYPT_ENTRANCE': {
         icon: '⚰️', minCards: 9, maxCards: 11,
@@ -1203,12 +1266,12 @@ const NODE_CONFIGS = {
     'CASTLE_GATES': {
         icon: '🏰', minCards: 10, maxCards: 12,
         monsters: ['m_guard', 'm_armor', 'm_gargoyle', 'm_orc'],
-        events: ['e_trap'], bossPool: ['mb_knight', 'mb_commander']
+        events: ['e_trap', 'e_chain_4'], bossPool: ['mb_knight', 'mb_commander']
     },
     'THE_DUNGEONS': {
         icon: '⛓️', minCards: 10, maxCards: 14,
         monsters: ['m_rat', 'm_skeleton', 'm_executioner', 'm_imp'],
-        events: ['e_tribute'], bossPool: []
+        events: ['e_tribute', 'e_chain_5'], bossPool: []
     },
     'GRAND_HALL': {
         icon: '🧛', minCards: 12, maxCards: 15,
@@ -1324,7 +1387,37 @@ const MONSTER_DB = {
     'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
     'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
     'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
-    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, desc: 'FINAL BOSS' }
+    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, desc: 'FINAL BOSS' },
+
+    // 1. The Underlings (Powerful Elites)
+    'm_void_sentinel': { 
+        id: 'm_void_sentinel', 
+        name: 'Void Sentinel', 
+        type: CARD_TYPES.MONSTER, 
+        hp: 30, maxHp: 30, atk: 5, 
+        lootTable: 'tier3_void', 
+        desc: 'Guards the Emperor' 
+    },
+
+    // 2. The Secret Boss (Double Malakor's HP, higher DMG)
+    'mb_azaroth': { 
+        id: 'mb_azaroth', 
+        name: 'Azaroth', 
+        type: CARD_TYPES.MONSTER, 
+        hp: 120, maxHp: 120, atk: 9, 
+        goldReward: 100, 
+        lootTable: 'secret_boss_loot', 
+        isBoss: true, 
+        desc: 'THE VOID EMPEROR' 
+    },
+
+    // 3. The Encounter Group (Boss + 2 Underlings)
+    'g_secret_boss': { 
+        id: 'g_secret_boss', 
+        type: CARD_TYPES.GROUP, 
+        members: ['m_void_sentinel', 'mb_azaroth', 'm_void_sentinel'], 
+        desc: 'The Emperor awaits...' 
+    },
 };
 
 const EVENT_DB = {}; 
@@ -1513,6 +1606,7 @@ function startGame(heroIndex) {
 
     // Initialize State
     state.hero = JSON.parse(JSON.stringify(HEROES[heroIndex]));
+    state.secretNodeUnlocked = false; // Add this line
     // Load unique hero deck
     state.deck = JSON.parse(JSON.stringify(HERO_DECKS[state.hero.id]));
     
@@ -1841,6 +1935,9 @@ function renderWorldMap() {
 
     // 1. Draw Lines (Parents -> Children)
     Object.values(MAP_GRAPH).forEach(node => {
+        // HIDE SECRET NODE CONNECTION
+        if (node.id === 'n_secret' && !state.secretNodeUnlocked) return; 
+
         node.parents.forEach(parentId => {
             const parent = MAP_GRAPH[parentId];
             // Create SVG Line
@@ -1859,6 +1956,9 @@ function renderWorldMap() {
         const isUnlocked = isNodeAccessible(node.id);
         const isCompleted = state.completedNodes.includes(node.id);
         
+        // HIDE SECRET NODE VISUAL
+        if (node.id === 'n_secret' && !state.secretNodeUnlocked) return;
+
         const el = document.createElement('div');
         el.className = `map-node-visual`;
         el.style.left = `${node.x}px`;
@@ -2403,7 +2503,6 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             removeEvent();
         }
     }
-
     // 4. Weapon Master
     else if (choice.effect === 'train_str') {
         let card = JSON.parse(JSON.stringify(ITEM_DB['s_heavy']));
@@ -2428,7 +2527,6 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         log("You feel permanently stronger (+1 Max HP).", "green");
         removeEvent();
     }
-
     // --- 10 New Events ---
     // 6. Gambler
     else if (choice.effect === 'gamble_gold') {
@@ -2539,7 +2637,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     else if (choice.effect === 'goblin_rock') {
         if(state.gold >= 10) {
             state.gold -= 10;
-            let rock = { id: 'q_shiny_rock', name: 'Shiny Rock', type: CARD_TYPES.QUEST, rarity: 'common', value: 1, desc: 'It\\'s just a rock.' };
+            let rock = { id: 'q_shiny_rock', name: 'Shiny Rock', type: CARD_TYPES.QUEST, rarity: 'common', value: 1, desc: 'It\'s just a rock.' };
             state.inventory.push(rock);
             log("You bought a shiny rock. The goblin cackles.", "gray");
         } else { log("Not enough gold."); }
@@ -2591,6 +2689,61 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             state.deck.push({...CURSE_CARD, name: 'Void Taint'});
             log("A dark energy clings to you. Gained a curse.", "purple");
         }
+        removeEvent();
+    }
+    // --- SECRET CHAIN LOGIC ---
+    else if (choice.effect === 'chain_step_1') {
+        if (state.gold >= 5) {
+            state.gold -= 5;
+            state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_1'])));
+            log("The beggar hands you a vibrating coin.", "gold");
+        } else {
+            log("Not enough gold.");
+        }
+        removeEvent();
+    }
+    else if (choice.effect === 'chain_step_2') {
+        // Remove Step 1 Item
+        const idx = state.inventory.findIndex(i => i.id === 'q_chain_1');
+        if (idx > -1) state.inventory.splice(idx, 1);
+        
+        // Give Step 2 Item
+        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_2'])));
+        log(" The statue's eye pops out. You take it.", "purple");
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        removeEvent();
+    }
+    else if (choice.effect === 'chain_step_3') {
+        // Remove Step 2 Item
+        const idx = state.inventory.findIndex(i => i.id === 'q_chain_2');
+        if (idx > -1) state.inventory.splice(idx, 1);
+        
+        // Give Step 3 Item
+        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_3'])));
+        log("The tomb slides open. You find a handle.", "purple");
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        removeEvent();
+    }
+    else if (choice.effect === 'chain_step_4') {
+        // Remove Step 3 Item
+        const idx = state.inventory.findIndex(i => i.id === 'q_chain_3');
+        if (idx > -1) state.inventory.splice(idx, 1);
+        
+        // Give Step 4 Item
+        state.inventory.push(JSON.parse(JSON.stringify(ITEM_DB['q_chain_4'])));
+        log("You forge the pieces together. It forms a Void Key.", "gold");
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
+        removeEvent();
+    }
+    else if (choice.effect === 'unlock_secret_node') {
+        // Remove Key
+        const idx = state.inventory.findIndex(i => i.id === 'q_chain_4');
+        if (idx > -1) state.inventory.splice(idx, 1);
+        
+        // Unlock Node
+        state.secretNodeUnlocked = true;
+        log("The reality wall shatters! A new path is revealed.", "#e74c3c");
+        EventManager.emit(EVENTS.INVENTORY_UPDATED);
         removeEvent();
     }
 
