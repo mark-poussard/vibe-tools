@@ -948,6 +948,21 @@ const LOOT_TABLES = {
     'secret_boss_loot': [
         { id: 'l_infinity_blade', weight: 100 }
     ],
+    'chest_t1_rare_items': [
+        { id: 'l_goo',    weight: 1 },
+        { id: 'l_spear',  weight: 1 },
+        { id: 's_web',    weight: 1 }
+    ],
+    'chest_t2_rare_items': [
+        { id: 's_drain',   weight: 1 },
+        { id: 'l_cloak',  weight: 1 },
+        { id: 's_bolt',  weight: 1 }
+    ],
+    'chest_t3_rare_items': [
+        { id: 's_stone',  weight: 1 },
+        { id: 'l_bark',   weight: 1 },
+        { id: 'l_scale',  weight: 1 }
+    ],
 };
 
 function rollLoot(tableId) {
@@ -973,7 +988,9 @@ const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, c
 
 const EVENT_MONSTERS = {
     'm_ghost': { id: 'm_ghost', name: 'Vengeful Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, rewardId: 'm_ghost', desc: 'Hit by Physical' },
-    'm_mimic': { id: 'm_mimic', name: 'Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, lootTable: 'chest_random', desc: 'It has teeth!' },
+    'm_mimic_t1': { id: 'm_mimic_t1', name: 'Wooden Mimic', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 5, desc: 'It has splinters!' },
+    'm_mimic_t2': { id: 'm_mimic_t2', name: 'Iron Mimic', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 6, desc: 'Hard to chew!' },
+    'm_mimic_t3': { id: 'm_mimic_t3', name: 'Gilded Mimic', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 7, desc: 'Rich in flavor!' },
     'm_giant_groggy': { id: 'm_giant_groggy', name: 'Groggy Giant', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, rewardId: 'm_goblin', desc: 'Disturbed!' },
     'm_giant_awakened': { id: 'm_giant_awakened', name: 'Awakened Giant', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 8, rewardId: 'm_goblin', desc: 'Enraged!' },
     'm_bard_angry': { id: 'm_bard_angry', name: 'Angry Bard', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, rewardId: 'm_goblin', desc: 'You monster!' }
@@ -998,10 +1015,23 @@ const COMMON_EVENTS = [
         ]
     },
     {
-        id: 'e_chest', name: 'Wooden Chest', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Is it breathing?',
+        id: 'e_chest_t1', name: 'Wooden Chest', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Is it breathing?',
         choices: [
-            { label: 'Use Rusty Key', effect: 'chest_unlock', reqItem: 'q_old_key' },
-            { label: 'Smash Lock', effect: 'chest_smash' },
+            { label: 'Open it', effect: 'chest_open_t1' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_chest_t2', name: 'Iron Chest', type: CARD_TYPES.EVENT, minTier: 2, desc: 'It seems sturdy.',
+        choices: [
+            { label: 'Open it', effect: 'chest_open_t2' },
+            { label: 'Leave', effect: 'leave' }
+        ]
+    },
+    {
+        id: 'e_chest_t3', name: 'Gilded Chest', type: CARD_TYPES.EVENT, minTier: 3, desc: 'It gleams with promise.',
+        choices: [
+            { label: 'Open it', effect: 'chest_open_t3' },
             { label: 'Leave', effect: 'leave' }
         ]
     },
@@ -1202,7 +1232,7 @@ const NODE_CONFIGS = {
     'VILLAGE_OUTSKIRTS': {
         icon: '🏡', minCards: 4, maxCards: 5,
         monsters: ['m_rat', 'm_goblin', 'm_thief', 'm_bat_swarm'],
-        events: ['e_chest'], bossPool: []
+        events: ['e_chest_t1'], bossPool: []
     },
     'WHISPERING_WOODS': {
         icon: '🌲', minCards: 5, maxCards: 6,
@@ -1234,7 +1264,7 @@ const NODE_CONFIGS = {
     'SAND_DUNES': {
         icon: '🏜️', minCards: 6, maxCards: 8,
         monsters: ['m_kobold', 'm_sandworm', 'm_scorpion', 'm_dust_devil'],
-        events: ['e_chest', 'e_chain_2'], bossPool: ['mb_sandworm_q']
+        events: ['e_chest_t2', 'e_chain_2'], bossPool: ['mb_sandworm_q']
     },
     'CANYON_PASS': {
         icon: '⛰️', minCards: 7, maxCards: 9,
@@ -1270,7 +1300,7 @@ const NODE_CONFIGS = {
     'HAUNTED_HILLS': {
         icon: '👻', minCards: 8, maxCards: 10,
         monsters: ['m_wraith', 'm_wolf', 'm_specter', 'm_banshee'],
-        events: ['e_trap', 'e_chain_3'], bossPool: ['mb_lich', 'mb_vampire']
+        events: ['e_trap', 'e_chain_3', 'e_chest_t3'], bossPool: ['mb_lich', 'mb_vampire']
     },
     'CRYPT_ENTRANCE': {
         icon: '⚰️', minCards: 9, maxCards: 11,
@@ -2519,33 +2549,58 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         removeEvent();
     }
 
-    // 3. Locked Chest
-    else if (choice.effect === 'chest_unlock') {
-        // Remove Key
-        const keyIndex = state.inventory.findIndex(i => i.id === 'q_old_key');
-        if (keyIndex > -1) {
-            state.inventory.splice(keyIndex, 1);
-            log("Used Rusty Key.");
-            EventManager.emit(EVENTS.INVENTORY_UPDATED);
+    // 3. Chests & Mimics
+    else if (choice.effect === 'chest_open_t1') {
+        if (Math.random() > 0.5) { // 50% mimic
+            log("It's a trap! A Wooden Mimic!", "red");
+            spawnEventMonster('m_mimic_t1');
+        } else { // 50% not a mimic
+            if (Math.random() > 0.5) { // 50% chance of loot
+                const reward = rollLoot('chest_t1_rare_items');
+                if (reward) {
+                    log(`You opened it and found: ${reward.name}!`);
+                    acquireLoot(reward);
+                } else {
+                    log("The chest is empty.");
+                }
+            } else { // 50% chance of nothing
+                log("The chest is empty.");
+            }
+            removeEvent();
         }
-        // 100% Loot, no Mimic
-        const reward = rollLoot('chest_random');
-        if(reward) {
-            log(`You unlocked the chest and found: ${reward.name}!`);
-            acquireLoot(reward);
+    } else if (choice.effect === 'chest_open_t2') {
+        if (Math.random() > 0.5) { // 50% mimic
+            log("It's a trap! An Iron Mimic!", "red");
+            spawnEventMonster('m_mimic_t2');
+        } else { // 50% not a mimic
+            if (Math.random() > 0.5) { // 50% chance of loot
+                const reward = rollLoot('chest_t2_rare_items');
+                if (reward) {
+                    log(`You opened it and found: ${reward.name}!`);
+                    acquireLoot(reward);
+                } else {
+                    log("The chest is empty.");
+                }
+            } else { // 50% chance of nothing
+                log("The chest is empty.");
+            }
+            removeEvent();
         }
-        removeEvent();
-    }
-    else if (choice.effect === 'chest_smash') {
-        // 50/50 Risk
-        if(Math.random() > 0.5) {
-            log("It's a trap! MIMIC!", "red");
-            spawnEventMonster('m_mimic');
-        } else {
-            const reward = rollLoot('chest_random');
-            if(reward) {
-                log(`You smashed it open and found: ${reward.name}!`);
-                acquireLoot(reward);
+    } else if (choice.effect === 'chest_open_t3') {
+        if (Math.random() > 0.5) { // 50% mimic
+            log("It's a trap! A Gilded Mimic!", "red");
+            spawnEventMonster('m_mimic_t3');
+        } else { // 50% not a mimic
+            if (Math.random() > 0.5) { // 50% chance of loot
+                const reward = rollLoot('chest_t3_rare_items');
+                if (reward) {
+                    log(`You opened it and found: ${reward.name}!`);
+                    acquireLoot(reward);
+                } else {
+                    log("The chest is empty.");
+                }
+            } else { // 50% chance of nothing
+                log("The chest is empty.");
             }
             removeEvent();
         }
