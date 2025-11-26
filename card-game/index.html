@@ -1495,6 +1495,7 @@ let state = {
     inventory: [],
     gold: 0,
     settings: { autoAddToDeck: true },
+    preDungeonState: null,
     // Track temporary buffs from consumables (reset after dungeon)
     buffs: { atk: 0, block: 0, maxHp: 0, ap: 0 } 
 };
@@ -2063,6 +2064,16 @@ function enterDungeonNode(nodeId) {
         log(`Entered: ${node.name}`);
         return;
     }
+
+    // Save pre-dungeon state to restore on death
+    state.preDungeonState = {
+        gold: state.gold,
+        inventory: JSON.parse(JSON.stringify(state.inventory)),
+        deck: JSON.parse(JSON.stringify(state.deck)),
+        collection: JSON.parse(JSON.stringify(state.collection)),
+        equipped: JSON.parse(JSON.stringify(state.equipped)),
+        hero: JSON.parse(JSON.stringify(state.hero))
+    };
     
     state.currentNodeId = nodeId;
     state.tier = node.tier; // Still needed for buildDungeonTier logic
@@ -2980,6 +2991,7 @@ function acquireLoot(lootCard) {
 function dungeonComplete() {
     // Standard Node Completion
     log("Dungeon Cleared!", "gold");
+    state.preDungeonState = null; // Clear save state on success
     
     // Mark Node as Complete
         if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
@@ -3093,9 +3105,37 @@ function endTurn() {
 function checkWinCondition() {}
 
 function gameOver() {
-    document.getElementById('overlay').style.display = 'flex';
-    document.getElementById('overlay-title').innerText = "YOU DIED";
-    document.getElementById('overlay-title').style.color = "red";
+    log("You have fallen...", "red");
+
+    // Restore pre-dungeon state if it exists
+    if (state.preDungeonState) {
+        state.gold = state.preDungeonState.gold;
+        state.inventory = state.preDungeonState.inventory;
+        state.deck = state.preDungeonState.deck;
+        state.collection = state.preDungeonState.collection;
+        state.equipped = state.preDungeonState.equipped;
+        state.hero = state.preDungeonState.hero;
+        state.preDungeonState = null; // Clean up
+    }
+
+    // Heal to half HP after restoring stats.
+    state.hero.hp = Math.floor(state.hero.maxHp / 2);
+    log(`Healed to ${state.hero.hp} HP.`);
+
+    showNotification('You have fallen!', 'loss');
+    
+    // Clean up the run and return to map after a delay
+    setTimeout(() => {
+        // Reset run-specific state arrays
+        state.hand = [];
+        state.discard = [];
+        state.adventureRow = [];
+        state.buffs = { atk: 0, block: 0, maxHp: 0, ap: 0 };
+        
+        document.getElementById('overlay').style.display = 'none';
+        ScreenManager.show('MAP');
+        log("You retreat, losing everything gained in that dungeon.");
+    }, 2000);
 }
 
 function log(msg, color) {
