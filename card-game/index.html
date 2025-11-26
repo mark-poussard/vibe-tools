@@ -2093,14 +2093,33 @@ function enterDungeonNode(nodeId) {
 
     drawCards(5);
     
-    // Ensure at least one monster to start
+    // Ensure at least one threat to start
     if (state.dungeonDeck.length > 0) {
-        // Ensure first is not event
+        // To prevent starting with an event, swap it with the first available monster/group
         if (state.dungeonDeck[0].type === CARD_TYPES.EVENT) {
-             const safeIdx = state.dungeonDeck.findIndex(c => c.type === CARD_TYPES.MONSTER);
-             if(safeIdx > -1) [state.dungeonDeck[0], state.dungeonDeck[safeIdx]] = [state.dungeonDeck[safeIdx], state.dungeonDeck[0]];
+             const safeIdx = state.dungeonDeck.findIndex(c => c.type === CARD_TYPES.MONSTER || c.type === CARD_TYPES.GROUP);
+             if (safeIdx > -1) {
+                [state.dungeonDeck[0], state.dungeonDeck[safeIdx]] = [state.dungeonDeck[safeIdx], state.dungeonDeck[0]];
+             }
         }
-        state.adventureRow.push(state.dungeonDeck.shift());
+        
+        const firstCard = state.dungeonDeck.shift();
+        
+        if (firstCard.type === CARD_TYPES.GROUP) {
+            log(`${firstCard.desc || 'Ambush'}! Enemies incoming!`, '#e67e22');
+            firstCard.members.forEach(monsterId => {
+                if (state.adventureRow.length < 5) {
+                    const monster = MONSTER_DB[monsterId];
+                    if (monster) {
+                        state.adventureRow.push(JSON.parse(JSON.stringify(monster)));
+                    } else {
+                        console.error(`Monster ID "${monsterId}" not found in database.`);
+                    }
+                }
+            });
+        } else {
+            state.adventureRow.push(firstCard);
+        }
     }
 
     log(`Entered: ${node.name}`);
