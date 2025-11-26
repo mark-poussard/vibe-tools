@@ -996,16 +996,16 @@ const COMMON_EVENTS = [
     { 
         id: 'e_shrine', name: 'Cursed Shrine', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A dark aura hums.',
         choices: [
-            { label: 'Pray (Heal 10, Get Curse)', effect: 'pray' },
-            { label: 'Desecrate (Fight Spirit)', effect: 'fight' },
-            { label: 'Ignore (Leave)', effect: 'leave' }
+            { label: 'Pray', effect: 'pray' },
+            { label: 'Desecrate', effect: 'fight' },
+            { label: 'Ignore', effect: 'leave' }
         ]
     },
     {
         id: 'e_trap', name: 'Trap Door', type: CARD_TYPES.EVENT, minTier: 1, desc: 'The floor crumbles!',
         choices: [
-            { label: 'Jump (Unequip Random Item)', effect: 'trap_unequip' },
-            { label: 'Brace (Take 5 DMG)', effect: 'trap_dmg' }
+            { label: 'Jump', effect: 'trap_unequip' },
+            { label: 'Brace', effect: 'trap_dmg' }
         ]
     },
     {
@@ -1032,66 +1032,66 @@ const COMMON_EVENTS = [
     {
         id: 'e_tribute', name: 'Dark Altar', type: CARD_TYPES.EVENT, minTier: 2, desc: 'Requires a sacrifice.',
         choices: [
-            { label: 'Sacrifice (Lose 5 Max HP, Get Relic)', effect: 'tribute_pay' },
+            { label: 'Sacrifice', effect: 'tribute_pay' },
             { label: 'Leave', effect: 'leave' }
         ]
     },
     {
         id: 'e_trainer', name: 'Old Master', type: CARD_TYPES.EVENT, minTier: 2, desc: 'He offers training.',
         choices: [
-            { label: 'Train Attack (Get Heavy Strike)', effect: 'train_str' },
-            { label: 'Train Defense (Get Iron Skin)', effect: 'train_def' },
+            { label: 'Train Attack', effect: 'train_str' },
+            { label: 'Train Defense', effect: 'train_def' },
             { label: 'Ignore', effect: 'leave' }
         ]
     },
     {
         id: 'e_spring', name: 'Magic Spring', type: CARD_TYPES.EVENT, minTier: 1, desc: 'Glowing blue water.',
         choices: [
-            { label: 'Drink (Heal 5 HP)', effect: 'spring_heal' },
-            { label: 'Bottle (Get +1 Max HP)', effect: 'spring_max' }
+            { label: 'Drink', effect: 'spring_heal' },
+            { label: 'Bottle', effect: 'spring_max' }
         ]
     },
     {
         id: 'e_gambler', name: "Gambler's Den", type: CARD_TYPES.EVENT, minTier: 1, desc: 'A shady figure offers a game of chance.',
         choices: [
-            { label: 'Bet 10 Gold (50% Win)', effect: 'gamble_gold', reqGold: 10 },
+            { label: 'Bet 10 Gold', effect: 'gamble_gold', reqGold: 10 },
             { label: 'Leave', effect: 'leave' }
         ]
     },
     {
         id: 'e_fountain', name: 'Fountain of Youth', type: CARD_TYPES.EVENT, minTier: 2, desc: 'The water shimmers with life.',
         choices: [
-            { label: 'Drink Deep (Full Heal, -1 Max HP)', effect: 'fountain_full_heal' },
-            { label: 'Sip (Heal 5 HP)', effect: 'fountain_sip' },
+            { label: 'Drink Deep', effect: 'fountain_full_heal' },
+            { label: 'Sip', effect: 'fountain_sip' },
             { label: 'Leave', effect: 'leave' }
         ]
     },
     {
         id: 'e_giant', name: 'Sleeping Giant', type: CARD_TYPES.EVENT, minTier: 2, desc: 'A colossal giant slumbers in your path.',
         choices: [
-            { label: 'Sneak Past (50% fail)', effect: 'giant_sneak' },
-            { label: 'Poke it (Fight Groggy Giant)', effect: 'giant_attack' }
+            { label: 'Sneak Past', effect: 'giant_sneak' },
+            { label: 'Poke it', effect: 'giant_attack' }
         ]
     },
     {
         id: 'e_bard', name: 'Wandering Bard', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A bard offers a song for some coin.',
         choices: [
-            { label: 'Pay 5g for a song (+1 AP buff)', effect: 'bard_pay', reqGold: 5 },
-            { label: 'Rob the bard (Fight)', effect: 'bard_rob' },
+            { label: 'Pay 5g for a song', effect: 'bard_pay', reqGold: 5 },
+            { label: 'Rob the bard', effect: 'bard_rob' },
             { label: 'Listen for free', effect: 'leave' }
         ]
     },
     {
         id: 'e_armory', name: 'Abandoned Armory', type: CARD_TYPES.EVENT, minTier: 1, desc: 'You can take one item for the next fight.',
         choices: [
-            { label: 'Take Sword (+2 Atk Buff)', effect: 'armory_sword' },
-            { label: 'Take Shield (+2 Block Buff)', effect: 'armory_shield' }
+            { label: 'Take Sword', effect: 'armory_sword' },
+            { label: 'Take Shield', effect: 'armory_shield' }
         ]
     },
     {
         id: 'e_idol', name: 'Cursed Idol', type: CARD_TYPES.EVENT, minTier: 2, desc: 'An idol pulses with dark energy.',
         choices: [
-            { label: 'Take Idol (Get Relic, Get Curse)', effect: 'idol_take' },
+            { label: 'Take Idol', effect: 'idol_take' },
             { label: 'Destroy it', effect: 'leave' }
         ]
     },
@@ -1105,16 +1105,16 @@ const COMMON_EVENTS = [
     {
         id: 'e_goblin_shop', name: 'Goblin Merchant', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A goblin offers "rare" goods.',
         choices: [
-            { label: 'Buy Mystery Potion (15g)', effect: 'goblin_potion', reqGold: 15 },
-            { label: 'Buy Shiny Rock (10g)', effect: 'goblin_rock', reqGold: 10 },
+            { label: 'Buy Mystery Potion', effect: 'goblin_potion', reqGold: 15 },
+            { label: 'Buy Shiny Rock', effect: 'goblin_rock', reqGold: 10 },
             { label: 'Leave', effect: 'leave' }
         ]
     },
     {
         id: 'e_library', name: 'Ancient Library', type: CARD_TYPES.EVENT, minTier: 2, desc: 'Scrolls of forgotten lore are scattered around.',
         choices: [
-            { label: 'Study Combat (Get Attack Skill)', effect: 'library_combat' },
-            { label: 'Study Defense (Get Defense Skill)', effect: 'library_defense' }
+            { label: 'Study Combat', effect: 'library_combat' },
+            { label: 'Study Defense', effect: 'library_defense' }
         ]
     },
     {
