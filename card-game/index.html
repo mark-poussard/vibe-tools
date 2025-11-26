@@ -978,7 +978,7 @@ function rollLoot(tableId) {
     return null;
 }
 
-const CURSE_CARD = { id: 'c_fatigue', name: 'Fatigue', type: CARD_TYPES.CURSE, cost: 1, desc: 'Unplayable trash.' };
+const CURSE_CARD = { id: 'c_pain', name: 'Pain', type: CARD_TYPES.CURSE, cost: 0, effects: [{ type: 'DAMAGE', val: 5, target: 'SELF' }], desc: 'Take 5 damage.' };
 
 const EVENT_MONSTERS = {
     'm_ghost': { id: 'm_ghost', name: 'Vengeful Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, rewardId: 'm_ghost', desc: 'Hit by Physical' },
@@ -2394,10 +2394,7 @@ function playCard(target) {
 
     const card = state.hand[state.selectedCardIndex];
     
-    if (card.type === CARD_TYPES.CURSE) {
-        log("Cannot play Curses!", "red");
-        return;
-    }
+
 
     if (state.hero.ap < card.cost) {
         log("Not enough AP!", "red");
@@ -2482,6 +2479,12 @@ function processEffects(effects, targetIndex) {
             if (eff.type === 'HEAL') healHero(eff.val);
             if (eff.type === 'GAIN_AP') { state.hero.ap += eff.val; log(`Gained ${eff.val} AP.`); }
             if (eff.type === 'DRAW') { drawCards(eff.val); log(`Drew ${eff.val} cards.`); }
+            if (eff.type === 'DAMAGE') {
+                state.hero.hp -= eff.val;
+                log(`Took <span class="log-dmg">${eff.val}</span> damage!`);
+                showNotification(`Took ${eff.val} damage`, 'loss');
+                if (state.hero.hp <= 0) gameOver();
+            }
             success = true; // Self effects always succeed if played
         }
     });
