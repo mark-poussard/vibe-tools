@@ -1060,7 +1060,7 @@ const COMMON_EVENTS = [
     {
         id: 'e_gambler', name: "Gambler's Den", type: CARD_TYPES.EVENT, minTier: 1, desc: 'A shady figure offers a game of chance.',
         choices: [
-            { label: 'Bet 10 Gold (50% Win)', effect: 'gamble_gold' },
+            { label: 'Bet 10 Gold (50% Win)', effect: 'gamble_gold', reqGold: 10 },
             { label: 'Leave', effect: 'leave' }
         ]
     },
@@ -1082,7 +1082,7 @@ const COMMON_EVENTS = [
     {
         id: 'e_bard', name: 'Wandering Bard', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A bard offers a song for some coin.',
         choices: [
-            { label: 'Pay 5g for a song (+1 AP buff)', effect: 'bard_pay' },
+            { label: 'Pay 5g for a song (+1 AP buff)', effect: 'bard_pay', reqGold: 5 },
             { label: 'Rob the bard (Fight)', effect: 'bard_rob' },
             { label: 'Listen for free', effect: 'leave' }
         ]
@@ -1111,8 +1111,8 @@ const COMMON_EVENTS = [
     {
         id: 'e_goblin_shop', name: 'Goblin Merchant', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A goblin offers "rare" goods.',
         choices: [
-            { label: 'Buy Mystery Potion (15g)', effect: 'goblin_potion' },
-            { label: 'Buy Shiny Rock (10g)', effect: 'goblin_rock' },
+            { label: 'Buy Mystery Potion (15g)', effect: 'goblin_potion', reqGold: 15 },
+            { label: 'Buy Shiny Rock (10g)', effect: 'goblin_rock', reqGold: 10 },
             { label: 'Leave', effect: 'leave' }
         ]
     },
@@ -1134,7 +1134,7 @@ const COMMON_EVENTS = [
     {
         id: 'e_chain_1', name: 'The Old Beggar', type: CARD_TYPES.EVENT, minTier: 1, desc: 'A hooded figure extends a trembling hand.',
         choices: [
-            { label: 'Give 5 Gold', effect: 'chain_step_1' },
+            { label: 'Give 5 Gold', effect: 'chain_step_1', reqGold: 5 },
             { label: 'Ignore', effect: 'leave' }
         ]
     },
@@ -3225,6 +3225,9 @@ function createCardElement(data, index) {
                         disabled = 'disabled';
                         label = `🔒 ${choice.label} (Missing Item)`;
                     }
+                } else if (choice.reqGold && state.gold < choice.reqGold) {
+                    disabled = 'disabled';
+                    label = `🔒 ${choice.label} (Not enough Gold)`;
                 }
 
                 buttons += `<button class="choice-btn" ${disabled} onclick="event.stopPropagation(); resolveEventChoice(${index}, ${choiceIdx})">${label}</button>`;
