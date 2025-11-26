@@ -1822,6 +1822,7 @@ function useInventoryItem(invIndex) {
         // Apply Immediate Effects
         if (item.heal) {
             healHero(item.heal);
+            showNotification(`Healed +${item.heal} HP`, 'loot');
         }
         // Apply Dungeon Buffs
         if (item.buffAtk) state.buffs.atk += item.buffAtk;
