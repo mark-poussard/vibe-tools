@@ -2640,8 +2640,9 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         removeEvent();
     }
     else if (choice.effect === 'spring_max') {
-        state.hero.maxHp += 1;
-        log("You feel permanently stronger (+1 Max HP).", "green");
+        const potion = JSON.parse(JSON.stringify(ITEM_DB['c_potion_s']));
+        acquireLoot(potion);
+        log("You bottle the water. Gained a Health Potion.", "green");
         removeEvent();
     }
     // --- 10 New Events ---
