@@ -907,30 +907,25 @@ const HERO_DECKS = {
 /* --- LOOT TABLES --- */
 const LOOT_TABLES = {
     'tier1_standard': [
-        { id: 'l_dagger', weight: 20 },
-        { id: 'l_shield', weight: 20 },
-        { id: 's_bite',   weight: 20 },
-        { id: 's_claw',   weight: 20 },
-        { id: 's_mend',   weight: 10 },
-        { id: null,       weight: 410 } // ~80% chance of nothing (Total weight 500)
+        { id: null, weight: 1 } // Tier 1 drops no items
     ],
     'tier1_elite': [
-        { id: 's_web',    weight: 30 },
-        { id: 'l_shield', weight: 10 },
-        { id: null,       weight: 460 }
+        { id: null, weight: 1 } // Tier 1 drops no items
     ],
     'tier2_standard': [
-        { id: 's_smash',  weight: 30 },
-        { id: 'l_amulet', weight: 30 },
+        { id: 's_smash',  weight: 20 },
         { id: 's_bolt',   weight: 10 },
-        { id: null,       weight: 280 } // Fallback
+        { id: 'l_dagger', weight: 15 }, // +1 DMG
+        { id: 'l_shield', weight: 15 }, // +1 Block
+        { id: null,       weight: 290 }
     ],
     'tier3_void': [
-        { id: 's_stone',  weight: 30 },
-        { id: 'l_bark',   weight: 30 },
-        { id: 'l_scale',  weight: 30 },
-        { id: 'l_cloak',  weight: 10 },
-        { id: null,       weight: 400 }
+        { id: 's_stone',  weight: 20 },
+        { id: 'l_bark',   weight: 20 }, // +5 Max HP (equiv. to +2 item)
+        { id: 'l_spear',  weight: 20 }, // +2 DMG
+        { id: 'l_goo',    weight: 20 }, // +2 Block
+        { id: 'l_cloak',  weight: 10 }, // +1 Block, +1 AP (equiv. to +2 item)
+        { id: null,       weight: 410 }
     ],
     'chest_random': [
         { id: 'l_cloak',  weight: 10 },
@@ -939,11 +934,10 @@ const LOOT_TABLES = {
         { id: 'l_goo',    weight: 30 }
     ],
     'tier4_boss_loot': [
-        { id: 'l_boss_relic', weight: 10 },
-        { id: 'l_blood',      weight: 30 },
-        { id: 'l_scale',      weight: 30 },
-        { id: 's_stone',      weight: 30 },
-        { id: null,           weight: 400 }
+        { id: 'l_boss_relic', weight: 25 }, // +2 DMG & +5 Max HP
+        { id: 'l_scale',      weight: 25 }, // +3 Block
+        { id: 's_stone',      weight: 25 },
+        { id: null,           weight: 425 }
     ],
     'secret_boss_loot': [
         { id: 'l_infinity_blade', weight: 100 }
