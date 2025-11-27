@@ -2571,7 +2571,7 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         state.hero.maxHp -= 5;
         state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
         // Give a strong item
-        let relic = { id: 'l_blood', name: 'Blood Gem', type: CARD_TYPES.LOOT, value: 5, atkBuff: 3, desc: '+3 DMG' };
+                let relic = { id: 'l_blood', name: 'Blood Gem', type: CARD_TYPES.LOOT, value: 50, atkBuff: 3, desc: '+3 DMG' };
         log("You sacrificed vitality for power.");
         acquireLoot(relic);
         removeEvent();
