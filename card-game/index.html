@@ -241,6 +241,31 @@
         .card.selected { border: 2px solid var(--highlight); transform: translateY(-10px); }
         .card.equipped { transform: scale(0.9);}
 
+        /* --- Damage Indicator Animations --- */
+        .damage-indicator {
+            position: fixed; /* Position relative to viewport */
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: fade-up 1s ease-out forwards;
+            z-index: 3000; /* Above everything */
+            text-shadow: 1px 1px 2px black;
+            white-space: nowrap;
+        }
+        .damage-indicator.damage { color: #e74c3c; }
+        .damage-indicator.blocked { color: #3498db; }
+
+        @keyframes fade-up {
+            from {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            to {
+                opacity: 0;
+                transform: translate(-50%, -150%) scale(0.8);
+            }
+        }
+
         /* Buttons on cards */
         .choice-btn { font-size: 8px; padding: 4px; width: 100%; margin-top: 2px; }
         .destroy-btn { width: 20px; height: 20px; font-size: 12px; }
@@ -2936,10 +2961,12 @@ function dealDamage(monsterIndex, amount) {
     // --- NEW: Monster Block Logic ---
     if (monster.block && monster.block > 0) {
         if (monster.block >= totalDmg) {
+            showDamageIndicator(monsterIndex, totalDmg, 'blocked');
             monster.block -= totalDmg;
             log(`${monster.name}'s block absorbed all damage.`);
             totalDmg = 0;
         } else {
+            showDamageIndicator(monsterIndex, monster.block, 'blocked');
             totalDmg -= monster.block;
             log(`${monster.name}'s block absorbed ${monster.block} damage.`);
             monster.block = 0;
@@ -2948,6 +2975,7 @@ function dealDamage(monsterIndex, amount) {
     // --- END NEW ---
 
     if (totalDmg > 0) {
+        showDamageIndicator(monsterIndex, totalDmg, 'damage');
         monster.hp -= totalDmg;
         log(`Hit ${monster.name} for <span class="log-dmg">${totalDmg}</span> dmg.`);
     }
@@ -3176,6 +3204,35 @@ function log(msg, color) {
     if (el.children.length > 4) {
         el.removeChild(el.children[0]);
     }
+}
+
+function showDamageIndicator(cardIndex, amount, type) {
+    const advContainer = document.getElementById('adventure-row');
+    if (!advContainer) return;
+
+    // The first child is the area-label, so card indices in DOM are offset by 1
+    const cardElement = advContainer.children[cardIndex + 1];
+    
+    if (!cardElement) return;
+
+    const indicator = document.createElement('div');
+    indicator.className = `damage-indicator ${type}`;
+    indicator.textContent = `-${amount}`;
+
+    const cardRect = cardElement.getBoundingClientRect();
+    
+    // Random position inside the card's boundaries
+    const x = cardRect.left + (Math.random() * (cardRect.width * 0.6)) + (cardRect.width * 0.2);
+    const y = cardRect.top + (Math.random() * (cardRect.height * 0.6)) + (cardRect.height * 0.2);
+    
+    indicator.style.left = `${x}px`;
+    indicator.style.top = `${y}px`;
+
+    document.body.appendChild(indicator);
+
+    setTimeout(() => {
+        indicator.remove();
+    }, 950);
 }
 
 /* --- RENDERING --- */
