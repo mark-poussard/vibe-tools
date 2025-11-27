@@ -2915,7 +2915,24 @@ function resolveEventChoice(cardIndex, choiceIndex) {
         }
         
         EventManager.emit(EVENTS.INVENTORY_UPDATED);
-        removeEvent();
+        removeEvent(); // Clear the event card from the row
+
+        // This is a successful exit, so don't revert progress
+        state.preDungeonState = null;
+
+        // Mark current node as complete
+        if (state.currentNodeId && !state.completedNodes.includes(state.currentNodeId)) {
+            state.completedNodes.push(state.currentNodeId);
+            EventManager.emit(EVENTS.MAP_UPDATED);
+        }
+        
+        // Delay and return to map
+        setTimeout(() => {
+            log("The path is open. Returning to the map...");
+            continueGame();
+        }, 2000);
+        
+        return; // Stop further processing in resolveEventChoice
     }
 
     render();
