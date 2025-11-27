@@ -178,6 +178,13 @@
             white-space: pre-wrap;
         }
 
+        #flee-btn {
+            background: var(--curse-color);
+            color: white;
+            width: 80px;
+            font-size: 12px;
+        }
+
         /* --- Cards (Mobile Optimized) --- */
         .card {
             flex: 0 0 85px; /* Fixed width, no shrinking/growing */
@@ -712,6 +719,7 @@
             </div>
             <div id="end-turn-container">
                 <button id="end-turn-btn" onclick="endTurn()">END<br>TURN</button>
+                <button id="flee-btn" onclick="fleeDungeon()">Flee</button>
             </div>
         </div>
     </div>
@@ -3193,6 +3201,41 @@ function gameOver() {
         ScreenManager.show('MAP');
         log("You retreat, losing everything gained in that dungeon.");
     }, 2000);
+}
+
+function fleeDungeon() {
+    if (!confirm("Are you sure you want to flee? You will lose all progress from this dungeon.")) {
+        return;
+    }
+    
+    log("You have fled the dungeon!", "#e67e22");
+
+    const currentHp = state.hero.hp;
+
+    // Restore pre-dungeon state if it exists
+    if (state.preDungeonState) {
+        state.gold = state.preDungeonState.gold;
+        state.inventory = state.preDungeonState.inventory;
+        state.deck = state.preDungeonState.deck;
+        state.collection = state.preDungeonState.collection;
+        state.equipped = state.preDungeonState.equipped;
+        state.hero = state.preDungeonState.hero;
+        state.preDungeonState = null; // Clean up
+    }
+
+    // Set HP to what it was when fleeing. Make sure it's not over maxHP.
+    state.hero.hp = Math.min(currentHp, state.hero.maxHp);
+    
+    showNotification('You have fled!', 'loss');
+    
+    // Clean up the run and return to map
+    state.hand = [];
+    state.discard = [];
+    state.adventureRow = [];
+    state.buffs = { atk: 0, block: 0, maxHp: 0, ap: 0 };
+    
+    ScreenManager.show('MAP');
+    log("You retreat, losing everything gained in that dungeon.");
 }
 
 function log(msg, color) {
