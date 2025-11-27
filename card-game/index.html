@@ -3276,8 +3276,8 @@ function createCardElement(data, index) {
 
     if (data.type === CARD_TYPES.MONSTER) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
-        let blockHtml = data.maxBlock ? `<span>🛡️${data.block}</span>` : '';
-        statsHtml = `<div class="card-stats"><span>⚔️${data.atk}</span>${blockHtml}<span>❤️${data.hp}</span></div>`;
+        let blockHtml = data.maxBlock ? `<span style="width: 100%; text-align: center;">🛡️${data.block}</span>` : '';
+        statsHtml = `<div class="card-stats" style="flex-wrap: wrap; justify-content: space-between;"><span>⚔️${data.atk}</span><span>❤️${data.hp}</span>${blockHtml}</div>`;
     } else if (data.type === CARD_TYPES.HERO) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
         statsHtml = `<div class="card-stats"><span>⚡${data.ap}</span><span>❤️${data.hp}</span></div>`;
