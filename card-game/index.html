@@ -918,7 +918,15 @@ const ITEM_DB = {
 
     's_strike': { id: 's_strike', name: 'Strike', type: CARD_TYPES.SKILL, cost: 1, effects: [{type:'DAMAGE', val:3, target:'ENEMY'}], desc: 'Deal 3 DMG' },
 
-    's_defend': { id: 's_defend', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, effects: [{type:'BLOCK', val:3, target:'SELF'}], desc: 'Gain 3 Block' }
+    's_defend': { id: 's_defend', name: 'Defend', type: CARD_TYPES.SKILL, cost: 1, effects: [{type:'BLOCK', val:3, target:'SELF'}], desc: 'Gain 3 Block' },
+
+    // --- VAMPIRE SKILLS ---
+    's_vamp_bite': { id: 's_vamp_bite', name: 'Vampiric Bite', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
+        effects: [{ type: 'LIFESTEAL', val: 3, efficiency: 0.5, target: 'ENEMY' }], desc: 'Deal 3 DMG. Heal 50% of unblocked DMG dealt.' },
+    's_vamp_drain': { id: 's_vamp_drain', name: 'Life Drain', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 2, 
+        effects: [{ type: 'LIFESTEAL', val: 8, efficiency: 0.5, target: 'ENEMY' }], desc: 'Deal 8 DMG. Heal 50% of unblocked DMG dealt.' },
+    's_vamp_feast': { id: 's_vamp_feast', name: 'Blood Feast', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 3, 
+        effects: [{ type: 'LIFESTEAL', val: 12, efficiency: 1.0, target: 'ENEMY' }], desc: 'Deal 12 DMG. Heal 100% of unblocked DMG dealt.' }
 };
 
 const HERO_DECKS = {
@@ -993,6 +1001,15 @@ const LOOT_TABLES = {
         { id: 's_stone',  weight: 1 },
         { id: 'l_bark',   weight: 1 },
         { id: 'l_scale',  weight: 1 }
+    ],
+    'undead_loot': [
+        { id: 's_vamp_bite', weight: 25 },
+        { id: null, weight: 75 }
+    ],
+    'vampire_loot': [
+        { id: 's_vamp_drain', weight: 20 },
+        { id: 's_vamp_feast', weight: 10 },
+        { id: null, weight: 70 }
     ],
 };
 
@@ -1465,8 +1482,8 @@ const MONSTER_DB = {
     'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, goldReward: 5, block: 2, maxBlock: 2, desc: 'BOSS: Venomous' },
 
     // Tier 3 (Dead Lands)
-    'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, goldReward: 10, desc: 'BOSS: Dark Magic' },
-    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, goldReward: 10, block: 3, maxBlock: 3, desc: 'BOSS: Immortal' },
+    'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, goldReward: 10, lootTable: 'undead_loot', desc: 'BOSS: Dark Magic' },
+    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, goldReward: 10, lootTable: 'vampire_loot', block: 3, maxBlock: 3, desc: 'BOSS: Immortal' },
 
     // Tier 4 (Castle/Endgame)
     'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, block: 5, maxBlock: 5, desc: 'BOSS: Armored' },
@@ -1477,7 +1494,7 @@ const MONSTER_DB = {
     // Bosses
     'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
     'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
-    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, block: 2, maxBlock: 2, desc: 'BOSS: Gatekeeper' },
+    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, lootTable: 'undead_loot', block: 2, maxBlock: 2, desc: 'BOSS: Gatekeeper' },
     'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, goldReward: 5, block: 4, maxBlock: 4, desc: 'BOSS: Gatekeeper' },
     'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, block: 5, maxBlock: 5, desc: 'FINAL BOSS' },
 
@@ -2533,6 +2550,16 @@ function processEffects(effects, targetIndex) {
                 }
                 success = true;
             }
+            if (eff.type === 'LIFESTEAL') {
+                const damageDealt = dealDamage(targetIndex, eff.val);
+                if (damageDealt > 0) {
+                    const lifeStolen = Math.floor(damageDealt * eff.efficiency);
+                    if (lifeStolen > 0) {
+                        healHero(lifeStolen);
+                    }
+                }
+                success = true;
+            }
         }
         
         if (eff.target === 'SELF') {
@@ -2542,7 +2569,7 @@ function processEffects(effects, targetIndex) {
             if (eff.type === 'DRAW') { drawCards(eff.val); log(`Drew ${eff.val} cards.`); }
             if (eff.type === 'DAMAGE') {
                 state.hero.hp -= eff.val;
-                log(`Took <span class="log-dmg">${eff.val}</span> damage!`);
+                log(`<span class="log-dmg">${eff.val}</span> damage!`);
                 showNotification(`Took ${eff.val} damage`, 'loss');
                 if (state.hero.hp <= 0) gameOver();
             }
@@ -3023,6 +3050,7 @@ function dealDamage(monsterIndex, amount) {
     if (monster.hp <= 0) {
         killMonster(monsterIndex);
     }
+    return totalDmg;
 }
 
 function killMonster(index) {
