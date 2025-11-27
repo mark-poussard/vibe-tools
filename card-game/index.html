@@ -2380,8 +2380,8 @@ function selectCard(index) {
     // Analyze Card Intent
     const hasEnemyEffect = card.type === CARD_TYPES.SKILL && card.effects && card.effects.some(e => e.target === 'ENEMY');
 
-    // 3. Auto-Play: Self-Target (Loot or Pure Buffs)
-    if (card.type === CARD_TYPES.LOOT || (card.type === CARD_TYPES.SKILL && !hasEnemyEffect)) {
+    // 3. Auto-Play: Self-Target (Loot, Curses, or Pure Buffs)
+    if (card.type === CARD_TYPES.LOOT || card.type === CARD_TYPES.CURSE || (card.type === CARD_TYPES.SKILL && !hasEnemyEffect)) {
         playCard('hero');
         return;
     }
