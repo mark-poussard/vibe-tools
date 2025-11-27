@@ -1347,23 +1347,23 @@ const MONSTER_DB = {
     'm_kobold': { id: 'm_kobold', name: 'Kobold', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_elite', desc: 'Elite Scout' },
     
     // Tier 2
-    'm_orc':    { id: 'm_orc',    name: 'Orc', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 4, lootTable: 'tier2_standard', desc: 'Heavy Hitter' },
+    'm_orc':    { id: 'm_orc',    name: 'Orc', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 4, block: 1, maxBlock: 1, lootTable: 'tier2_standard', desc: 'Heavy Hitter' },
     'm_spider': { id: 'm_spider', name: 'Cave Spider', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 2, lootTable: 'tier2_standard', desc: 'Poisonous' },
     'm_wolf':   { id: 'm_wolf',   name: 'Dire Wolf', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Fast Biter' },
     'm_cultist':{ id: 'm_cultist',name: 'Dark Cultist', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Glass Cannon' },
     'm_leech':  { id: 'm_leech',  name: 'Void Leech', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 2, lootTable: 'tier2_standard', desc: 'Life Drainer' },
 
     // Tier 3
-    'm_golem':  { id: 'm_golem',  name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, lootTable: 'tier3_void', desc: 'Tank' },
+    'm_golem':  { id: 'm_golem',  name: 'Stone Golem', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 2, block: 5, maxBlock: 5, lootTable: 'tier3_void', desc: 'Tank' },
     'm_assassin':{ id: 'm_assassin', name: 'Void Assassin', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 6, lootTable: 'tier3_void', desc: 'High Damage!' },
-    'm_ent':    { id: 'm_ent',    name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, lootTable: 'tier3_void', desc: 'Ancient Wood' },
+    'm_ent':    { id: 'm_ent',    name: 'Rotting Ent', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 3, block: 2, maxBlock: 2, lootTable: 'tier3_void', desc: 'Ancient Wood' },
     'm_drake':  { id: 'm_drake',  name: 'Baby Drake', type: CARD_TYPES.MONSTER, hp: 18, maxHp: 18, atk: 5, lootTable: 'tier3_void', desc: 'Fierce!' },
     
     'm_bandit': { id: 'm_bandit', name: 'Bandit', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 3, lootTable: 'tier1_standard', desc: 'Thief' },
-    'm_skeleton': { id: 'm_skeleton', name: 'Skeleton', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 3, lootTable: 'tier2_standard', desc: 'Undead' },
+    'm_skeleton': { id: 'm_skeleton', name: 'Skeleton', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 3, block: 1, maxBlock: 1, lootTable: 'tier2_standard', desc: 'Undead' },
     'm_sandworm': { id: 'm_sandworm', name: 'Sand Worm', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 4, lootTable: 'tier2_standard', desc: 'Burrower' },
     'm_wraith':   { id: 'm_wraith', name: 'Wraith', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 5, lootTable: 'tier3_void', desc: 'Spirit' },
-    'm_guard':    { id: 'm_guard', name: 'Castle Guard', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 4, lootTable: 'tier2_standard', desc: 'Armored' },
+    'm_guard':    { id: 'm_guard', name: 'Castle Guard', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 4, block: 2, maxBlock: 2, lootTable: 'tier2_standard', desc: 'Armored' },
     // --- NEW EXPANSION: REGION 1 (Greenlands) ---
     'm_bear':       { id: 'm_bear', name: 'Brown Bear', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 3, lootTable: 'tier1_standard', desc: 'High HP' },
     'm_thief':      { id: 'm_thief', name: 'Petty Thief', type: CARD_TYPES.MONSTER, hp: 5, maxHp: 5, atk: 3, lootTable: 'tier1_standard', desc: 'Sneaky' },
@@ -1390,7 +1390,7 @@ const MONSTER_DB = {
     // --- NEW EXPANSION: REGION 2 (Desert) ---
     'm_scorpion':   { id: 'm_scorpion', name: 'Scorpion', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 4, lootTable: 'tier2_standard', desc: 'Venomous' },
     'm_vulture':    { id: 'm_vulture', name: 'Carrion Bird', type: CARD_TYPES.MONSTER, hp: 6, maxHp: 6, atk: 4, lootTable: 'tier1_standard', desc: 'Flying' },
-    'm_mummy':      { id: 'm_mummy', name: 'Mummy', type: CARD_TYPES.MONSTER, hp: 14, maxHp: 14, atk: 2, lootTable: 'tier2_standard', desc: 'Undead' },
+    'm_mummy':      { id: 'm_mummy', name: 'Mummy', type: CARD_TYPES.MONSTER, hp: 14, maxHp: 14, atk: 2, block: 1, maxBlock: 1, lootTable: 'tier2_standard', desc: 'Undead' },
     'm_nomad':      { id: 'm_nomad', name: 'Desert Nomad', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 3, lootTable: 'tier2_standard', desc: 'Warrior' },
     'm_basilisk':   { id: 'm_basilisk', name: 'Basilisk', type: CARD_TYPES.MONSTER, hp: 16, maxHp: 16, atk: 3, lootTable: 'tier2_standard', desc: 'Petrifying' },
     'm_sand_spirit':{ id: 'm_sand_spirit', name: 'Sand Spirit', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 5, lootTable: 'tier2_standard', desc: 'Ethereal' },
@@ -1400,21 +1400,21 @@ const MONSTER_DB = {
     // --- NEW EXPANSION: REGION 3 (Dead Lands) ---
     'm_zombie':     { id: 'm_zombie', name: 'Zombie', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 2, lootTable: 'tier2_standard', desc: 'Relentless' },
     'm_ghoul':      { id: 'm_ghoul', name: 'Flesh Ghoul', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 4, lootTable: 'tier2_standard', desc: 'Hungry' },
-    'm_bone_warrior':{ id: 'm_bone_warrior', name: 'Bone Warrior', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 5, lootTable: 'tier3_void', desc: 'Armed' },
+    'm_bone_warrior':{ id: 'm_bone_warrior', name: 'Bone Warrior', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 5, block: 2, maxBlock: 2, lootTable: 'tier3_void', desc: 'Armed' },
     'm_necromancer':{ id: 'm_necromancer', name: 'Necromancer', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 6, lootTable: 'tier3_void', desc: 'Summoner' },
     'm_banshee':    { id: 'm_banshee', name: 'Banshee', type: CARD_TYPES.MONSTER, hp: 9, maxHp: 9, atk: 5, lootTable: 'tier3_void', desc: 'Screamer' },
-    'm_gargoyle':   { id: 'm_gargoyle', name: 'Gargoyle', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 3, lootTable: 'tier3_void', desc: 'Stone Skin' },
+    'm_gargoyle':   { id: 'm_gargoyle', name: 'Gargoyle', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 3, block: 3, maxBlock: 3, lootTable: 'tier3_void', desc: 'Stone Skin' },
     'm_abomination':{ id: 'm_abomination', name: 'Abomination', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 4, lootTable: 'tier3_void', desc: 'Hulking' },
     'm_specter':    { id: 'm_specter', name: 'Specter', type: CARD_TYPES.MONSTER, hp: 10, maxHp: 10, atk: 6, lootTable: 'tier3_void', desc: 'Ghostly' },
 
     // --- NEW EXPANSION: REGION 4 (Castle) ---
-    'm_armor':      { id: 'm_armor', name: 'Dark Armor', type: CARD_TYPES.MONSTER, hp: 22, maxHp: 22, atk: 3, lootTable: 'tier3_void', desc: 'Animated' },
+    'm_armor':      { id: 'm_armor', name: 'Dark Armor', type: CARD_TYPES.MONSTER, hp: 22, maxHp: 22, atk: 3, block: 5, maxBlock: 5, lootTable: 'tier3_void', desc: 'Animated' },
     'm_warlock':    { id: 'm_warlock', name: 'Cult Warlock', type: CARD_TYPES.MONSTER, hp: 12, maxHp: 12, atk: 7, lootTable: 'tier3_void', desc: 'Dark Magic' },
-    'm_royal_guard':{ id: 'm_royal_guard', name: 'Royal Guard', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 5, lootTable: 'tier3_void', desc: 'Elite' },
+    'm_royal_guard':{ id: 'm_royal_guard', name: 'Royal Guard', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 5, block: 3, maxBlock: 3, lootTable: 'tier3_void', desc: 'Elite' },
     'm_imp':        { id: 'm_imp', name: 'Chaos Imp', type: CARD_TYPES.MONSTER, hp: 8, maxHp: 8, atk: 6, lootTable: 'tier2_standard', desc: 'Fast' },
     'm_executioner':{ id: 'm_executioner', name: 'Executioner', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, lootTable: 'tier3_void', desc: 'Headsman' },
     'm_sorcerer':   { id: 'm_sorcerer', name: 'Void Sorcerer', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 6, lootTable: 'tier3_void', desc: 'Caster' },
-    'm_dark_knight':{ id: 'm_dark_knight', name: 'Dark Knight', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 6, lootTable: 'tier3_void', desc: 'Champion' },
+    'm_dark_knight':{ id: 'm_dark_knight', name: 'Dark Knight', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 6, block: 4, maxBlock: 4, lootTable: 'tier3_void', desc: 'Champion' },
 
 // --- NEW BOSSES ---
     // Tier 1 (Greenlands/Ruins)
@@ -1424,24 +1424,24 @@ const MONSTER_DB = {
 
     // Tier 2 (Desert)
     'mb_sandworm_q':  { id: 'mb_sandworm_q', name: 'Sandworm Queen', type: CARD_TYPES.MONSTER, hp: 40, maxHp: 40, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Devourer' },
-    'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, goldReward: 5, desc: 'BOSS: Venomous' },
+    'mb_scorp_king':  { id: 'mb_scorp_king', name: 'Scorpion King', type: CARD_TYPES.MONSTER, hp: 35, maxHp: 35, atk: 6, isBoss: true, goldReward: 5, block: 2, maxBlock: 2, desc: 'BOSS: Venomous' },
 
     // Tier 3 (Dead Lands)
     'mb_necromancer': { id: 'mb_necromancer', name: 'High Necromancer', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 8, isBoss: true, goldReward: 10, desc: 'BOSS: Dark Magic' },
-    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, goldReward: 10, desc: 'BOSS: Immortal' },
+    'mb_vampire':     { id: 'mb_vampire', name: 'Vampire Count', type: CARD_TYPES.MONSTER, hp: 45, maxHp: 45, atk: 5, isBoss: true, goldReward: 10, block: 3, maxBlock: 3, desc: 'BOSS: Immortal' },
 
     // Tier 4 (Castle/Endgame)
-    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Armored' },
-    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Stone God' },
-    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, goldReward: 20, lootTable: 'tier4_boss_loot', isBoss: true, desc: 'BOSS: Apex' },
+    'mb_commander':   { id: 'mb_commander', name: 'Castle Commander', type: CARD_TYPES.MONSTER, hp: 50, maxHp: 50, atk: 6, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, block: 5, maxBlock: 5, desc: 'BOSS: Armored' },
+    'mb_gargoyle_p':  { id: 'mb_gargoyle_p', name: 'Gargoyle Prime', type: CARD_TYPES.MONSTER, hp: 55, maxHp: 55, atk: 5, goldReward: 13, lootTable: 'tier4_boss_loot', isBoss: true, block: 8, maxBlock: 8, desc: 'BOSS: Stone God' },
+    'mb_void_dragon': { id: 'mb_void_dragon', name: 'Void Dragon', type: CARD_TYPES.MONSTER, hp: 70, maxHp: 70, atk: 9, goldReward: 20, lootTable: 'tier4_boss_loot', isBoss: true, block: 5, maxBlock: 5, desc: 'BOSS: Apex' },
 
     // Bosses
     // Bosses
     'mb_troll': { id: 'mb_troll', name: 'Cave Troll', type: CARD_TYPES.MONSTER, hp: 20, maxHp: 20, atk: 4, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
     'mb_brood': { id: 'mb_brood', name: 'Broodmother', type: CARD_TYPES.MONSTER, hp: 15, maxHp: 15, atk: 5, isBoss: true, goldReward: 3, desc: 'BOSS: Gatekeeper' },
-    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
-    'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, goldReward: 5, desc: 'BOSS: Gatekeeper' },
-    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, desc: 'FINAL BOSS' },
+    'mb_lich':  { id: 'mb_lich',  name: 'Elder Lich', type: CARD_TYPES.MONSTER, hp: 25, maxHp: 25, atk: 5, isBoss: true, goldReward: 5, block: 2, maxBlock: 2, desc: 'BOSS: Gatekeeper' },
+    'mb_knight':{ id: 'mb_knight', name: 'Void Knight', type: CARD_TYPES.MONSTER, hp: 30, maxHp: 30, atk: 4, isBoss: true, goldReward: 5, block: 4, maxBlock: 4, desc: 'BOSS: Gatekeeper' },
+    'mb_malakor':{ id: 'mb_malakor', name: 'MALAKOR', type: CARD_TYPES.MONSTER, hp: 60, maxHp: 60, atk: 7, isBoss: true, goldReward: 20, block: 5, maxBlock: 5, desc: 'FINAL BOSS' },
 
     // 1. The Underlings (Powerful Elites)
     'm_void_sentinel': { 
@@ -1449,6 +1449,7 @@ const MONSTER_DB = {
         name: 'Void Sentinel', 
         type: CARD_TYPES.MONSTER, 
         hp: 30, maxHp: 30, atk: 5, 
+        block: 10, maxBlock: 10, 
         lootTable: 'tier3_void', 
         desc: 'Guards the Emperor' 
     },
@@ -1462,6 +1463,7 @@ const MONSTER_DB = {
         goldReward: 100, 
         lootTable: 'secret_boss_loot', 
         isBoss: true, 
+        block: 10, maxBlock: 10, 
         desc: 'THE VOID EMPEROR' 
     },
 
@@ -2930,9 +2932,25 @@ function dealDamage(monsterIndex, amount) {
     }
 
     let totalDmg = amount + bonus;
-    monster.hp -= totalDmg;
     
-    log(`Hit ${monster.name} for <span class="log-dmg">${totalDmg}</span> dmg.`);
+    // --- NEW: Monster Block Logic ---
+    if (monster.block && monster.block > 0) {
+        if (monster.block >= totalDmg) {
+            monster.block -= totalDmg;
+            log(`${monster.name}'s block absorbed all damage.`);
+            totalDmg = 0;
+        } else {
+            totalDmg -= monster.block;
+            log(`${monster.name}'s block absorbed ${monster.block} damage.`);
+            monster.block = 0;
+        }
+    }
+    // --- END NEW ---
+
+    if (totalDmg > 0) {
+        monster.hp -= totalDmg;
+        log(`Hit ${monster.name} for <span class="log-dmg">${totalDmg}</span> dmg.`);
+    }
 
     if (monster.hp <= 0) {
         killMonster(monsterIndex);
@@ -3072,6 +3090,17 @@ function endTurn() {
         gameOver();
         return;
     }
+
+    // --- NEW: Reset Monster Block ---
+    state.adventureRow.forEach(m => {
+        if(m.type === CARD_TYPES.MONSTER && m.maxBlock) {
+            if (m.block < m.maxBlock) {
+                m.block = m.maxBlock;
+                log(`${m.name} regenerates its block.`);
+            }
+        }
+    });
+    // --- END NEW ---
 
     state.hero.ap = Math.max(state.hero.ap, state.hero.maxAp);
     state.hero.block = 0; 
@@ -3247,7 +3276,8 @@ function createCardElement(data, index) {
 
     if (data.type === CARD_TYPES.MONSTER) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
-        statsHtml = `<div class="card-stats"><span>⚔️${data.atk}</span><span>❤️${data.hp}</span></div>`;
+        let blockHtml = data.maxBlock ? `<span>🛡️${data.block}</span>` : '';
+        statsHtml = `<div class="card-stats"><span>⚔️${data.atk}</span>${blockHtml}<span>❤️${data.hp}</span></div>`;
     } else if (data.type === CARD_TYPES.HERO) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
         statsHtml = `<div class="card-stats"><span>⚡${data.ap}</span><span>❤️${data.hp}</span></div>`;
