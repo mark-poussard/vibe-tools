@@ -861,6 +861,9 @@ const ITEM_DB = {
                       { type: 'HEAL', val: 2, target: 'SELF' } // Added logic for drain
                   ], desc: 'Deal 6 DMG & Heal 2' },
 
+    's_breaker': { id: 's_breaker', name: 'Shield Breaker', type: CARD_TYPES.SKILL, rarity: 'rare', cost: 1, 
+                  effects: [{ type: 'SHATTER', target: 'ENEMY' }], desc: 'Removes all Block from an enemy.' },
+
     // Tier 3 Legendary
     's_stone':  { id: 's_stone',  name: 'Stone Form',   type: CARD_TYPES.SKILL, rarity: 'legendary', cost: 2, 
                   effects: [{ type: 'BLOCK', val: 15, target: 'SELF' }], desc: 'Gain 15 Block' },
@@ -983,7 +986,8 @@ const LOOT_TABLES = {
     'chest_t2_rare_items': [
         { id: 's_drain',   weight: 1 },
         { id: 'l_cloak',  weight: 1 },
-        { id: 's_bolt',  weight: 1 }
+        { id: 's_bolt',  weight: 1 },
+        { id: 's_breaker', weight: 1 }
     ],
     'chest_t3_rare_items': [
         { id: 's_stone',  weight: 1 },
@@ -1314,7 +1318,8 @@ const NODE_CONFIGS = {
         icon: '⛺', isMerchant: true,
         itemPool: [
             { id: 'l_spear', price: 50 }, { id: 's_web', price: 40 },
-            { id: 's_bolt', price: 45 }, { id: 'l_goo', price: 50 }
+            { id: 's_bolt', price: 45 }, { id: 'l_goo', price: 50 },
+            { id: 's_breaker', price: 50 }
         ]
     },
 
@@ -2516,6 +2521,16 @@ function processEffects(effects, targetIndex) {
             
             if (eff.type === 'DAMAGE') {
                 dealDamage(targetIndex, eff.val);
+                success = true;
+            }
+            if (eff.type === 'SHATTER') {
+                let monster = state.adventureRow[targetIndex];
+                if (monster.block && monster.block > 0) {
+                    log(`${monster.name}'s block was shattered!`);
+                    monster.block = 0;
+                } else {
+                    log(`${monster.name} had no block to shatter.`);
+                }
                 success = true;
             }
         }
