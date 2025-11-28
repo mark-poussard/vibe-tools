@@ -3444,16 +3444,28 @@ function createCardElement(data, index) {
     } else if (data.type === CARD_TYPES.SKILL || data.type === CARD_TYPES.CURSE) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
         
-        // Generate mini-icons based on effects
-        let icons = `<span>⚡${data.cost}</span>`;
-        if (data.effects) {
-             data.effects.forEach(e => {
-                 if(e.type === 'DAMAGE') icons += ` <span>⚔️${e.val}</span>`;
-                 if(e.type === 'BLOCK') icons += ` <span>🛡️${e.val}</span>`;
-                 if(e.type === 'HEAL') icons += ` <span>💚${e.val}</span>`;
-             });
+        const lifestealEffect = data.effects ? data.effects.find(e => e.type === 'LIFESTEAL') : null;
+
+        if (lifestealEffect) {
+            statsHtml = `<div class="card-stats" style="flex-direction: column; align-items: stretch; justify-content: flex-end; gap: 2px;">
+                    <div style="text-align: right; font-size: 10px;">🩸${lifestealEffect.efficiency * 100}%</div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>⚡${data.cost}</span>
+                        <span>⚔️${lifestealEffect.val}</span>
+                    </div>
+                </div>`;
+        } else {
+            // Generate mini-icons based on effects
+            let icons = `<span>⚡${data.cost}</span>`;
+            if (data.effects) {
+                 data.effects.forEach(e => {
+                     if(e.type === 'DAMAGE') icons += ` <span>⚔️${e.val}</span>`;
+                     if(e.type === 'BLOCK') icons += ` <span>🛡️${e.val}</span>`;
+                     if(e.type === 'HEAL') icons += ` <span>💚${e.val}</span>`;
+                 });
+            }
+            statsHtml = `<div class="card-stats">${icons}</div>`;
         }
-        statsHtml = `<div class="card-stats">${icons}</div>`;
     } else if (data.type === CARD_TYPES.LOOT) {
         bodyHtml = `<div class="card-desc">${data.desc}</div>`;
         // Display Gold Value
