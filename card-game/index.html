@@ -1869,7 +1869,11 @@ function useInventoryItem(invIndex) {
         // Apply Passive Stats
         if (item.hpBonus) {
             state.hero.maxHp += item.hpBonus;
-            state.hero.hp += item.hpBonus;
+            if (item.hpBonus > 0) {
+                state.hero.hp += item.hpBonus;
+            } else {
+                state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+            }
         }
         if (item.apBonus) state.hero.maxAp += item.apBonus;
         
@@ -1920,8 +1924,13 @@ function mapUnequipItem(equipIndex) {
 
     // Revert HP Bonus
     if (item.hpBonus) {
-        state.hero.maxHp -= item.hpBonus;
-        state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+        const hpChange = -item.hpBonus; // The effective change
+        state.hero.maxHp += hpChange;
+        if (hpChange > 0) { // If unequipping a penalty, it's a bonus
+            state.hero.hp += hpChange;
+        } else { // If unequipping a bonus, it's a penalty
+            state.hero.hp = Math.min(state.hero.hp, state.hero.maxHp);
+        }
     }
 
     if (item.apBonus) {
