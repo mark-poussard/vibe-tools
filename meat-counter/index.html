@@ -70,6 +70,11 @@
       background: var(--secondary-color);
       padding: 15px;
       border-radius: 5px;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .stat-box:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .stat-box h3 { margin-top: 0; }
     #history-list {
@@ -118,6 +123,62 @@
       color: white;
     }
     #import-file { display: none; }
+
+    /* Modal Styles */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1000; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      position: relative;
+    }
+    .close-btn {
+      color: #aaa;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close-btn:hover,
+    .close-btn:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #modal-title {
+      margin-top: 0;
+      color: var(--primary-color);
+      text-align: center;
+    }
+    #modal-body ul {
+      list-style: none;
+      padding: 0;
+    }
+    #modal-body li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      text-transform: capitalize;
+    }
+    #modal-body li:last-child {
+      border-bottom: none;
+    }
   </style>
 </head>
 <body>
@@ -139,19 +200,19 @@
 
     <h2>Recap (grams)</h2>
     <div class="stats">
-      <div class="stat-box">
+      <div class="stat-box" data-period="day">
         <h3>Today</h3>
         <p id="sum-day">0</p>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-period="week">
         <h3>This Week</h3>
         <p id="sum-week">0</p>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-period="month">
         <h3>This Month</h3>
         <p id="sum-month">0</p>
       </div>
-      <div class="stat-box">
+      <div class="stat-box" data-period="year">
         <h3>This Year</h3>
         <p id="sum-year">0</p>
       </div>
@@ -170,6 +231,14 @@
 
   </div>
 
+  <div id="recap-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="modal-title">Breakdown</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const entryForm = document.getElementById('entry-form');
@@ -186,6 +255,12 @@
 
       const exportBtn = document.getElementById('export-btn');
       const importFile = document.getElementById('import-file');
+
+      const statsContainer = document.querySelector('.stats');
+      const recapModal = document.getElementById('recap-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBody = document.getElementById('modal-body');
+      const closeModalBtn = recapModal.querySelector('.close-btn');
       
       let entries = [];
 
@@ -371,6 +446,91 @@
           }
         };
         reader.readAsText(file);
+      });
+
+      function getEntriesForPeriod(period) {
+        const now = new Date();
+        let startTime;
+
+        switch (period) {
+          case 'day':
+            startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            break;
+          case 'week':
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            startTime = new Date(today.setDate(diff)).setHours(0, 0, 0, 0);
+            break;
+          case 'month':
+            startTime = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+            break;
+          case 'year':
+            startTime = new Date(now.getFullYear(), 0, 1).getTime();
+            break;
+          default:
+            return [];
+        }
+        return entries.filter(entry => entry.id >= startTime);
+      }
+
+      function showRecapBreakdown(period) {
+        const periodEntries = getEntriesForPeriod(period);
+        
+        const breakdown = { chicken: 0, cow: 0, pork: 0, fish: 0 };
+        
+        periodEntries.forEach(entry => {
+          if (breakdown.hasOwnProperty(entry.type)) {
+            breakdown[entry.type] += entry.grams;
+          }
+        });
+        
+        let title = '';
+        switch(period) {
+          case 'day': title = "Today's Breakdown"; break;
+          case 'week': title = "This Week's Breakdown"; break;
+          case 'month': title = "This Month's Breakdown"; break;
+          case 'year': title = "This Year's Breakdown"; break;
+        }
+        modalTitle.textContent = title;
+
+        let contentHTML = '<ul>';
+        let hasContent = false;
+        const meatTypes = ['chicken', 'cow', 'pork', 'fish'];
+        meatTypes.forEach(type => {
+          if (breakdown[type] > 0) {
+            hasContent = true;
+            contentHTML += `<li><span>${type}</span> <span>${breakdown[type]}g</span></li>`;
+          }
+        });
+
+        if (!hasContent) {
+          contentHTML += '<li>No entries for this period.</li>';
+        }
+        contentHTML += '</ul>';
+
+        modalBody.innerHTML = contentHTML;
+        recapModal.style.display = 'block';
+      }
+
+      function closeModal() {
+        recapModal.style.display = 'none';
+      }
+
+      statsContainer.addEventListener('click', (e) => {
+        const statBox = e.target.closest('.stat-box');
+        if (statBox) {
+          const period = statBox.dataset.period;
+          showRecapBreakdown(period);
+        }
+      });
+
+      closeModalBtn.addEventListener('click', closeModal);
+
+      window.addEventListener('click', (event) => {
+        if (event.target === recapModal) {
+          closeModal();
+        }
       });
 
       // Initial load
