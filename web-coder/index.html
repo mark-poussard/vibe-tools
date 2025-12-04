@@ -1171,6 +1171,7 @@
                         2. Generate a list of search/replace operations to fulfill the request.
                         3. Ensure 'search_string' is unique enough to match only the intended lines.
                         4. Ensure 'replacement_string' contains the full new code block.
+                        5. HARD REQUIREMENT: The entire web application must be contained within this single 'index.html' file. This includes all HTML, CSS, and JavaScript. Do not suggest or use any external libraries or files.
                     `;
 
                     const result = await GoogleAI.generate(this.state.config.aiApiKey, model, systemPrompt, userText);
