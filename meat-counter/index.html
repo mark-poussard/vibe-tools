@@ -231,6 +231,11 @@
         <p id="sum-year-grams" class="gram-breakdown">0g</p>
         <p id="sum-year-animals" class="animal-count">≈ 0.000 animals</p>
       </div>
+      <div class="stat-box" data-period="all">
+        <h3 id="all-time-title">All Time</h3>
+        <p id="sum-all-grams" class="gram-breakdown">0g</p>
+        <p id="sum-all-animals" class="animal-count">≈ 0.000 animals</p>
+      </div>
     </div>
 
     <h2>History</h2>
@@ -382,11 +387,24 @@
           return { gramText, animalText };
         };
 
+        const firstEntry = entries.length > 0 ? entries.reduce((min, e) => e.id < min.id ? e : min, entries[0]) : null;
+        const allTimeTitleEl = document.getElementById('all-time-title');
+        if (firstEntry) {
+            const firstDate = new Date(firstEntry.id);
+            const year = firstDate.getFullYear();
+            const month = String(firstDate.getMonth() + 1).padStart(2, '0');
+            const day = String(firstDate.getDate()).padStart(2, '0');
+            allTimeTitleEl.textContent = `Since ${year}-${month}-${day}`;
+        } else {
+            allTimeTitleEl.textContent = 'All Time';
+        }
+
         const periods = {
           day: startOfDay,
           week: startOfWeek,
           month: startOfMonth,
-          year: startOfYear
+          year: startOfYear,
+          all: 0
         };
 
         for (const period in periods) {
@@ -520,6 +538,9 @@
           case 'year':
             startTime = new Date(now.getFullYear(), 0, 1).getTime();
             break;
+          case 'all':
+            startTime = 0;
+            break;
           default:
             return [];
         }
@@ -543,6 +564,10 @@
           case 'week': title = "This Week's Breakdown"; break;
           case 'month': title = "This Month's Breakdown"; break;
           case 'year': title = "This Year's Breakdown"; break;
+          case 'all':
+            const allTimeTitle = document.getElementById('all-time-title').textContent;
+            title = `Breakdown: ${allTimeTitle}`;
+            break;
         }
         modalTitle.textContent = title;
 
