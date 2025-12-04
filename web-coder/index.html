@@ -1192,7 +1192,7 @@
                             AI generated ${result.operations?.length || 0} change(s).
                         </div>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button class="btn btn-primary" onclick="App.showReviewModal()" style="font-size:0.8rem; padding:8px;">Review Changes</button>
+                            <button class="btn btn-primary" onclick="App.showReviewModal(this)" style="font-size:0.8rem; padding:8px;">Review Changes</button>
                         </div>
                     `;
 
@@ -1305,13 +1305,7 @@
                 if(btn) btn.remove();
             },
 
-            showReviewModal() {
-                const operations = this.state.fileData.lastAiResponseJson?.operations;
-                if (!operations) {
-                    this.showToast("No AI output available to review.");
-                    return;
-                }
-
+            renderReviewModalContent(operations) {
                 const listContainer = document.getElementById('review-operations-list');
                 listContainer.innerHTML = '';
 
@@ -1344,12 +1338,40 @@
                 } else {
                     applyBtn.style.display = 'block';
                 }
+            },
 
+            showReviewModal(buttonElement) {
+                const messageDiv = buttonElement.closest('.message');
+                if (!messageDiv) return;
+
+                const msgId = messageDiv.id;
+                this.state.fileData.reviewingMessageId = msgId;
+
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId] || [];
+                const msg = history.find(m => m.id === msgId);
+
+                const operations = msg?.aiResponse?.operations;
+                if (!operations) {
+                    this.showToast("No AI output available to review.");
+                    return;
+                }
+
+                this.renderReviewModalContent(operations);
                 this.openModal('modal-review');
             },
             
             applySelectedChanges() {
-                const operations = this.state.fileData.lastAiResponseJson.operations;
+                const msgId = this.state.fileData.reviewingMessageId;
+                if (!msgId) return;
+
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId] || [];
+                const msg = history.find(m => m.id === msgId);
+                
+                if (!msg || !msg.aiResponse) return;
+
+                const operations = msg.aiResponse.operations;
                 let newContent = this.state.fileData.pendingContent;
                 let successCount = 0;
 
@@ -1361,7 +1383,7 @@
 
                     if (!op.applied && newContent.includes(op.search_string)) {
                         newContent = newContent.replace(op.search_string, op.replacement_string);
-                        op.applied = true;
+                        op.applied = true; // This modifies the object in history
                         successCount++;
                     } else if (!op.applied) {
                         this.showToast("Could not apply a change, code may have been modified.", "error");
@@ -1369,6 +1391,7 @@
                 });
 
                 if (successCount > 0) {
+                    localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
                     this.state.fileData.pendingContent = newContent;
                     this.updatePreview();
                     this.updateManualEditor();
@@ -1379,21 +1402,31 @@
             },
 
             revertChange(opIndex) {
-                const op = this.state.fileData.lastAiResponseJson.operations[opIndex];
+                const msgId = this.state.fileData.reviewingMessageId;
+                if (!msgId) return;
+
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId] || [];
+                const msg = history.find(m => m.id === msgId);
+                
+                if (!msg || !msg.aiResponse) return;
+
+                const op = msg.aiResponse.operations[opIndex];
                 if (!op || !op.applied) return;
 
                 let currentContent = this.state.fileData.pendingContent;
 
                 if (currentContent.includes(op.replacement_string)) {
                     currentContent = currentContent.replace(op.replacement_string, op.search_string);
-                    delete op.applied;
+                    delete op.applied; // This modifies the object in history
+                    localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
 
                     this.state.fileData.pendingContent = currentContent;
                     this.updatePreview();
                     this.updateManualEditor();
                     this.showToast("Change reverted.");
 
-                    this.showReviewModal(); 
+                    this.renderReviewModalContent(msg.aiResponse.operations); 
                 } else {
                     this.showToast("Could not revert: code block not found.");
                 }
@@ -1446,7 +1479,7 @@
 
             // ... [Previous Modal utilities & Helper methods] ...
             openModal(id) { document.getElementById(id).classList.add('open'); },
-            closeModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); this.state.projectToDelete=null; },
+            closeModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); this.state.projectToDelete=null; if (this.state.fileData) this.state.fileData.reviewingMessageId = null; },
             escapeHtml(t) { return t.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); },
             showToast(m) {
                 const c = document.getElementById('toast-container'); const t = document.createElement('div');
