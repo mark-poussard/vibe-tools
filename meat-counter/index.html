@@ -189,10 +189,10 @@
     <form id="entry-form">
       <input type="number" id="grams-input" placeholder="Grams" required min="1">
       <select id="meat-type-input" required>
-        <option value="chicken">Chicken</option>
-        <option value="cow">Cow</option>
-        <option value="pork">Pork</option>
-        <option value="fish">Fish</option>
+        <option value="chicken">🐔 Chicken</option>
+        <option value="cow">🐮 Cow</option>
+        <option value="pork">🐷 Pork</option>
+        <option value="fish">🐟 Fish</option>
       </select>
       <button type="submit">Add Entry</button>
       <input type="hidden" id="editing-id">
@@ -276,6 +276,16 @@
           entries = JSON.parse(data);
         }
       }
+
+      function getMeatDisplay(type) {
+        switch (type) {
+          case 'chicken': return '🐔 Chicken';
+          case 'cow': return '🐮 Cow';
+          case 'pork': return '🐷 Pork';
+          case 'fish': return '🐟 Fish';
+          default: return type;
+        }
+      }
       
       function render() {
         renderHistory();
@@ -297,7 +307,7 @@
           const entryDate = new Date(entry.id).toLocaleString();
           li.innerHTML = `
             <div class="entry-details">
-              <strong>${entry.grams}g</strong> of ${entry.type} on ${entryDate}
+              <strong>${entry.grams}g</strong> of ${getMeatDisplay(entry.type)} on ${entryDate}
             </div>
             <div class="entry-actions">
               <button class="edit-btn" data-id="${entry.id}">Edit</button>
@@ -500,7 +510,7 @@
         meatTypes.forEach(type => {
           if (breakdown[type] > 0) {
             hasContent = true;
-            contentHTML += `<li><span>${type}</span> <span>${breakdown[type]}g</span></li>`;
+            contentHTML += `<li><span>${getMeatDisplay(type)}</span> <span>${breakdown[type]}g</span></li>`;
           }
         });
 
