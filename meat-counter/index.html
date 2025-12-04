@@ -77,6 +77,17 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
     .stat-box h3 { margin-top: 0; }
+    .gram-breakdown {
+      font-size: 1.1em;
+      font-weight: bold;
+      min-height: 1.2em;
+      word-wrap: break-word;
+    }
+    .animal-count {
+      font-size: 0.9em;
+      color: #666;
+      min-height: 1.1em;
+    }
     #history-list {
       list-style: none;
       padding: 0;
@@ -202,19 +213,23 @@
     <div class="stats">
       <div class="stat-box" data-period="day">
         <h3>Today</h3>
-        <p id="sum-day">0</p>
+        <p id="sum-day-grams" class="gram-breakdown">0g</p>
+        <p id="sum-day-animals" class="animal-count">≈ 0.000 animals</p>
       </div>
       <div class="stat-box" data-period="week">
         <h3>This Week</h3>
-        <p id="sum-week">0</p>
+        <p id="sum-week-grams" class="gram-breakdown">0g</p>
+        <p id="sum-week-animals" class="animal-count">≈ 0.000 animals</p>
       </div>
       <div class="stat-box" data-period="month">
         <h3>This Month</h3>
-        <p id="sum-month">0</p>
+        <p id="sum-month-grams" class="gram-breakdown">0g</p>
+        <p id="sum-month-animals" class="animal-count">≈ 0.000 animals</p>
       </div>
       <div class="stat-box" data-period="year">
         <h3>This Year</h3>
-        <p id="sum-year">0</p>
+        <p id="sum-year-grams" class="gram-breakdown">0g</p>
+        <p id="sum-year-animals" class="animal-count">≈ 0.000 animals</p>
       </div>
     </div>
 
@@ -248,10 +263,7 @@
       const historyList = document.getElementById('history-list');
       const formButton = entryForm.querySelector('button');
 
-      const sumDayEl = document.getElementById('sum-day');
-      const sumWeekEl = document.getElementById('sum-week');
-      const sumMonthEl = document.getElementById('sum-month');
-      const sumYearEl = document.getElementById('sum-year');
+
 
       const exportBtn = document.getElementById('export-btn');
       const importFile = document.getElementById('import-file');
@@ -319,39 +331,69 @@
       }
 
       function renderStats() {
+        const ANIMAL_WEIGHTS = {
+          cow: 195000,
+          chicken: 1200,
+          pork: 55000,
+          fish: 300
+        };
+        const MEAT_EMOJIS = {
+          chicken: '🐔',
+          cow: '🐮',
+          pork: '🐷',
+          fish: '🐟'
+        };
+        const MEAT_ORDER = ['chicken', 'cow', 'pork', 'fish'];
+
         const now = new Date();
         const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
         
-        const today = new Date(); // Use a fresh date object for week calculation
-        const dayOfWeek = today.getDay();
-        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // adjust when day is sunday
-        const startOfWeek = new Date(today.setDate(diff)).setHours(0,0,0,0);
+        const todayForWeek = new Date();
+        const dayOfWeek = todayForWeek.getDay();
+        const diff = todayForWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const startOfWeek = new Date(todayForWeek.setDate(diff)).setHours(0,0,0,0);
 
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
         const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
 
-        let sumDay = 0, sumWeek = 0, sumMonth = 0, sumYear = 0;
-
-        entries.forEach(entry => {
-          const entryTime = entry.id;
-          if (entryTime >= startOfYear) {
-            sumYear += entry.grams;
-            if (entryTime >= startOfMonth) {
-              sumMonth += entry.grams;
-              if (entryTime >= startOfWeek) {
-                sumWeek += entry.grams;
-                if (entryTime >= startOfDay) {
-                  sumDay += entry.grams;
-                }
-              }
+        const calculatePeriodStats = (startTime) => {
+          const periodEntries = entries.filter(entry => entry.id >= startTime);
+          const sums = { chicken: 0, cow: 0, pork: 0, fish: 0 };
+          
+          periodEntries.forEach(entry => {
+            if (sums.hasOwnProperty(entry.type)) {
+              sums[entry.type] += entry.grams;
             }
-          }
-        });
+          });
 
-        sumDayEl.textContent = sumDay;
-        sumWeekEl.textContent = sumWeek;
-        sumMonthEl.textContent = sumMonth;
-        sumYearEl.textContent = sumYear;
+          const gramText = MEAT_ORDER
+            .filter(type => sums[type] > 0)
+            .map(type => `${MEAT_EMOJIS[type]} ${sums[type]}g`)
+            .join(' ') || '0g';
+
+          let animalCount = 0;
+          MEAT_ORDER.forEach(type => {
+            if (sums[type] > 0) {
+              animalCount += sums[type] / ANIMAL_WEIGHTS[type];
+            }
+          });
+
+          const animalText = `≈ ${animalCount.toFixed(3)} animals`;
+          return { gramText, animalText };
+        };
+
+        const periods = {
+          day: startOfDay,
+          week: startOfWeek,
+          month: startOfMonth,
+          year: startOfYear
+        };
+
+        for (const period in periods) {
+          const stats = calculatePeriodStats(periods[period]);
+          document.getElementById(`sum-${period}-grams`).textContent = stats.gramText;
+          document.getElementById(`sum-${period}-animals`).textContent = stats.animalText;
+        }
       }
 
       function resetForm() {
