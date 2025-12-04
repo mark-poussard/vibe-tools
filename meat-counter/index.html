@@ -87,6 +87,7 @@
       font-size: 0.9em;
       color: #666;
       min-height: 1.1em;
+      word-wrap: break-word;
     }
     #history-list {
       list-style: none;
@@ -214,27 +215,27 @@
       <div class="stat-box" data-period="day">
         <h3>Today</h3>
         <p id="sum-day-grams" class="gram-breakdown">0g</p>
-        <p id="sum-day-animals" class="animal-count">≈ 0.000 animals</p>
+        <p id="sum-day-animals" class="animal-count">&nbsp;</p>
       </div>
       <div class="stat-box" data-period="week">
         <h3>This Week</h3>
         <p id="sum-week-grams" class="gram-breakdown">0g</p>
-        <p id="sum-week-animals" class="animal-count">≈ 0.000 animals</p>
+        <p id="sum-week-animals" class="animal-count">&nbsp;</p>
       </div>
       <div class="stat-box" data-period="month">
         <h3>This Month</h3>
         <p id="sum-month-grams" class="gram-breakdown">0g</p>
-        <p id="sum-month-animals" class="animal-count">≈ 0.000 animals</p>
+        <p id="sum-month-animals" class="animal-count">&nbsp;</p>
       </div>
       <div class="stat-box" data-period="year">
         <h3>This Year</h3>
         <p id="sum-year-grams" class="gram-breakdown">0g</p>
-        <p id="sum-year-animals" class="animal-count">≈ 0.000 animals</p>
+        <p id="sum-year-animals" class="animal-count">&nbsp;</p>
       </div>
       <div class="stat-box" data-period="all">
         <h3 id="all-time-title">All Time</h3>
         <p id="sum-all-grams" class="gram-breakdown">0g</p>
-        <p id="sum-all-animals" class="animal-count">≈ 0.000 animals</p>
+        <p id="sum-all-animals" class="animal-count">&nbsp;</p>
       </div>
     </div>
 
@@ -376,14 +377,11 @@
             .map(type => `${MEAT_EMOJIS[type]} ${sums[type]}g`)
             .join(' ') || '0g';
 
-          let animalCount = 0;
-          MEAT_ORDER.forEach(type => {
-            if (sums[type] > 0) {
-              animalCount += sums[type] / ANIMAL_WEIGHTS[type];
-            }
-          });
+          const animalText = MEAT_ORDER
+            .filter(type => sums[type] > 0)
+            .map(type => `${MEAT_EMOJIS[type]} ${(sums[type] / ANIMAL_WEIGHTS[type]).toFixed(3)}`)
+            .join(' ') || '&nbsp;';
 
-          const animalText = `≈ ${animalCount.toFixed(3)} animals`;
           return { gramText, animalText };
         };
 
@@ -410,7 +408,7 @@
         for (const period in periods) {
           const stats = calculatePeriodStats(periods[period]);
           document.getElementById(`sum-${period}-grams`).textContent = stats.gramText;
-          document.getElementById(`sum-${period}-animals`).textContent = stats.animalText;
+          document.getElementById(`sum-${period}-animals`).innerHTML = stats.animalText;
         }
       }
 
