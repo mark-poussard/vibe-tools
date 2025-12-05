@@ -1902,7 +1902,6 @@ function useInventoryItem(invIndex) {
         // Apply Immediate Effects
         if (item.heal) {
             healHero(item.heal);
-            showNotification(`Healed +${item.heal} HP`, 'loot');
         }
         // Apply Dungeon Buffs
         if (item.buffAtk) state.buffs.atk += item.buffAtk;
@@ -2638,7 +2637,6 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // --- Original Events ---
     if (choice.effect === 'pray') {
         healHero(10);
-        showNotification('Healed +10 HP', 'loot');
         state.discard.push({...CURSE_CARD});
         log("You were healed, but cursed.");
         removeEvent();
@@ -2777,7 +2775,6 @@ function resolveEventChoice(cardIndex, choiceIndex) {
     // 5. Spring
     else if (choice.effect === 'spring_heal') {
         healHero(5);
-        showNotification('Healed +5 HP', 'loot');
         removeEvent();
     }
     else if (choice.effect === 'spring_max') {
@@ -2932,7 +2929,6 @@ function resolveEventChoice(cardIndex, choiceIndex) {
             showNotification("Took 10 Damage", "loss");
         } else if (outcome === 1) {
             healHero(10);
-            showNotification('Healed +10 HP', 'loot');
             log("A warm light heals you. +10 HP.", "green");
         } else if (outcome === 2) {
             state.gold += 25;
@@ -3197,6 +3193,7 @@ function addBlock(amount) {
 function healHero(amount) {
     state.hero.hp = Math.min(state.hero.maxHp, state.hero.hp + amount);
     log(`Healed for <span class="log-gain">${amount}</span> HP.`);
+    showNotification(`Healed +${amount} HP`, 'loot');
     EventManager.emit(EVENTS.HERO_UPDATED);
 }
 
