@@ -3191,9 +3191,14 @@ function addBlock(amount) {
 }
 
 function healHero(amount) {
+    const oldHp = state.hero.hp;
     state.hero.hp = Math.min(state.hero.maxHp, state.hero.hp + amount);
-    log(`Healed for <span class="log-gain">${amount}</span> HP.`);
-    showNotification(`Healed +${amount} HP`, 'loot');
+    const healedAmount = state.hero.hp - oldHp;
+
+    log(`Healed for <span class="log-gain">${healedAmount}</span> HP.`);
+    if (healedAmount > 0) {
+        showNotification(`Healed +${healedAmount} HP`, 'loot');
+    }
     EventManager.emit(EVENTS.HERO_UPDATED);
 }
 
