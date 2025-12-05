@@ -829,7 +829,7 @@ const ITEM_DB = {
     'i_shield': { id: 'i_shield', name: 'Tower Shield', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, block: 2, desc: '+2 Block / Turn' },
     'i_cloak':  { id: 'i_cloak',  name: 'Cloak',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, apBonus: 1, desc: '+1 Max AP' },
     'i_wand':   { id: 'i_wand',   name: 'Ember',   type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, desc: '+1 DMG' },
-    'i_ring':   { id: 'i_ring',   name: 'Blood Ring', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, atkBuff: 1, hpBonus: -2, desc: '+1 DMG, -2 Max HP' },
+    'i_ring':   { id: 'i_ring',   name: 'Blood Ring', type: CARD_TYPES.LOOT, rarity: 'common', value: 5, lifestealBuff: 0.5, desc: '+50% Lifesteal efficiency.' },
 
 // --- CONSUMABLES ---
     'c_potion_s': { id: 'c_potion_s', name: 'Health Potion', type: CARD_TYPES.CONSUMABLE, rarity: 'common', value: 15, heal: 10, desc: 'Restore 10 HP' },
@@ -2596,7 +2596,9 @@ function processEffects(effects, targetIndex) {
             if (eff.type === 'LIFESTEAL') {
                 const damageDealt = dealDamage(targetIndex, eff.val);
                 if (damageDealt > 0) {
-                    const lifeStolen = Math.floor(damageDealt * eff.efficiency);
+                    let totalEfficiency = eff.efficiency;
+                    state.equipped.forEach(item => { if(item.lifestealBuff) totalEfficiency += item.lifestealBuff; });
+                    const lifeStolen = Math.floor(damageDealt * totalEfficiency);
                     if (lifeStolen > 0) {
                         healHero(lifeStolen);
                     }
