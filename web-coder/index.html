@@ -566,6 +566,7 @@
         #modal-manual-select { z-index: 250; }
         .manual-select-layout {
             display: flex;
+            flex-direction: column;
             flex: 1;
             overflow: hidden;
             gap: 15px;
@@ -718,30 +719,35 @@
 
         <!-- MODAL: Manual Selection -->
         <div id="modal-manual-select" class="modal-overlay">
-            <div class="modal-content" style="max-width: 900px; width: 95%; height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-content" style="max-width: 900px; width: 95%; height: 95vh; display: flex; flex-direction: column;">
                 <div class="modal-header">Manual Line Selection</div>
                 <p class="help-text">The AI's search string wasn't found. Select the consecutive lines in your file that should be replaced by the AI output.</p>
                 
-                <div style="margin: 10px 0;">
-                    <input type="text" id="manual-line-search" placeholder="Search code to navigate...">
-                </div>
-
                 <div class="manual-select-layout">
-                    <!-- Left: Navigator -->
-                    <div class="navigator-pane">
-                        <div id="manual-line-navigator"></div>
+                    <!-- Top: AI Context -->
+                    <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; max-height: 40%;">
+                        <div style="display: flex; gap: 10px; flex: 1; overflow: hidden;">
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">AI Intended to Replace:</div>
+                                <div class="diff-view" style="flex: 1; overflow: auto; background: #1a1a1a;">
+                                    <pre class="removed" id="manual-ai-search-view" style="font-size: 0.7rem;"></pre>
+                                </div>
+                            </div>
+                            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 2px;">Replacement:</div>
+                                <div class="diff-view" style="flex: 1; overflow: auto; background: #1a1a1a;">
+                                    <pre class="added" id="manual-ai-replace-view" style="font-size: 0.7rem;"></pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <!-- Right: AI Context -->
-                    <div style="width: 300px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
-                        <div style="font-size: 0.8rem; color: var(--text-secondary)">AI Intended to Replace:</div>
-                        <div class="diff-view" style="flex: 1; overflow-y: auto; background: #1a1a1a;">
-                            <pre class="removed" id="manual-ai-search-view" style="font-size: 0.7rem;"></pre>
+                    <!-- Bottom: Navigator -->
+                    <div class="navigator-pane">
+                        <div style="padding: 10px; border-bottom: 1px solid var(--border-color); background: var(--surface-color);">
+                            <input type="text" id="manual-line-search" placeholder="Search code to navigate..." style="padding: 8px; font-size: 0.8rem;">
                         </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary)">Replacement:</div>
-                        <div class="diff-view" style="flex: 1; overflow-y: auto; background: #1a1a1a;">
-                            <pre class="added" id="manual-ai-replace-view" style="font-size: 0.7rem;"></pre>
-                        </div>
+                        <div id="manual-line-navigator"></div>
                     </div>
                 </div>
 
