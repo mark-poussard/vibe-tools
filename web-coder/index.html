@@ -561,6 +561,54 @@
         }
         
         .toast.show { opacity: 1; }
+
+        /* Manual Selection Styles */
+        #modal-manual-select { z-index: 250; }
+        .manual-select-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .navigator-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e1e;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        #manual-line-navigator {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .line-row {
+            display: flex;
+            font-family: monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            line-height: 1.2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.02);
+        }
+        .line-row:hover { background: rgba(255,255,255,0.05); }
+        .line-row.selected { background: rgba(59, 130, 246, 0.4); }
+        .line-row.match { background: rgba(255, 255, 0, 0.15); }
+        .line-num-nav {
+            width: 40px;
+            text-align: right;
+            padding-right: 8px;
+            background: #252526;
+            color: #858585;
+            user-select: none;
+            border-right: 1px solid #333;
+        }
+        .line-content-nav {
+            padding-left: 8px;
+            white-space: pre;
+            color: #d4d4d4;
+        }
     </style>
 </head>
 <body>
@@ -664,6 +712,43 @@
                 <div class="modal-actions">
                     <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
                     <button type="button" id="btn-apply-selected" class="btn btn-primary">Apply Selected</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Manual Selection -->
+        <div id="modal-manual-select" class="modal-overlay">
+            <div class="modal-content" style="max-width: 900px; width: 95%; height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header">Manual Line Selection</div>
+                <p class="help-text">The AI's search string wasn't found. Select the consecutive lines in your file that should be replaced by the AI output.</p>
+                
+                <div style="margin: 10px 0;">
+                    <input type="text" id="manual-line-search" placeholder="Search code to navigate...">
+                </div>
+
+                <div class="manual-select-layout">
+                    <!-- Left: Navigator -->
+                    <div class="navigator-pane">
+                        <div id="manual-line-navigator"></div>
+                    </div>
+                    
+                    <!-- Right: AI Context -->
+                    <div style="width: 300px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary)">AI Intended to Replace:</div>
+                        <div class="diff-view" style="flex: 1; overflow-y: auto; background: #1a1a1a;">
+                            <pre class="removed" id="manual-ai-search-view" style="font-size: 0.7rem;"></pre>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary)">Replacement:</div>
+                        <div class="diff-view" style="flex: 1; overflow-y: auto; background: #1a1a1a;">
+                            <pre class="added" id="manual-ai-replace-view" style="font-size: 0.7rem;"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <div id="selection-status" style="flex: 1; font-size: 0.8rem; color: var(--text-secondary); align-self: center;"></div>
+                    <button type="button" class="btn" style="width:auto; background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeManualSelect()">Cancel</button>
+                    <button type="button" id="btn-apply-manual" class="btn btn-primary" style="width: auto;" disabled>Replace Selected</button>
                 </div>
             </div>
         </div>
@@ -1322,8 +1407,9 @@
                             ${!isApplied ? `
                                 <input type="checkbox" id="op-checkbox-${op.id}" data-op-index="${index}" ${canApply ? 'checked' : 'disabled'}>
                                 <label for="op-checkbox-${op.id}">
-                                    ${canApply ? 'Apply this change' : '<span style="color: var(--danger-color)">⚠️ Cannot apply: match not found</span>'}
+                                    ${canApply ? 'Apply this change' : '<span style="color: var(--danger-color)">⚠️ Match not found</span>'}
                                 </label>
+                                ${!canApply ? `<button type="button" class="btn-xs" style="margin-left: 10px; cursor: pointer;" onclick="App.openManualSelectModal(${index})">Select Lines Manually</button>` : ''}
                             ` : `
                                 <span>✅ Applied</span>
                                 <button class="btn-xs" onclick="App.revertChange(${index})">Revert</button>
@@ -1484,7 +1570,112 @@
 
             // ... [Previous Modal utilities & Helper methods] ...
             openModal(id) { document.getElementById(id).classList.add('open'); },
-            closeModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); this.state.projectToDelete=null; if (this.state.fileData) this.state.fileData.reviewingMessageId = null; },
+            closeModals() { 
+                document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); 
+                this.state.projectToDelete=null; 
+                if (this.state.fileData) {
+                    this.state.fileData.reviewingMessageId = null;
+                    this.state.fileData.manualSelectOpIndex = null;
+                }
+            },
+            
+            closeManualSelect() {
+                document.getElementById('modal-manual-select').classList.remove('open');
+                this.state.fileData.manualSelectOpIndex = null;
+            },
+
+            openManualSelectModal(opIndex) {
+                this.state.fileData.manualSelectOpIndex = opIndex;
+                this.state.fileData.manualSelectRange = { start: null, end: null };
+                
+                const msgId = this.state.fileData.reviewingMessageId;
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId] || [];
+                const msg = history.find(m => m.id === msgId);
+                const op = msg.aiResponse.operations[opIndex];
+
+                document.getElementById('manual-ai-search-view').textContent = op.search_string;
+                document.getElementById('manual-ai-replace-view').textContent = op.replacement_string;
+                
+                document.getElementById('btn-apply-manual').disabled = true;
+                document.getElementById('selection-status').textContent = "Click a line to start selection";
+                document.getElementById('manual-line-search').value = "";
+
+                this.renderManualLines();
+                this.openModal('modal-manual-select');
+            },
+
+            renderManualLines(filter = "") {
+                const container = document.getElementById('manual-line-navigator');
+                container.innerHTML = '';
+                const lines = this.state.fileData.pendingContent.split('\n');
+                const range = this.state.fileData.manualSelectRange;
+
+                lines.forEach((text, i) => {
+                    const isSelected = range.start !== null && range.end !== null && i >= range.start && i <= range.end;
+                    const isMatch = filter && text.toLowerCase().includes(filter.toLowerCase());
+                    
+                    const row = document.createElement('div');
+                    row.className = `line-row ${isSelected ? 'selected' : ''} ${isMatch ? 'match' : ''}`;
+                    row.innerHTML = `
+                        <div class="line-num-nav">${i + 1}</div>
+                        <div class="line-content-nav">${this.escapeHtml(text || ' ')}</div>
+                    `;
+                    row.onclick = () => this.handleManualLineClick(i);
+                    container.appendChild(row);
+                    
+                    if (isMatch && filter && !this._scrolledToFirstMatch) {
+                        row.scrollIntoView({ block: 'start' });
+                        this._scrolledToFirstMatch = true;
+                    }
+                });
+            },
+
+            handleManualLineClick(index) {
+                const range = this.state.fileData.manualSelectRange;
+                if (range.start === null) {
+                    range.start = index;
+                    range.end = index;
+                } else {
+                    if (index < range.start) {
+                        range.start = index;
+                    } else {
+                        range.end = index;
+                    }
+                }
+                
+                document.getElementById('btn-apply-manual').disabled = false;
+                document.getElementById('selection-status').textContent = `Lines ${range.start + 1} to ${range.end + 1} selected`;
+                this.renderManualLines(document.getElementById('manual-line-search').value);
+            },
+
+            applyManualChange() {
+                const range = this.state.fileData.manualSelectRange;
+                const opIndex = this.state.fileData.manualSelectOpIndex;
+                const msgId = this.state.fileData.reviewingMessageId;
+                
+                const projectId = this.state.currentProject.id;
+                const history = this.state.projectHistory[projectId] || [];
+                const msg = history.find(m => m.id === msgId);
+                const op = msg.aiResponse.operations[opIndex];
+
+                const lines = this.state.fileData.pendingContent.split('\n');
+                const before = lines.slice(0, range.start);
+                const after = lines.slice(range.end + 1);
+                
+                const newContent = [...before, op.replacement_string, ...after].join('\n');
+                this.state.fileData.pendingContent = newContent;
+                
+                op.applied = true;
+                localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
+                
+                this.updatePreview();
+                this.updateManualEditor();
+                
+                this.closeManualSelect();
+                this.renderReviewModalContent(msg.aiResponse.operations);
+                this.showToast("Manual replacement applied.");
+            },
             escapeHtml(t) { return t.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); },
             showToast(m) {
                 const c = document.getElementById('toast-container'); const t = document.createElement('div');
@@ -1517,6 +1708,12 @@
                     this.commitChanges();
                 });
                 document.getElementById('btn-apply-selected').onclick = () => this.applySelectedChanges();
+                document.getElementById('btn-apply-manual').onclick = () => this.applyManualChange();
+
+                document.getElementById('manual-line-search').addEventListener('input', (e) => {
+                    this._scrolledToFirstMatch = false;
+                    this.renderManualLines(e.target.value);
+                });
 
                 // NEW: Model Selector Change
                 document.getElementById('model-select').addEventListener('change', (e) => {
