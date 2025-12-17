@@ -1309,17 +1309,21 @@
             renderReviewModalContent(operations) {
                 const listContainer = document.getElementById('review-operations-list');
                 listContainer.innerHTML = '';
+                const currentContent = this.state.fileData.pendingContent;
 
                 operations.forEach((op, index) => {
                     const itemDiv = document.createElement('div');
                     itemDiv.className = 'operation-item';
                     const isApplied = op.applied;
+                    const canApply = !isApplied && currentContent.includes(op.search_string);
 
                     itemDiv.innerHTML = `
                         <div class="operation-header">
                             ${!isApplied ? `
-                                <input type="checkbox" id="op-checkbox-${op.id}" data-op-index="${index}" checked>
-                                <label for="op-checkbox-${op.id}">Apply this change</label>
+                                <input type="checkbox" id="op-checkbox-${op.id}" data-op-index="${index}" ${canApply ? 'checked' : 'disabled'}>
+                                <label for="op-checkbox-${op.id}">
+                                    ${canApply ? 'Apply this change' : '<span style="color: var(--danger-color)">⚠️ Cannot apply: match not found</span>'}
+                                </label>
                             ` : `
                                 <span>✅ Applied</span>
                                 <button class="btn-xs" onclick="App.revertChange(${index})">Revert</button>
