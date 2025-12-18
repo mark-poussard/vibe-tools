@@ -721,7 +721,7 @@
         <div id="modal-manual-select" class="modal-overlay">
             <div class="modal-content" style="max-width: 900px; width: 95%; height: 95vh; display: flex; flex-direction: column;">
                 <div class="modal-header">Manual Line Selection</div>
-                <p class="help-text">The AI's search string wasn't found. Select the consecutive lines in your file that should be replaced by the AI output.</p>
+                <p class="help-text">The AI's search string wasn't found. Select lines in your file that should be removed and replaced by the AI output.</p>
                 
                 <div class="manual-select-layout">
                     <!-- Top: AI Context -->
@@ -1592,7 +1592,7 @@
 
             openManualSelectModal(opIndex) {
                 this.state.fileData.manualSelectOpIndex = opIndex;
-                this.state.fileData.manualSelectRange = { start: null, end: null };
+                this.state.fileData.manualSelectedLines = new Set();
                 
                 const msgId = this.state.fileData.reviewingMessageId;
                 const projectId = this.state.currentProject.id;
@@ -1604,7 +1604,7 @@
                 document.getElementById('manual-ai-replace-view').textContent = op.replacement_string;
                 
                 document.getElementById('btn-apply-manual').disabled = true;
-                document.getElementById('selection-status').textContent = "Click a line to start selection";
+                document.getElementById('selection-status').textContent = "Click lines to select";
                 document.getElementById('manual-line-search').value = "";
 
                 this.renderManualLines();
@@ -1615,10 +1615,10 @@
                 const container = document.getElementById('manual-line-navigator');
                 container.innerHTML = '';
                 const lines = this.state.fileData.pendingContent.split('\n');
-                const range = this.state.fileData.manualSelectRange;
+                const selected = this.state.fileData.manualSelectedLines;
 
                 lines.forEach((text, i) => {
-                    const isSelected = range.start !== null && range.end !== null && i >= range.start && i <= range.end;
+                    const isSelected = selected.has(i);
                     const isMatch = filter && text.toLowerCase().includes(filter.toLowerCase());
                     
                     const row = document.createElement('div');
@@ -1638,25 +1638,20 @@
             },
 
             handleManualLineClick(index) {
-                const range = this.state.fileData.manualSelectRange;
-                if (range.start === null) {
-                    range.start = index;
-                    range.end = index;
-                } else {
-                    if (index < range.start) {
-                        range.start = index;
-                    } else {
-                        range.end = index;
-                    }
-                }
+                const selected = this.state.fileData.manualSelectedLines;
+                if (selected.has(index)) selected.delete(index);
+                else selected.add(index);
                 
-                document.getElementById('btn-apply-manual').disabled = false;
-                document.getElementById('selection-status').textContent = `Lines ${range.start + 1} to ${range.end + 1} selected`;
+                const count = selected.size;
+                document.getElementById('btn-apply-manual').disabled = count === 0;
+                document.getElementById('selection-status').textContent = count === 0 ? "Click lines to select" : `${count} line(s) selected`;
                 this.renderManualLines(document.getElementById('manual-line-search').value);
             },
 
             applyManualChange() {
-                const range = this.state.fileData.manualSelectRange;
+                const selected = this.state.fileData.manualSelectedLines;
+                if (selected.size === 0) return;
+                
                 const opIndex = this.state.fileData.manualSelectOpIndex;
                 const msgId = this.state.fileData.reviewingMessageId;
                 
@@ -1666,18 +1661,23 @@
                 const op = msg.aiResponse.operations[opIndex];
 
                 const lines = this.state.fileData.pendingContent.split('\n');
-                const before = lines.slice(0, range.start);
-                const after = lines.slice(range.end + 1);
+                const firstIdx = Math.min(...selected);
                 
-                const newContent = [...before, op.replacement_string, ...after].join('\n');
-                this.state.fileData.pendingContent = newContent;
+                const newLines = [];
+                for (let i = 0; i < lines.length; i++) {
+                    if (i === firstIdx) {
+                        newLines.push(op.replacement_string);
+                    } else if (!selected.has(i)) {
+                        newLines.push(lines[i]);
+                    }
+                }
                 
+                this.state.fileData.pendingContent = newLines.join('\n');
                 op.applied = true;
                 localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
                 
                 this.updatePreview();
                 this.updateManualEditor();
-                
                 this.closeManualSelect();
                 this.renderReviewModalContent(msg.aiResponse.operations);
                 this.showToast("Manual replacement applied.");
