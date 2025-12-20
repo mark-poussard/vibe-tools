@@ -1107,15 +1107,26 @@
                 } catch(e) { this.showToast("Creation failed: " + e.message); }
             },
             confirmDelete(name) { this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
-            async deleteProject() { 
+            async deleteProject() {
                 const btn = document.getElementById('btn-confirm-delete');
                 const originalText = btn.textContent; try {
                     btn.textContent = "Deleting..."; btn.disabled = true;
                     const [owner, repo] = this.state.config.githubRepo.split('/');
-                    const path = `${this.state.projectToDelete}/index.html`;
-                    const file = await GitHubAPI.getFile(this.state.config.githubToken, owner, repo, path);
-                    if (!file.sha) throw new Error("index.html not found");
-                    await GitHubAPI.deleteFile(this.state.config.githubToken, owner, repo, path, file.sha, `Delete project: ${this.state.projectToDelete}`);
+                    const token = this.state.config.githubToken;
+                    const projectName = this.state.projectToDelete;
+                    
+                    const deleteRecursive = async (path) => {
+                        const items = await GitHubAPI.getContents(token, owner, repo, path);
+                        for (const item of items) {
+                            if (item.type === 'dir') {
+                                await deleteRecursive(item.path);
+                            } else {
+                                await GitHubAPI.deleteFile(token, owner, repo, item.path, item.sha, `Delete project: ${projectName}`);
+                            }
+                        }
+                    };
+                    
+                    await deleteRecursive(projectName);
                     this.closeModals(); await this.renderProjects(); this.showToast("Project deleted.");
                 } catch (e) { this.showToast("Delete failed: " + e.message); } finally { btn.textContent = originalText; btn.disabled = false; }
             },
