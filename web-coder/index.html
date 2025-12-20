@@ -706,6 +706,18 @@
             </div>
         </div>
 
+        <!-- MODAL: Project Settings -->
+        <div id="modal-project-settings" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header" id="project-settings-title">Project Settings</div>
+                <div class="modal-actions" style="flex-direction: column; gap: 10px;">
+                    <button type="button" class="btn" style="background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary)" onclick="App.confirmDuplicate(App.state.selectedProject)">👯 Duplicate Project</button>
+                    <button type="button" class="btn" style="background-color: var(--danger-color); color: white;" onclick="App.confirmDelete(App.state.selectedProject)">🗑️ Delete Project</button>
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary); margin-top: 10px;" onclick="App.closeModals()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL: Duplicate Project -->
         <div id="modal-duplicate-project" class="modal-overlay">
             <div class="modal-content">
@@ -1035,7 +1047,7 @@
                 config: { githubToken: '', aiApiKey: '', githubRepo: '', preferredModel: '' },
                 projects: [],
                 projectHistory: {},
-                projectToDelete: null, projectToDuplicate: null,
+                projectToDelete: null, projectToDuplicate: null, selectedProject: null,
                 currentProject: null,
                 fileData: { content: '', sha: '', pendingContent: '', commitMsg: '', lastAiResponseJson: null },
                 isLoading: false
@@ -1122,7 +1134,7 @@
                         const div = document.createElement('div');
                         div.className = 'project-card';
                         div.onclick = () => App.openEditor(proj.name);
-                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="event.stopPropagation(); App.confirmDuplicate('${proj.name}')" title="Duplicate">👯</button><button class="icon-btn danger" onclick="event.stopPropagation(); App.confirmDelete('${proj.name}')" title="Delete">🗑️</button></div>`;
+                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="event.stopPropagation(); App.openProjectSettings('${proj.name}')" title="Settings">⚙️</button></div>`;
                         container.appendChild(div);
                     });
                  }
@@ -1138,7 +1150,12 @@
                     this.closeModals(); this.showToast("Project created.");
                 } catch(e) { this.showToast("Creation failed: " + e.message); }
             },
-            confirmDuplicate(name) { this.state.projectToDuplicate = name; this.openModal('modal-duplicate-project'); },
+            openProjectSettings(name) {
+                this.state.selectedProject = name;
+                document.getElementById('project-settings-title').textContent = `Settings: ${name}`;
+                this.openModal('modal-project-settings');
+            },
+            confirmDuplicate(name) { this.closeModals(); this.state.projectToDuplicate = name; this.openModal('modal-duplicate-project'); },
             async duplicateProject(newName) {
                 const btn = document.getElementById('btn-submit-duplicate');
                 const originalText = btn.textContent;
@@ -1167,7 +1184,7 @@
                     this.closeModals(); this.showToast("Project duplicated.");
                 } catch (e) { this.showToast("Duplication failed: " + e.message); } finally { btn.textContent = originalText; btn.disabled = false; }
             },
-            confirmDelete(name) { this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
+            confirmDelete(name) { this.closeModals(); this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
             async deleteProject() {
                 const btn = document.getElementById('btn-confirm-delete');
                 const originalText = btn.textContent; try {
@@ -1626,7 +1643,7 @@
             openModal(id) { document.getElementById(id).classList.add('open'); },
             closeModals() { 
                 document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); 
-                this.state.projectToDelete=null; this.state.projectToDuplicate=null; 
+                this.state.projectToDelete=null; this.state.projectToDuplicate=null; this.state.selectedProject=null; 
                 if (this.state.fileData) {
                     this.state.fileData.reviewingMessageId = null;
                     this.state.fileData.manualSelectOpIndex = null;
