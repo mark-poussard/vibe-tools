@@ -1,11 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>racing-game</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Racer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        #game-container { width: 100%; max-width: 600px; background: #2c3e50; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); border: 2px solid #34495e; }
+        h1 { margin-top: 0; text-shadow: 2px 2px #000; color: #f1c40f; }
+        #track { position: relative; height: 160px; background: #333; border: 4px solid #7f8c8d; margin-bottom: 25px; border-radius: 8px; background-image: linear-gradient(#444 50%, #333 50%); background-size: 100% 80px; }
+        .lane { height: 80px; position: relative; border-bottom: 2px dashed #555; display: flex; align-items: center; }
+        .lane:last-child { border-bottom: none; }
+        .car { position: absolute; font-size: 35px; transition: left 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5)); }
+        #player-car { color: #3498db; }
+        .finish-line { position: absolute; right: 40px; top: 0; bottom: 0; width: 15px; background: repeating-linear-gradient(45deg, #fff, #fff 5px, #000 5px, #000 10px); }
+        
+        #hand { display: flex; gap: 10px; justify-content: center; min-height: 130px; margin-top: 10px; }
+        .card { width: 90px; height: 125px; background: #ecf0f1; color: #2c3e50; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; box-sizing: border-box; transition: all 0.2s ease; border-bottom: 5px solid #bdc3c7; }
+        .card:hover { transform: translateY(-12px); border-bottom-width: 8px; background: #fff; box-shadow: 0 10px 15px rgba(0,0,0,0.3); }
+        .card.disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+        .card .val { font-size: 24px; font-weight: 900; margin: 5px 0; }
+        .card .name { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        
+        #ui-overlay { text-align: center; margin-bottom: 15px; }
+        #message { font-size: 1.1rem; font-weight: bold; color: #ecf0f1; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 5px; height: 1.5em; }
+        .btn { padding: 12px 30px; background: #e67e22; border: none; border-radius: 25px; font-weight: bold; color: white; cursor: pointer; font-size: 1.1rem; box-shadow: 0 4px #d35400; transition: all 0.1s; }
+        .btn:hover { background: #f39c12; }
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px #d35400; }
+        .label { position: absolute; left: 5px; top: 5px; font-size: 10px; color: #95a5a6; text-transform: uppercase; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <h1>racing-game</h1>
+    <h1>🏎️ CARD RACER</h1>
+    <div id="game-container">
+        <div id="ui-overlay">
+            <div id="message">Press "Start" to begin!</div>
+        </div>
+        <div id="track">
+            <div class="lane"><span class="label">PLAYER</span><span id="player-car" class="car" style="left: 5%">🏎️</span></div>
+            <div class="lane"><span class="label">OPPONENT</span><span id="ai-car" class="car" style="left: 5%">🏎️</span></div>
+            <div class="finish-line"></div>
+        </div>
+        <div id="hand"></div>
+        <div id="controls" style="text-align: center; margin-top: 25px;">
+            <button id="start-btn" class="btn">Start Race</button>
+        </div>
+    </div>
+
+    <script>
+        const cardTypes = [
+            { name: 'Drift', move: 1, color: '#1abc9c' },
+            { name: 'Drive', move: 2, color: '#2ecc71' },
+            { name: 'Speed', move: 3, color: '#3498db' },
+            { name: 'Nitro', move: 4, color: '#9b59b6' },
+            { name: 'Turbo', move: 5, color: '#e74c3c' }
+        ];
+
+        let playerPos = 0;
+        let aiPos = 0;
+        let hand = [];
+        let isPlayerTurn = false;
+
+        const elements = {
+            hand: document.getElementById('hand'),
+            playerCar: document.getElementById('player-car'),
+            aiCar: document.getElementById('ai-car'),
+            message: document.getElementById('message'),
+            startBtn: document.getElementById('start-btn')
+        };
+
+        function init() {
+            playerPos = 0;
+            aiPos = 0;
+            hand = [];
+            isPlayerTurn = true;
+            elements.startBtn.style.display = 'none';
+            elements.message.innerText = "Your turn! Pick a card.";
+            updatePositions();
+            drawHand();
+        }
+
+        function drawHand() {
+            hand = [];
+            for(let i=0; i<4; i++) {
+                hand.push(cardTypes[Math.floor(Math.random() * cardTypes.length)]);
+            }
+            renderHand();
+        }
+
+        function renderHand() {
+            elements.hand.innerHTML = '';
+            hand.forEach((card, i) => {
+                const div = document.createElement('div');
+                div.className = 'card' + (isPlayerTurn ? '' : ' disabled');
+                div.style.borderColor = card.color;
+                div.innerHTML = `<div class="name" style="color:${card.color}">${card.name}</div><div class="val">${card.move}</div>`;
+                div.onclick = () => isPlayerTurn && playCard(i);
+                elements.hand.appendChild(div);
+            });
+        }
+
+        function playCard(index) {
+            const card = hand[index];
+            playerPos += card.move * 8;
+            isPlayerTurn = false;
+            hand[index] = cardTypes[Math.floor(Math.random() * cardTypes.length)];
+            
+            updatePositions();
+            renderHand();
+            if (checkWin()) return;
+
+            elements.message.innerText = `You moved ${card.move}! AI is thinking...`;
+            setTimeout(aiTurn, 1000);
+        }
+
+        function aiTurn() {
+            const move = Math.floor(Math.random() * 4) + 1;
+            aiPos += move * 8;
+            updatePositions();
+            if (checkWin()) return;
+
+            isPlayerTurn = true;
+            elements.message.innerText = `AI moved ${move}. Your turn!`;
+            renderHand();
+        }
+
+        function updatePositions() {
+            elements.playerCar.style.left = Math.min(playerPos + 5, 90) + '%';
+            elements.aiCar.style.left = Math.min(aiPos + 5, 90) + '%';
+        }
+
+        function checkWin() {
+            if (playerPos >= 85) {
+                elements.message.innerText = "🏆 YOU WON THE RACE!";
+                endGame();
+                return true;
+            }
+            if (aiPos >= 85) {
+                elements.message.innerText = "❌ AI WON THE RACE!";
+                endGame();
+                return true;
+            }
+            return false;
+        }
+
+        function endGame() {
+            isPlayerTurn = false;
+            elements.startBtn.innerText = "Play Again";
+            elements.startBtn.style.display = 'inline-block';
+            renderHand();
+        }
+
+        elements.startBtn.addEventListener('click', init);
+    </script>
 </body>
 </html>
