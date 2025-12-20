@@ -760,7 +760,7 @@
         <div id="modal-delete-confirm" class="modal-overlay">
             <div class="modal-content">
                 <div class="modal-header">Delete Project?</div>
-                <p>Are you sure you want to remove this project from Web Coder? This will not affect the GitHub repository.</p>
+                <p>Are you sure you want to delete this project? <strong style="color: var(--danger-color)">This will permanently delete the project folder and all its files from the GitHub repository.</strong></p>
                 <div class="modal-actions">
                     <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
                     <button type="button" id="btn-confirm-delete" class="btn" style="background-color: var(--danger-color); color: white;">Delete</button>
@@ -1084,6 +1084,7 @@
                     const [owner, repo] = this.state.config.githubRepo.split('/');
                     const items = await GitHubAPI.getContents(this.state.config.githubToken, owner, repo);
                     const projects = items.filter(i => i.type === 'dir');
+                    this.state.projects = projects;
                     container.innerHTML = '';
                     if (projects.length === 0) emptyState.classList.remove('hidden');
                     else {
