@@ -700,6 +700,23 @@
             </div>
         </div>
 
+        <!-- MODAL: Duplicate Project -->
+        <div id="modal-duplicate-project" class="modal-overlay">
+            <div class="modal-content">
+                <div class="modal-header">Duplicate Project</div>
+                <form id="form-duplicate-project">
+                    <div class="form-group">
+                        <label>New Project Name</label>
+                        <input type="text" id="inp-dup-name" required placeholder="e.g. landing-page-v2">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.closeModals()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-duplicate">Duplicate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <!-- MODAL: Review AI Changes -->
         <div id="modal-review" class="modal-overlay">
             <div class="modal-content">
@@ -1012,7 +1029,7 @@
                 config: { githubToken: '', aiApiKey: '', githubRepo: '', preferredModel: '' },
                 projects: [],
                 projectHistory: {},
-                projectToDelete: null,
+                projectToDelete: null, projectToDuplicate: null,
                 currentProject: null,
                 fileData: { content: '', sha: '', pendingContent: '', commitMsg: '', lastAiResponseJson: null },
                 isLoading: false
@@ -1098,7 +1115,7 @@
                     this.state.projects.forEach(proj => {
                         const div = document.createElement('div');
                         div.className = 'project-card';
-                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="App.openEditor('${proj.name}')">✏️</button><button class="icon-btn danger" onclick="App.confirmDelete('${proj.name}')">🗑️</button></div>`;
+                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="App.openEditor('${proj.name}')" title="Edit">✏️</button><button class="icon-btn" onclick="App.confirmDuplicate('${proj.name}')" title="Duplicate">👯</button><button class="icon-btn danger" onclick="App.confirmDelete('${proj.name}')" title="Delete">🗑️</button></div>`;
                         container.appendChild(div);
                     });
                  }
@@ -1113,6 +1130,35 @@
                     this.renderProjects();
                     this.closeModals(); this.showToast("Project created.");
                 } catch(e) { this.showToast("Creation failed: " + e.message); }
+            },
+            confirmDuplicate(name) { this.state.projectToDuplicate = name; this.openModal('modal-duplicate-project'); },
+            async duplicateProject(newName) {
+                const btn = document.getElementById('btn-submit-duplicate');
+                const originalText = btn.textContent;
+                const oldName = this.state.projectToDuplicate;
+                try {
+                    btn.textContent = "Duplicating..."; btn.disabled = true;
+                    const [owner, repo] = this.state.config.githubRepo.split('/');
+                    const token = this.state.config.githubToken;
+                    
+                    const copyRecursive = async (sourcePath, destPath) => {
+                        const items = await GitHubAPI.getContents(token, owner, repo, sourcePath);
+                        for (const item of items) {
+                            const subDest = item.path.replace(sourcePath, destPath);
+                            if (item.type === 'dir') {
+                                await copyRecursive(item.path, subDest);
+                            } else {
+                                const file = await GitHubAPI.getFile(token, owner, repo, item.path);
+                                await GitHubAPI.updateFile(token, owner, repo, subDest, file.content, null, `Duplicate ${oldName} to ${newName}: copying ${item.name}`);
+                            }
+                        }
+                    };
+
+                    await copyRecursive(oldName, newName);
+                    this.state.projects.push({ name: newName, type: 'dir' });
+                    this.renderProjects();
+                    this.closeModals(); this.showToast("Project duplicated.");
+                } catch (e) { this.showToast("Duplication failed: " + e.message); } finally { btn.textContent = originalText; btn.disabled = false; }
             },
             confirmDelete(name) { this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
             async deleteProject() {
@@ -1573,7 +1619,7 @@
             openModal(id) { document.getElementById(id).classList.add('open'); },
             closeModals() { 
                 document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('open')); 
-                this.state.projectToDelete=null; 
+                this.state.projectToDelete=null; this.state.projectToDuplicate=null; 
                 if (this.state.fileData) {
                     this.state.fileData.reviewingMessageId = null;
                     this.state.fileData.manualSelectOpIndex = null;
@@ -1694,8 +1740,13 @@
                 document.getElementById('btn-settings').onclick = ()=>this.navigateTo('setup');
                 document.getElementById('btn-add-project').onclick = ()=>this.openModal('modal-add-project');
                 document.getElementById('btn-import-export').onclick = ()=>this.openModal('modal-io');
-                document.getElementById('form-add-project').addEventListener('submit',(e)=>{e.preventDefault();
+                document.getElementById('form-add-project').addEventListener('submit',(e)=>{
+                    e.preventDefault();
                     this.addProject(document.getElementById('inp-proj-name').value);
+                });
+                document.getElementById('form-duplicate-project').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.duplicateProject(document.getElementById('inp-dup-name').value);
                 });
                 document.getElementById('btn-confirm-delete').onclick = ()=>this.deleteProject();
                 document.getElementById('btn-download-json').onclick = () => this.exportProjects();
