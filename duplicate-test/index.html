@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meat Counter</title>
+  <style>
+    :root {
+      --primary-color: #4CAF50;
+      --secondary-color: #f1f1f1;
+      --text-color: #333;
+      --border-color: #ddd;
+      --danger-color: #f44336;
+      --edit-color: #2196F3;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      background-color: #f9f9f9;
+      color: var(--text-color);
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      color: var(--primary-color);
+      text-align: center;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 15px;
+      background: var(--secondary-color);
+      border-radius: 5px;
+    }
+    form input[type="number"], form select, form button {
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      font-size: 16px;
+    }
+    form input[type="number"] { flex: 2; }
+    form select { flex: 2; }
+    form button {
+      flex: 1;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    form button:hover { background-color: #45a049; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .stat-box {
+      background: var(--secondary-color);
+      padding: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+    .stat-box:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .stat-box h3 { margin-top: 0; }
+    .gram-breakdown {
+      font-size: 1.1em;
+      font-weight: bold;
+      min-height: 1.2em;
+      word-wrap: break-word;
+    }
+    .animal-count {
+      font-size: 0.9em;
+      color: #666;
+      min-height: 1.1em;
+      word-wrap: break-word;
+    }
+    #history-list {
+      list-style: none;
+      padding: 0;
+    }
+    #history-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    #history-list li:last-child { border-bottom: none; }
+    .entry-details { flex-grow: 1; }
+    .entry-actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+    .edit-btn { background-color: var(--edit-color); }
+    .delete-btn { background-color: var(--danger-color); }
+    .data-management {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .data-management button, .data-management label {
+      padding: 10px 15px;
+      border-radius: 5px;
+      border: 1px solid var(--primary-color);
+      background-color: white;
+      color: var(--primary-color);
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .data-management button:hover, .data-management label:hover {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    #import-file { display: none; }
+
+    /* Modal Styles */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1000; /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      position: relative;
+    }
+    .close-btn {
+      color: #aaa;
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close-btn:hover,
+    .close-btn:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #modal-title {
+      margin-top: 0;
+      color: var(--primary-color);
+      text-align: center;
+    }
+    #modal-body ul {
+      list-style: none;
+      padding: 0;
+    }
+    #modal-body li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      text-transform: capitalize;
+    }
+    #modal-body li:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Meat Counter</h1>
+
+    <form id="entry-form">
+      <input type="number" id="grams-input" placeholder="Grams" required min="1">
+      <select id="meat-type-input" required>
+        <option value="chicken">🐔 Chicken</option>
+        <option value="cow">🐮 Cow</option>
+        <option value="pork">🐷 Pork</option>
+        <option value="fish">🐟 Fish</option>
+      </select>
+      <button type="submit">Add Entry</button>
+      <input type="hidden" id="editing-id">
+    </form>
+
+    <h2>Recap (grams)</h2>
+    <div class="stats">
+      <div class="stat-box" data-period="day">
+        <h3>Today</h3>
+        <p id="sum-day-grams" class="gram-breakdown">0g</p>
+        <p id="sum-day-animals" class="animal-count">&nbsp;</p>
+      </div>
+      <div class="stat-box" data-period="week">
+        <h3>This Week</h3>
+        <p id="sum-week-grams" class="gram-breakdown">0g</p>
+        <p id="sum-week-animals" class="animal-count">&nbsp;</p>
+      </div>
+      <div class="stat-box" data-period="month">
+        <h3>This Month</h3>
+        <p id="sum-month-grams" class="gram-breakdown">0g</p>
+        <p id="sum-month-animals" class="animal-count">&nbsp;</p>
+      </div>
+      <div class="stat-box" data-period="year">
+        <h3>This Year</h3>
+        <p id="sum-year-grams" class="gram-breakdown">0g</p>
+        <p id="sum-year-animals" class="animal-count">&nbsp;</p>
+      </div>
+      <div class="stat-box" data-period="all">
+        <h3 id="all-time-title">All Time</h3>
+        <p id="sum-all-grams" class="gram-breakdown">0g</p>
+        <p id="sum-all-animals" class="animal-count">&nbsp;</p>
+      </div>
+    </div>
+
+    <h2>History</h2>
+    <ul id="history-list">
+      <!-- Entries will be populated here by JavaScript -->
+    </ul>
+
+    <div class="data-management">
+      <button id="export-btn">Export Data</button>
+      <label for="import-file">Import Data</label>
+      <input type="file" id="import-file" accept=".json">
+    </div>
+
+  </div>
+
+  <div id="recap-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h2 id="modal-title">Breakdown</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const entryForm = document.getElementById('entry-form');
+      const gramsInput = document.getElementById('grams-input');
+      const meatTypeInput = document.getElementById('meat-type-input');
+      const editingIdInput = document.getElementById('editing-id');
+      const historyList = document.getElementById('history-list');
+      const formButton = entryForm.querySelector('button');
+
+
+
+      const exportBtn = document.getElementById('export-btn');
+      const importFile = document.getElementById('import-file');
+
+      const statsContainer = document.querySelector('.stats');
+      const recapModal = document.getElementById('recap-modal');
+      const modalTitle = document.getElementById('modal-title');
+      const modalBody = document.getElementById('modal-body');
+      const closeModalBtn = recapModal.querySelector('.close-btn');
+      
+      let entries = [];
+
+      const STORAGE_KEY = 'meatCounterEntries';
+
+      function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      }
+
+      function loadData() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (data) {
+          entries = JSON.parse(data);
+        }
+      }
+
+      function getMeatDisplay(type) {
+        switch (type) {
+          case 'chicken': return '🐔 Chicken';
+          case 'cow': return '🐮 Cow';
+          case 'pork': return '🐷 Pork';
+          case 'fish': return '🐟 Fish';
+          default: return type;
+        }
+      }
+      
+      function render() {
+        renderHistory();
+        renderStats();
+      }
+
+      function renderHistory() {
+        historyList.innerHTML = '';
+        if (entries.length === 0) {
+            historyList.innerHTML = '<li>No entries yet. Add one above!</li>';
+            return;
+        }
+
+        // Sort entries by date, newest first
+        const sortedEntries = [...entries].sort((a, b) => b.id - a.id);
+
+        sortedEntries.forEach(entry => {
+          const li = document.createElement('li');
+          const entryDate = new Date(entry.id).toLocaleString();
+          li.innerHTML = `
+            <div class="entry-details">
+              <strong>${entry.grams}g</strong> of ${getMeatDisplay(entry.type)} on ${entryDate}
+            </div>
+            <div class="entry-actions">
+              <button class="edit-btn" data-id="${entry.id}">Edit</button>
+              <button class="delete-btn" data-id="${entry.id}">Remove</button>
+            </div>
+          `;
+          historyList.appendChild(li);
+        });
+      }
+
+      function renderStats() {
+        const ANIMAL_WEIGHTS = {
+          cow: 195000,
+          chicken: 1200,
+          pork: 55000,
+          fish: 300
+        };
+        const MEAT_EMOJIS = {
+          chicken: '🐔',
+          cow: '🐮',
+          pork: '🐷',
+          fish: '🐟'
+        };
+        const MEAT_ORDER = ['chicken', 'cow', 'pork', 'fish'];
+
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        const todayForWeek = new Date();
+        const dayOfWeek = todayForWeek.getDay();
+        const diff = todayForWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const startOfWeek = new Date(todayForWeek.setDate(diff)).setHours(0,0,0,0);
+
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+
+        const calculatePeriodStats = (startTime) => {
+          const periodEntries = entries.filter(entry => entry.id >= startTime);
+          const sums = { chicken: 0, cow: 0, pork: 0, fish: 0 };
+          
+          periodEntries.forEach(entry => {
+            if (sums.hasOwnProperty(entry.type)) {
+              sums[entry.type] += entry.grams;
+            }
+          });
+
+          const gramText = MEAT_ORDER
+            .filter(type => sums[type] > 0)
+            .map(type => `${MEAT_EMOJIS[type]} ${sums[type]}g`)
+            .join(' ') || '0g';
+
+          const animalText = MEAT_ORDER
+            .filter(type => sums[type] > 0)
+            .map(type => `${MEAT_EMOJIS[type]} ${(sums[type] / ANIMAL_WEIGHTS[type]).toFixed(3)}`)
+            .join(' ') || '&nbsp;';
+
+          return { gramText, animalText };
+        };
+
+        const firstEntry = entries.length > 0 ? entries.reduce((min, e) => e.id < min.id ? e : min, entries[0]) : null;
+        const allTimeTitleEl = document.getElementById('all-time-title');
+        if (firstEntry) {
+            const firstDate = new Date(firstEntry.id);
+            const year = firstDate.getFullYear();
+            const month = String(firstDate.getMonth() + 1).padStart(2, '0');
+            const day = String(firstDate.getDate()).padStart(2, '0');
+            allTimeTitleEl.textContent = `Since ${year}-${month}-${day}`;
+        } else {
+            allTimeTitleEl.textContent = 'All Time';
+        }
+
+        const periods = {
+          day: startOfDay,
+          week: startOfWeek,
+          month: startOfMonth,
+          year: startOfYear,
+          all: 0
+        };
+
+        for (const period in periods) {
+          const stats = calculatePeriodStats(periods[period]);
+          document.getElementById(`sum-${period}-grams`).textContent = stats.gramText;
+          document.getElementById(`sum-${period}-animals`).innerHTML = stats.animalText;
+        }
+      }
+
+      function resetForm() {
+        entryForm.reset();
+        editingIdInput.value = '';
+        formButton.textContent = 'Add Entry';
+      }
+
+      entryForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const grams = parseInt(gramsInput.value, 10);
+        const type = meatTypeInput.value;
+        const editingId = editingIdInput.value;
+
+        if (editingId) {
+          // Update existing entry
+          const entryIndex = entries.findIndex(entry => entry.id == editingId);
+          if (entryIndex > -1) {
+            entries[entryIndex].grams = grams;
+            entries[entryIndex].type = type;
+          }
+        } else {
+          // Add new entry
+          const newEntry = {
+            id: Date.now(),
+            grams: grams,
+            type: type
+          };
+          entries.push(newEntry);
+        }
+        
+        saveData();
+        render();
+        resetForm();
+      });
+
+      historyList.addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        if (!id) return;
+        
+        if (e.target.classList.contains('delete-btn')) {
+          if (confirm('Are you sure you want to delete this entry?')) {
+            entries = entries.filter(entry => entry.id != id);
+            saveData();
+            render();
+          }
+        }
+
+        if (e.target.classList.contains('edit-btn')) {
+          const entry = entries.find(entry => entry.id == id);
+          if (entry) {
+            gramsInput.value = entry.grams;
+            meatTypeInput.value = entry.type;
+            editingIdInput.value = entry.id;
+            formButton.textContent = 'Save Changes';
+            gramsInput.focus();
+          }
+        }
+      });
+      
+      exportBtn.addEventListener('click', () => {
+        if (entries.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+        const dataStr = JSON.stringify(entries, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meat-counter-backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+
+      importFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          try {
+            const importedData = JSON.parse(event.target.result);
+            // Basic validation
+            if (Array.isArray(importedData) && (importedData.length === 0 || (importedData[0].id && importedData[0].grams && importedData[0].type))) {
+              if (confirm('This will replace all current data. Are you sure?')) {
+                entries = importedData;
+                saveData();
+                render();
+                alert('Data imported successfully!');
+              }
+            } else {
+              throw new Error('Invalid file format.');
+            }
+          } catch (error) {
+            alert('Error importing data: ' + error.message);
+          } finally {
+             // Reset file input to allow re-uploading the same file
+            importFile.value = '';
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      function getEntriesForPeriod(period) {
+        const now = new Date();
+        let startTime;
+
+        switch (period) {
+          case 'day':
+            startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            break;
+          case 'week':
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            startTime = new Date(today.setDate(diff)).setHours(0, 0, 0, 0);
+            break;
+          case 'month':
+            startTime = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+            break;
+          case 'year':
+            startTime = new Date(now.getFullYear(), 0, 1).getTime();
+            break;
+          case 'all':
+            startTime = 0;
+            break;
+          default:
+            return [];
+        }
+        return entries.filter(entry => entry.id >= startTime);
+      }
+
+      function showRecapBreakdown(period) {
+        const periodEntries = getEntriesForPeriod(period);
+        
+        const breakdown = { chicken: 0, cow: 0, pork: 0, fish: 0 };
+        
+        periodEntries.forEach(entry => {
+          if (breakdown.hasOwnProperty(entry.type)) {
+            breakdown[entry.type] += entry.grams;
+          }
+        });
+        
+        let title = '';
+        switch(period) {
+          case 'day': title = "Today's Breakdown"; break;
+          case 'week': title = "This Week's Breakdown"; break;
+          case 'month': title = "This Month's Breakdown"; break;
+          case 'year': title = "This Year's Breakdown"; break;
+          case 'all':
+            const allTimeTitle = document.getElementById('all-time-title').textContent;
+            title = `Breakdown: ${allTimeTitle}`;
+            break;
+        }
+        modalTitle.textContent = title;
+
+        let contentHTML = '<ul>';
+        let hasContent = false;
+        const meatTypes = ['chicken', 'cow', 'pork', 'fish'];
+        meatTypes.forEach(type => {
+          if (breakdown[type] > 0) {
+            hasContent = true;
+            contentHTML += `<li><span>${getMeatDisplay(type)}</span> <span>${breakdown[type]}g</span></li>`;
+          }
+        });
+
+        if (!hasContent) {
+          contentHTML += '<li>No entries for this period.</li>';
+        }
+        contentHTML += '</ul>';
+
+        modalBody.innerHTML = contentHTML;
+        recapModal.style.display = 'block';
+      }
+
+      function closeModal() {
+        recapModal.style.display = 'none';
+      }
+
+      statsContainer.addEventListener('click', (e) => {
+        const statBox = e.target.closest('.stat-box');
+        if (statBox) {
+          const period = statBox.dataset.period;
+          showRecapBreakdown(period);
+        }
+      });
+
+      closeModalBtn.addEventListener('click', closeModal);
+
+      window.addEventListener('click', (event) => {
+        if (event.target === recapModal) {
+          closeModal();
+        }
+      });
+
+      // Initial load
+      loadData();
+      render();
+    });
+  </script>
+</body>
+</html>
