@@ -447,6 +447,12 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        
+        .project-card:hover {
+            border-color: var(--primary-color);
         }
         
         .project-info h3 {
@@ -1115,7 +1121,8 @@
                     this.state.projects.forEach(proj => {
                         const div = document.createElement('div');
                         div.className = 'project-card';
-                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="App.openEditor('${proj.name}')" title="Edit">✏️</button><button class="icon-btn" onclick="App.confirmDuplicate('${proj.name}')" title="Duplicate">👯</button><button class="icon-btn danger" onclick="App.confirmDelete('${proj.name}')" title="Delete">🗑️</button></div>`;
+                        div.onclick = () => App.openEditor(proj.name);
+                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="event.stopPropagation(); App.confirmDuplicate('${proj.name}')" title="Duplicate">👯</button><button class="icon-btn danger" onclick="event.stopPropagation(); App.confirmDelete('${proj.name}')" title="Delete">🗑️</button></div>`;
                         container.appendChild(div);
                     });
                  }
