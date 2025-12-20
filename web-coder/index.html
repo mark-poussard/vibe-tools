@@ -1019,7 +1019,7 @@
             },
             
             STORAGE_KEY_CONFIG: 'webcoder_config',
-            STORAGE_KEY_HISTORY: 'webcoder_history',
+            STORAGE_KEY_HISTORY: 'webcoder_history', STORAGE_KEY_PROJECTS: 'webcoder_projects',
 
             init() { this.loadState(); this.router(); this.bindEvents(); },
             loadState() {
@@ -1063,7 +1063,7 @@
             },
 
             async onViewEnter(screenId) {
-                if (screenId === 'projects') this.renderProjects();
+                if (screenId === 'projects') this.fetchProjects();
                 if (screenId === 'setup') {
                     document.getElementById('gh-token').value = this.state.config.githubToken || '';
                     document.getElementById('gh-repo').value = this.state.config.githubRepo || '';
@@ -1072,9 +1072,8 @@
             },
             
             // ... [Previous renderProjects, addProject, deleteProject methods remain same] ...
-            async renderProjects() {
+            async fetchProjects() {
                  const container = document.getElementById('project-list-container');
-                 const emptyState = document.getElementById('empty-state');
                  if (!this.state.config.githubRepo || !this.state.config.githubToken) {
                     container.innerHTML = '<div style="text-align:center; padding: 20px;">Please configure your GitHub settings first.</div>';
                     return;
@@ -1083,20 +1082,26 @@
                  try {
                     const [owner, repo] = this.state.config.githubRepo.split('/');
                     const items = await GitHubAPI.getContents(this.state.config.githubToken, owner, repo);
-                    const projects = items.filter(i => i.type === 'dir');
-                    this.state.projects = projects;
-                    container.innerHTML = '';
-                    if (projects.length === 0) emptyState.classList.remove('hidden');
-                    else {
-                        emptyState.classList.add('hidden');
-                        projects.forEach(proj => {
-                            const div = document.createElement('div');
-                            div.className = 'project-card';
-                            div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="App.openEditor('${proj.name}')">✏️</button><button class="icon-btn danger" onclick="App.confirmDelete('${proj.name}')">🗑️</button></div>`;
-                            container.appendChild(div);
-                        });
-                    }
+                    this.state.projects = items.filter(i => i.type === 'dir');
+                    this.renderProjects();
                  } catch (e) { container.innerHTML = `<div style="color: var(--danger-color); padding: 20px;">Error: ${e.message}</div>`; }
+            },
+            renderProjects() {
+                 const container = document.getElementById('project-list-container');
+                 const emptyState = document.getElementById('empty-state');
+                 if (!this.state.config.githubRepo) return;
+                 const [owner, repo] = this.state.config.githubRepo.split('/');
+                 container.innerHTML = '';
+                 if (this.state.projects.length === 0) emptyState.classList.remove('hidden');
+                 else {
+                    emptyState.classList.add('hidden');
+                    this.state.projects.forEach(proj => {
+                        const div = document.createElement('div');
+                        div.className = 'project-card';
+                        div.innerHTML = `<div class="project-info"><h3>${this.escapeHtml(proj.name)}</h3><p>${owner}/${repo}/${proj.name}</p></div><div class="project-actions"><button class="icon-btn" onclick="App.openEditor('${proj.name}')">✏️</button><button class="icon-btn danger" onclick="App.confirmDelete('${proj.name}')">🗑️</button></div>`;
+                        container.appendChild(div);
+                    });
+                 }
             },
             async addProject(name) {
                 try {
@@ -1104,7 +1109,9 @@
                     const path = `${name}/index.html`;
                     const template = `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${name}</title>\n</head>\n<body>\n  <h1>${name}</h1>\n</body>\n</html>`;
                     await GitHubAPI.updateFile(this.state.config.githubToken, owner, repo, path, template, null, `Initialize project: ${name}`);
-                    this.closeModals(); await this.renderProjects(); this.showToast("Project created.");
+                    this.state.projects.push({ name: name, type: 'dir' });
+                    this.renderProjects();
+                    this.closeModals(); this.showToast("Project created.");
                 } catch(e) { this.showToast("Creation failed: " + e.message); }
             },
             confirmDelete(name) { this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
@@ -1128,7 +1135,9 @@
                     };
                     
                     await deleteRecursive(projectName);
-                    this.closeModals(); await this.renderProjects(); this.showToast("Project deleted.");
+                    this.state.projects = this.state.projects.filter(p => p.name !== projectName);
+                    this.renderProjects();
+                    this.closeModals(); this.showToast("Project deleted.");
                 } catch (e) { this.showToast("Delete failed: " + e.message); } finally { btn.textContent = originalText; btn.disabled = false; }
             },
 
@@ -1751,7 +1760,7 @@
             },
             importProjects(f) {
                 const r = new FileReader(); r.onload=e=>{
-                    try { this.state.projects=JSON.parse(e.target.result); this.saveProjects(); this.closeModals(); this.showToast("Imported"); }
+                    try { this.state.projects=JSON.parse(e.target.result); this.renderProjects(); this.saveProjects(); this.closeModals(); this.showToast("Imported"); }
                     catch(x){ this.showToast("Bad JSON");}
                 }; r.readAsText(f);
             }
