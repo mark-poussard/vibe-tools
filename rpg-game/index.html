@@ -45,10 +45,49 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
       z-index: 100;
     }
+    #battle-screen {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #111;
+      color: white;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      z-index: 200;
+    }
+    .battle-stats { display: flex; gap: 40px; margin-bottom: 30px; font-size: 1.4em; text-align: center; }
+    .battle-actions button {
+      padding: 15px 30px; font-size: 1.1em; cursor: pointer; margin: 10px; background: #444; color: white; border: 2px solid #888;
+    }
+    .battle-actions button:hover { background: #666; }
+    #battle-msg { font-size: 1.2em; margin-bottom: 20px; color: #ffeb3b; height: 1.5em; }
+    #flash-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: white; opacity: 0; pointer-events: none; z-index: 300;
+    }
+    @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    .flashing { animation: flash-anim 0.5s ease-out; }
+    .dungeon-info { color: #ff66ff; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div id="ui">Click to move your character. The camera follows you but stays within map borders. Click the NPC to talk.</div>
+  <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span></div>
+  <div id="flash-overlay"></div>
+  <div id="battle-screen">
+    <div id="battle-msg">A wild monster appears!</div>
+    <div class="battle-stats">
+      <div>PLAYER<br><span id="p-hp"></span><br><span id="p-mp"></span></div>
+      <div style="font-size: 2em;">VS</div>
+      <div>ENEMY<br><span id="e-name"></span><br><span id="e-hp"></span></div>
+    </div>
+    <div class="battle-actions">
+      <button onclick="battleAction('attack')">Attack</button>
+      <button onclick="battleAction('skill')">Fireball (5MP)</button>
+      <button onclick="battleAction('flee')">Flee</button>
+    </div>
+  </div>
   <div id="dialog">
     <div id="dialogText"></div>
     <div style="margin-top: 10px; font-size: 0.8em; color: #666; text-align: right;">Click anywhere to close</div>
@@ -66,6 +105,7 @@
     const PLAYER_SPEED = 4;
     
     // State
+    let gameState = 'EXPLORE'; // EXPLORE, BATTLE
     const player = {
       x: MAP_PIXEL_SIZE / 2,
       y: MAP_PIXEL_SIZE / 2,
@@ -75,6 +115,13 @@
       isWalking: false,
       animFrame: 0
     };
+
+    const playerStats = {
+      hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0, gold: 0
+    };
+    
+    let currentEnemy = null;
+    let battleBusy = false;
 
     const npc = {
       tileX: 16,
@@ -89,8 +136,18 @@
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
         map[y] = [];
         for (let x = 0; x < MAP_SIZE_TILES; x++) {
-          // Procedural grass colors
-          map[y][x] = `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)`;
+          const isDungeon = x < 12 && y < 12;
+          if (isDungeon) {
+            map[y][x] = { 
+              type: 'dungeon', 
+              color: `rgb(${40 + Math.random() * 20}, 30, ${60 + Math.random() * 20})` 
+            };
+          } else {
+            map[y][x] = { 
+              type: 'grass', 
+              color: `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)` 
+            };
+          }
         }
       }
     }
@@ -116,8 +173,8 @@
     }
 
     canvas.addEventListener('mousedown', (e) => {
-      if (dialogActive) {
-        hideDialog();
+      if (dialogActive || gameState === 'BATTLE') {
+        if (dialogActive) hideDialog();
         return;
       }
       const rect = canvas.getBoundingClientRect();
@@ -167,7 +224,8 @@
     }
 
     function update() {
-      if (dialogActive) return;
+      if (dialogActive || gameState === 'BATTLE') return;
+      document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -177,6 +235,12 @@
         player.x += (dx / dist) * PLAYER_SPEED;
         player.y += (dy / dist) * PLAYER_SPEED;
         player.animFrame += 0.15;
+
+        const tx = Math.floor(player.x / TILE_SIZE);
+        const ty = Math.floor(player.y / TILE_SIZE);
+        if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
+          if (Math.random() < 0.012) startBattle();
+        }
       } else {
         player.x = player.targetX;
         player.y = player.targetY;
@@ -203,7 +267,7 @@
 
       for (let y = Math.max(0, startTileY); y < Math.min(MAP_SIZE_TILES, endTileY); y++) {
         for (let x = Math.max(0, startTileX); x < Math.min(MAP_SIZE_TILES, endTileX); x++) {
-          ctx.fillStyle = map[y][x];
+          ctx.fillStyle = map[y][x].color;
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
           ctx.strokeStyle = 'rgba(0,0,0,0.1)';
           ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -263,6 +327,87 @@
         update();
         draw();
       });
+    }
+
+    function startBattle() {
+      player.isWalking = false;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      document.getElementById('flash-overlay').classList.add('flashing');
+      setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
+      gameState = 'BATTLE';
+      currentEnemy = {
+        name: ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)],
+        hp: 25 + playerStats.lvl * 8, maxHp: 25 + playerStats.lvl * 8, atk: 6 + playerStats.lvl * 2, xp: 20 + playerStats.lvl * 5, gold: 15 + playerStats.lvl * 5
+      };
+      document.getElementById('battle-screen').style.display = 'flex';
+      updateBattleUI("A wild " + currentEnemy.name + " appeared!");
+    }
+
+    function updateBattleUI(msg) {
+      document.getElementById('p-hp').innerText = `HP: ${playerStats.hp}/${playerStats.maxHp}`;
+      document.getElementById('p-mp').innerText = `MP: ${playerStats.mp}/${playerStats.maxMp}`;
+      document.getElementById('e-name').innerText = currentEnemy.name;
+      document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+      if (msg) document.getElementById('battle-msg').innerText = msg;
+    }
+
+    function battleAction(type) {
+      if (battleBusy || gameState !== 'BATTLE') return;
+      battleBusy = true;
+      let msg = "";
+      if (type === 'attack') {
+        const dmg = playerStats.atk + Math.floor(Math.random() * 5);
+        currentEnemy.hp -= dmg;
+        msg = `You hit for ${dmg}! `;
+      } else if (type === 'skill') {
+        if (playerStats.mp >= 5) {
+          playerStats.mp -= 5;
+          const dmg = playerStats.atk * 2;
+          currentEnemy.hp -= dmg;
+          msg = `Fireball hit for ${dmg}! `;
+        } else {
+          updateBattleUI("Not enough MP!");
+          battleBusy = false;
+          return;
+        }
+      } else if (type === 'flee') {
+        if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
+        msg = "Flee failed! ";
+      }
+      updateBattleUI(msg);
+      if (currentEnemy.hp <= 0) {
+        playerStats.gold += currentEnemy.gold;
+        gainXp(currentEnemy.xp);
+        endBattle(`Victorious! Gained ${currentEnemy.xp}XP & ${currentEnemy.gold}G.`);
+      } else {
+        setTimeout(() => {
+          const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 5));
+          playerStats.hp -= eDmg;
+          updateBattleUI(msg + `${currentEnemy.name} attacks for ${eDmg}!`);
+          if (playerStats.hp <= 0) { alert("You perished."); location.reload(); }
+          battleBusy = false;
+        }, 700);
+      }
+    }
+
+    function gainXp(amt) {
+      playerStats.xp += amt;
+      if (playerStats.xp >= playerStats.lvl * 50) {
+        playerStats.lvl++;
+        playerStats.maxHp += 20; playerStats.hp = playerStats.maxHp;
+        playerStats.maxMp += 5; playerStats.mp = playerStats.maxMp;
+        playerStats.atk += 4;
+      }
+    }
+
+    function endBattle(msg) {
+      updateBattleUI(msg);
+      setTimeout(() => {
+        document.getElementById('battle-screen').style.display = 'none';
+        gameState = 'EXPLORE';
+        battleBusy = false;
+      }, 1500);
     }
 
     draw();
