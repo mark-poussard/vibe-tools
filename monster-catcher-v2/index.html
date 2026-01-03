@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>rpg-game</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      image-rendering: pixelated;
+      border: 4px solid #444;
+      cursor: pointer;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: monospace;
+      pointer-events: none;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+    }
+    #dialog {
+      display: none;
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 20px;
+      border: 4px solid #444;
+      font-family: monospace;
+      max-width: 80%;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    #battle-screen {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #111;
+      color: white;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      z-index: 200;
+    }
+    .battle-stats { display: flex; gap: 40px; margin-bottom: 30px; font-size: 1.4em; text-align: center; }
+    .battle-actions button {
+      padding: 15px 30px; font-size: 1.1em; cursor: pointer; margin: 10px; background: #444; color: white; border: 2px solid #888;
+    }
+    .battle-actions button:hover { background: #666; }
+    #battle-msg { font-size: 1.2em; margin-bottom: 20px; color: #ffeb3b; height: 1.5em; }
+    #flash-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: white; opacity: 0; pointer-events: none; z-index: 300;
+    }
+    @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    .flashing { animation: flash-anim 0.5s ease-out; }
+    .dungeon-info { color: #ff66ff; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span></div>
+  <div id="flash-overlay"></div>
+  <div id="battle-screen">
+    <div id="battle-msg">A wild monster appears!</div>
+    <div class="battle-stats">
+      <div>PLAYER<br><span id="p-hp"></span><br><span id="p-mp"></span></div>
+      <div style="font-size: 2em; display: flex; flex-direction: column; align-items: center;">
+        <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
+        VS
+      </div>
+      <div>ENEMY<br><span id="e-name"></span><br><span id="e-hp"></span></div>
+    </div>
+    <div class="battle-actions">
+      <button onclick="battleAction('attack')">Attack</button>
+      <button onclick="battleAction('skill')">Fireball (5MP)</button>
+      <button onclick="battleAction('flee')">Flee</button>
+    </div>
+  </div>
+  <div id="dialog">
+    <div id="dialogText"></div>
+    <div style="margin-top: 10px; font-size: 0.8em; color: #666; text-align: right;">Click anywhere to close</div>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Config
+    const TILE_SIZE = 64;
+    const MAP_SIZE_TILES = 30;
+    const MAP_PIXEL_SIZE = MAP_SIZE_TILES * TILE_SIZE;
+    const PLAYER_SPEED = 4;
+    
+    // State
+    let gameState = 'EXPLORE'; // EXPLORE, BATTLE
+    const player = {
+      x: MAP_PIXEL_SIZE / 2,
+      y: MAP_PIXEL_SIZE / 2,
+      targetX: MAP_PIXEL_SIZE / 2,
+      targetY: MAP_PIXEL_SIZE / 2,
+      size: 40,
+      isWalking: false,
+      animFrame: 0
+    };
+
+    const playerStats = {
+      hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0, gold: 0
+    };
+    
+    let currentEnemy = null;
+    let battleBusy = false;
+
+    const npc = {
+      tileX: 16,
+      tileY: 15,
+      dialog: "Hello fellow adventurer, how is your quest going ?"
+    };
+    let isInteractingWithNpc = false;
+    let dialogActive = false;
+
+    const map = [];
+    function initMap() {
+      for (let y = 0; y < MAP_SIZE_TILES; y++) {
+        map[y] = [];
+        for (let x = 0; x < MAP_SIZE_TILES; x++) {
+          if (x < 10 && y < 10) {
+            map[y][x] = { type: 'dungeon', levelRange: [1, 3], color: `rgb(${40 + Math.random() * 20}, 30, ${60 + Math.random() * 20})` };
+          } else if (x > 20 && y > 20) {
+            map[y][x] = { type: 'dungeon', levelRange: [10, 15], color: `rgb(${60 + Math.random() * 20}, 20, ${40 + Math.random() * 20})` };
+          } else if (x > 22 && y < 8) {
+            map[y][x] = { type: 'dungeon', levelRange: [5, 8], color: `rgb(40, ${40 + Math.random() * 20}, ${80 + Math.random() * 20})` };
+          } else {
+            map[y][x] = { type: 'grass', color: `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)` };
+          }
+        }
+      }
+    }
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+    initMap();
+
+    function showDialog(text) {
+      document.getElementById('dialogText').innerText = text;
+      document.getElementById('dialog').style.display = 'block';
+      dialogActive = true;
+    }
+
+    function hideDialog() {
+      document.getElementById('dialog').style.display = 'none';
+      dialogActive = false;
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (dialogActive || gameState === 'BATTLE') {
+        if (dialogActive) hideDialog();
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const screenX = e.clientX - rect.left;
+      const screenY = e.clientY - rect.top;
+      
+      const cam = getCameraOffset();
+      const worldX = screenX + cam.x;
+      const worldY = screenY + cam.y;
+      
+      const targetTileX = Math.floor(worldX / TILE_SIZE);
+      const targetTileY = Math.floor(worldY / TILE_SIZE);
+
+      if (targetTileX === npc.tileX && targetTileY === npc.tileY) {
+        const dx = targetTileX - player.x / TILE_SIZE;
+        const dy = targetTileY - player.y / TILE_SIZE;
+        let adjX = npc.tileX;
+        let adjY = npc.tileY;
+        if (Math.abs(dx) > Math.abs(dy)) adjX -= Math.sign(dx) || 1;
+        else adjY -= Math.sign(dy) || 1;
+        player.targetX = adjX * TILE_SIZE + TILE_SIZE / 2;
+        player.targetY = adjY * TILE_SIZE + TILE_SIZE / 2;
+        isInteractingWithNpc = true;
+      } else {
+        player.targetX = targetTileX * TILE_SIZE + TILE_SIZE / 2;
+        player.targetY = targetTileY * TILE_SIZE + TILE_SIZE / 2;
+        isInteractingWithNpc = false;
+      }
+    });
+
+    function getCameraOffset() {
+      let camX = player.x - canvas.width / 2;
+      let camY = player.y - canvas.height / 2;
+      
+      // Clamping to map borders
+      const maxCamX = MAP_PIXEL_SIZE - canvas.width;
+      const maxCamY = MAP_PIXEL_SIZE - canvas.height;
+      
+      // If map is smaller than screen, center it
+      if (MAP_PIXEL_SIZE < canvas.width) camX = (MAP_PIXEL_SIZE - canvas.width) / 2;
+      else camX = Math.max(0, Math.min(camX, maxCamX));
+
+      if (MAP_PIXEL_SIZE < canvas.height) camY = (MAP_PIXEL_SIZE - canvas.height) / 2;
+      else camY = Math.max(0, Math.min(camY, maxCamY));
+
+      return { x: camX, y: camY };
+    }
+
+    function update() {
+      if (dialogActive || gameState === 'BATTLE') return;
+      document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+      const dx = player.targetX - player.x;
+      const dy = player.targetY - player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > PLAYER_SPEED) {
+        player.isWalking = true;
+        player.x += (dx / dist) * PLAYER_SPEED;
+        player.y += (dy / dist) * PLAYER_SPEED;
+        player.animFrame += 0.15;
+
+        const tx = Math.floor(player.x / TILE_SIZE);
+        const ty = Math.floor(player.y / TILE_SIZE);
+        if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
+          if (Math.random() < 0.012) startBattle(map[ty][tx]);
+        }
+      } else {
+        player.x = player.targetX;
+        player.y = player.targetY;
+        if (isInteractingWithNpc) {
+          showDialog(npc.dialog);
+          isInteractingWithNpc = false;
+        }
+        player.isWalking = false;
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cam = getCameraOffset();
+
+      ctx.save();
+      ctx.translate(-cam.x, -cam.y);
+
+      // Draw Tiles
+      const startTileX = Math.floor(cam.x / TILE_SIZE);
+      const endTileX = Math.floor((cam.x + canvas.width) / TILE_SIZE) + 1;
+      const startTileY = Math.floor(cam.y / TILE_SIZE);
+      const endTileY = Math.floor((cam.y + canvas.height) / TILE_SIZE) + 1;
+
+      for (let y = Math.max(0, startTileY); y < Math.min(MAP_SIZE_TILES, endTileY); y++) {
+        for (let x = Math.max(0, startTileX); x < Math.min(MAP_SIZE_TILES, endTileX); x++) {
+          ctx.fillStyle = map[y][x].color;
+          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+          ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+
+      // Draw NPC
+      const npcX = npc.tileX * TILE_SIZE + TILE_SIZE / 2;
+      const npcY = npc.tileY * TILE_SIZE + TILE_SIZE / 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(npcX, npcY + 15, 15, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4444ff';
+      ctx.beginPath();
+      ctx.roundRect(npcX - 15, npcY - 45, 30, 45, 10);
+      ctx.fill();
+      ctx.fillStyle = '#ffdbac';
+      ctx.beginPath();
+      ctx.arc(npcX, npcY - 50, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Player Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(player.x, player.y + 15, 15, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Player (Body)
+      const bob = player.isWalking ? Math.abs(Math.sin(player.animFrame)) * 8 : 0;
+      ctx.fillStyle = '#ff4444';
+      ctx.beginPath();
+      ctx.roundRect(player.x - 15, player.y - 45 - bob, 30, 45, 10);
+      ctx.fill();
+      
+      // Draw Head
+      ctx.fillStyle = '#ffdbac';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y - 50 - bob, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw Feet (Walking animation)
+      if (player.isWalking) {
+        const legMove = Math.sin(player.animFrame) * 10;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(player.x - 12, player.y - 5 + legMove, 8, 5);  // Left foot
+        ctx.fillRect(player.x + 4, player.y - 5 - legMove, 8, 5);   // Right foot
+      } else {
+        ctx.fillStyle = '#333';
+        ctx.fillRect(player.x - 12, player.y - 5, 8, 5);
+        ctx.fillRect(player.x + 4, player.y - 5, 8, 5);
+      }
+
+      ctx.restore();
+
+      requestAnimationFrame(() => {
+        update();
+        draw();
+      });
+    }
+
+    function startBattle(zone) {
+      player.isWalking = false;
+      player.targetX = player.x;
+      player.targetY = player.y;
+      document.getElementById('flash-overlay').classList.add('flashing');
+      setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
+      gameState = 'BATTLE';
+      const range = zone.levelRange || [1, 5];
+      const level = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+      currentEnemy = {
+        name: ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)],
+        level: level,
+        hp: 15 + level * 12, maxHp: 15 + level * 12, atk: 4 + level * 3, xp: 15 + level * 10, gold: 10 + level * 8
+      };
+      document.getElementById('battle-screen').style.display = 'flex';
+      updateBattleUI(`A wild Lvl ${currentEnemy.level} ${currentEnemy.name} appeared!`);
+    }
+
+    function updateBattleUI(msg) {
+      document.getElementById('p-hp').innerText = `HP: ${playerStats.hp}/${playerStats.maxHp}`;
+      document.getElementById('p-mp').innerText = `MP: ${playerStats.mp}/${playerStats.maxMp}`;
+      document.getElementById('e-name').innerText = `Lvl ${currentEnemy.level} ${currentEnemy.name}`;
+      document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+      if (msg) document.getElementById('battle-msg').innerText = msg;
+      drawMonster(currentEnemy.name);
+    }
+
+    function drawMonster(name) {
+      const mCanvas = document.getElementById('monster-canvas');
+      const mCtx = mCanvas.getContext('2d');
+      mCtx.clearRect(0, 0, 100, 100);
+      mCtx.save();
+      mCtx.translate(50, 75);
+      if (name === 'Slime') {
+        mCtx.fillStyle = '#4ade80';
+        mCtx.beginPath(); mCtx.arc(0, 0, 30, Math.PI, 0); mCtx.ellipse(0, 0, 30, 15, 0, 0, Math.PI); mCtx.fill();
+        mCtx.fillStyle = 'white';
+        mCtx.beginPath(); mCtx.arc(-10, -10, 4, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(10, -10, 4, 0, Math.PI*2); mCtx.fill();
+      } else if (name === 'Skeleton') {
+        mCtx.fillStyle = '#f3f4f6';
+        mCtx.fillRect(-12, -35, 24, 35);
+        mCtx.beginPath(); mCtx.arc(0, -45, 15, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = '#111';
+        mCtx.beginPath(); mCtx.arc(-6, -48, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(6, -48, 3, 0, Math.PI*2); mCtx.fill();
+      } else if (name === 'Gorgon') {
+        mCtx.fillStyle = '#166534';
+        mCtx.beginPath(); mCtx.arc(0, -25, 20, 0, Math.PI*2); mCtx.fill();
+        mCtx.strokeStyle = '#15803d'; mCtx.lineWidth = 4;
+        for(let i=0; i<8; i++) {
+          mCtx.beginPath(); mCtx.moveTo(0, -35);
+          mCtx.quadraticCurveTo(Math.sin(i)*50, -60, Math.sin(i)*40, -40);
+          mCtx.stroke();
+        }
+      } else if (name === 'Shadow') {
+        mCtx.fillStyle = 'rgba(0,0,0,0.8)';
+        mCtx.beginPath(); mCtx.moveTo(-25, 0); mCtx.quadraticCurveTo(0, -90, 25, 0); mCtx.fill();
+        mCtx.fillStyle = '#ef4444';
+        mCtx.beginPath(); mCtx.arc(-8, -45, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(8, -45, 3, 0, Math.PI*2); mCtx.fill();
+      }
+      mCtx.restore();
+    }
+
+    function battleAction(type) {
+      if (battleBusy || gameState !== 'BATTLE') return;
+      battleBusy = true;
+      let msg = "";
+      if (type === 'attack') {
+        const dmg = playerStats.atk + Math.floor(Math.random() * 5);
+        currentEnemy.hp -= dmg;
+        msg = `You hit for ${dmg}! `;
+      } else if (type === 'skill') {
+        if (playerStats.mp >= 5) {
+          playerStats.mp -= 5;
+          const dmg = playerStats.atk * 2;
+          currentEnemy.hp -= dmg;
+          msg = `Fireball hit for ${dmg}! `;
+        } else {
+          updateBattleUI("Not enough MP!");
+          battleBusy = false;
+          return;
+        }
+      } else if (type === 'flee') {
+        if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
+        msg = "Flee failed! ";
+      }
+      updateBattleUI(msg);
+      if (currentEnemy.hp <= 0) {
+        playerStats.gold += currentEnemy.gold;
+        gainXp(currentEnemy.xp);
+        endBattle(`Victorious! Gained ${currentEnemy.xp}XP & ${currentEnemy.gold}G.`);
+      } else {
+        setTimeout(() => {
+          const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 5));
+          playerStats.hp -= eDmg;
+          updateBattleUI(msg + `${currentEnemy.name} attacks for ${eDmg}!`);
+          if (playerStats.hp <= 0) { alert("You perished."); location.reload(); }
+          battleBusy = false;
+        }, 700);
+      }
+    }
+
+    function gainXp(amt) {
+      playerStats.xp += amt;
+      if (playerStats.xp >= playerStats.lvl * 50) {
+        playerStats.lvl++;
+        playerStats.maxHp += 20; playerStats.hp = playerStats.maxHp;
+        playerStats.maxMp += 5; playerStats.mp = playerStats.maxMp;
+        playerStats.atk += 4;
+      }
+    }
+
+    function endBattle(msg) {
+      updateBattleUI(msg);
+      setTimeout(() => {
+        document.getElementById('battle-screen').style.display = 'none';
+        gameState = 'EXPLORE';
+        battleBusy = false;
+      }, 1500);
+    }
+
+    draw();
+  </script>
+</body>
+</html>
