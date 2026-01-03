@@ -78,10 +78,14 @@
     }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
-    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 120px; height: 12px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; } .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; } .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); }
+    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 120px; height: 12px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; } .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; } .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); } #starter-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: monospace; } .starter-cards { display: flex; gap: 20px; margin-top: 30px; } .starter-card { background: #333; border: 4px solid #555; padding: 20px; width: 180px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; } .starter-card:hover { transform: scale(1.05); border-color: #ffeb3b; } .starter-card h3 { margin: 10px 0; color: #ffeb3b; } .starter-card .stats { font-size: 0.8em; text-align: left; margin: 10px 0; line-height: 1.4; }
   </style>
 </head>
 <body>
+  <div id="starter-screen">
+    <h1>Choose Your Starter Monster</h1>
+    <div class="starter-cards"></div>
+  </div>
   <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span><button onclick="toggleMenu()" style="pointer-events: auto; margin-left: 10px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button></div>
   <div id="flash-overlay"></div>
   <div id="battle-screen">
@@ -139,9 +143,14 @@
     };
 
     const playerStats = {
-      party: [{ name: 'Hero', hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0 }],
-      gold: 0, inventory: []
+      party: [],
+      gold: 50, inventory: []
     };
+    const STARTERS = [
+      { name: 'Leafy', hp: 120, maxHp: 120, mp: 15, maxMp: 15, atk: 8, lvl: 1, xp: 0, skill: { name: 'Solar Bloom', cost: 5, mult: 1.2, heal: 15 } },
+      { name: 'Ignis', hp: 80, maxHp: 80, mp: 10, maxMp: 10, atk: 16, lvl: 1, xp: 0, skill: { name: 'Inferno', cost: 5, mult: 2.5 } },
+      { name: 'Aquos', hp: 100, maxHp: 100, mp: 25, maxMp: 25, atk: 11, lvl: 1, xp: 0, skill: { name: 'Tsunami', cost: 6, mult: 2.0 } }
+    ];
     let currentActorIndex = 0;
     
     let currentEnemy = null;
@@ -287,8 +296,8 @@
           <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
           <strong>Skills:</strong><br>
-          • Basic Attack (Damage: Atk)<br>
-          • Fireball (5 MP, Damage: Atk * 2)
+          • Basic Attack<br>
+          • ${p.skill ? p.skill.name : 'Power Strike'} (${p.skill ? p.skill.cost : 5} MP)
         </div>
         <button class="menu-btn" style="margin-top: 15px;" onclick="showParty()">Back</button>
       `;
@@ -386,8 +395,9 @@
     }
 
     function updateHud() {
+      if (playerStats.party.length === 0) return;
       const hero = playerStats.party[0];
-      document.getElementById('player-hud').innerText = `Lvl ${hero.lvl} | HP ${hero.hp}/${hero.maxHp} | Gold ${playerStats.gold} | Party: ${playerStats.party.length}`;
+      document.getElementById('player-hud').innerText = `Lvl ${hero.lvl} | HP ${Math.ceil(hero.hp)}/${hero.maxHp} | Gold ${playerStats.gold} | Party: ${playerStats.party.length}`;
     }
 
     function update() {
@@ -503,11 +513,12 @@
       gameState = 'BATTLE';
       const range = zone.levelRange || [1, 5];
       const level = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+      const eName = ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)];
       currentEnemy = {
-        name: ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)],
-        level: level,
+        name: eName, level: level,
         hp: 15 + level * 12, maxHp: 15 + level * 12, atk: 4 + level * 3, xp: 15 + level * 10, gold: 10 + level * 8,
-        mp: 10 + level * 2, maxMp: 10 + level * 2, lvl: level
+        mp: 10 + level * 2, maxMp: 10 + level * 2, lvl: level,
+        skill: { name: eName === "Shadow" ? "Curse" : "Smash", cost: 5, mult: 1.7 }
       };
       currentActorIndex = 0;
       while (playerStats.party[currentActorIndex] && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
@@ -532,42 +543,43 @@
       drawMonster(currentEnemy.name);
     }
 
-    function drawMonster(name) {
-      const mCanvas = document.getElementById('monster-canvas');
-      const mCtx = mCanvas.getContext('2d');
+    function drawMonsterIcon(mCtx, name) {
       mCtx.clearRect(0, 0, 100, 100);
-      mCtx.save();
-      mCtx.translate(50, 75);
-      if (name === 'Slime') {
-        mCtx.fillStyle = '#4ade80';
-        mCtx.beginPath(); mCtx.arc(0, 0, 30, Math.PI, 0); mCtx.ellipse(0, 0, 30, 15, 0, 0, Math.PI); mCtx.fill();
-        mCtx.fillStyle = 'white';
-        mCtx.beginPath(); mCtx.arc(-10, -10, 4, 0, Math.PI*2); mCtx.fill();
+      mCtx.save(); mCtx.translate(50, 75);
+      if (name === 'Leafy') {
+        mCtx.fillStyle = '#84cc16'; mCtx.beginPath(); mCtx.ellipse(0, 0, 30, 20, 0, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = '#4d7c0f'; mCtx.beginPath(); mCtx.moveTo(0, -20); mCtx.quadraticCurveTo(20, -40, 0, -50); mCtx.quadraticCurveTo(-20, -40, 0, -20); mCtx.fill();
+      } else if (name === 'Ignis') {
+        mCtx.fillStyle = '#ef4444'; mCtx.beginPath(); mCtx.moveTo(-25, 0); mCtx.lineTo(0, -60); mCtx.lineTo(25, 0); mCtx.closePath(); mCtx.fill();
+        mCtx.fillStyle = '#f59e0b'; mCtx.beginPath(); mCtx.moveTo(-15, 0); mCtx.lineTo(0, -40); mCtx.lineTo(15, 0); mCtx.closePath(); mCtx.fill();
+      } else if (name === 'Aquos') {
+        mCtx.fillStyle = '#0ea5e9'; mCtx.beginPath(); mCtx.moveTo(0, -60); mCtx.bezierCurveTo(30, -30, 30, 0, 0, 0); mCtx.bezierCurveTo(-30, 0, -30, -30, 0, -60); mCtx.fill();
+      } else if (name === 'Slime') {
+        mCtx.fillStyle = '#4ade80'; mCtx.beginPath(); mCtx.arc(0, 0, 30, Math.PI, 0); mCtx.ellipse(0, 0, 30, 15, 0, 0, Math.PI); mCtx.fill();
+        mCtx.fillStyle = 'white'; mCtx.beginPath(); mCtx.arc(-10, -10, 4, 0, Math.PI*2); mCtx.fill();
         mCtx.beginPath(); mCtx.arc(10, -10, 4, 0, Math.PI*2); mCtx.fill();
       } else if (name === 'Skeleton') {
-        mCtx.fillStyle = '#f3f4f6';
-        mCtx.fillRect(-12, -35, 24, 35);
+        mCtx.fillStyle = '#f3f4f6'; mCtx.fillRect(-12, -35, 24, 35);
         mCtx.beginPath(); mCtx.arc(0, -45, 15, 0, Math.PI*2); mCtx.fill();
-        mCtx.fillStyle = '#111';
-        mCtx.beginPath(); mCtx.arc(-6, -48, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = '#111'; mCtx.beginPath(); mCtx.arc(-6, -48, 3, 0, Math.PI*2); mCtx.fill();
         mCtx.beginPath(); mCtx.arc(6, -48, 3, 0, Math.PI*2); mCtx.fill();
       } else if (name === 'Gorgon') {
-        mCtx.fillStyle = '#166534';
-        mCtx.beginPath(); mCtx.arc(0, -25, 20, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = '#166534'; mCtx.beginPath(); mCtx.arc(0, -25, 20, 0, Math.PI*2); mCtx.fill();
         mCtx.strokeStyle = '#15803d'; mCtx.lineWidth = 4;
         for(let i=0; i<8; i++) {
-          mCtx.beginPath(); mCtx.moveTo(0, -35);
-          mCtx.quadraticCurveTo(Math.sin(i)*50, -60, Math.sin(i)*40, -40);
-          mCtx.stroke();
+          mCtx.beginPath(); mCtx.moveTo(0, -35); mCtx.quadraticCurveTo(Math.sin(i)*50, -60, Math.sin(i)*40, -40); mCtx.stroke();
         }
       } else if (name === 'Shadow') {
-        mCtx.fillStyle = 'rgba(0,0,0,0.8)';
-        mCtx.beginPath(); mCtx.moveTo(-25, 0); mCtx.quadraticCurveTo(0, -90, 25, 0); mCtx.fill();
-        mCtx.fillStyle = '#ef4444';
-        mCtx.beginPath(); mCtx.arc(-8, -45, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = 'rgba(0,0,0,0.8)'; mCtx.beginPath(); mCtx.moveTo(-25, 0); mCtx.quadraticCurveTo(0, -90, 25, 0); mCtx.fill();
+        mCtx.fillStyle = '#ef4444'; mCtx.beginPath(); mCtx.arc(-8, -45, 3, 0, Math.PI*2); mCtx.fill();
         mCtx.beginPath(); mCtx.arc(8, -45, 3, 0, Math.PI*2); mCtx.fill();
       }
       mCtx.restore();
+    }
+    function drawMonster(name) {
+      const mCanvas = document.getElementById('monster-canvas');
+      if (!mCanvas) return;
+      drawMonsterIcon(mCanvas.getContext('2d'), name);
     }
 
     function battleAction(type, itemIdx = null) {
@@ -581,9 +593,13 @@
         currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
         msg = `${actor.name} hit for ${dmg}! `;
       } else if (type === 'skill') {
-        if (actor.mp >= 5) {
-          actor.mp -= 5; const dmg = actor.atk * 2; currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-          msg = `${actor.name} used Fireball for ${dmg}! `;
+        const skill = actor.skill || { name: 'Power Strike', cost: 5, mult: 1.8 };
+        if (actor.mp >= skill.cost) {
+          actor.mp -= skill.cost;
+          const dmg = Math.floor(actor.atk * skill.mult);
+          currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+          if (skill.heal) actor.hp = Math.min(actor.maxHp, actor.hp + skill.heal);
+          msg = `${actor.name} used ${skill.name} for ${dmg}! `;
         } else { alert("Not enough MP!"); battleBusy = false; return; }
       } else if (type === 'flee') {
         if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
@@ -646,6 +662,24 @@
       }, 1500);
     }
 
+    function initStarterScreen() {
+      const screen = document.getElementById('starter-screen');
+      const container = screen.querySelector('.starter-cards');
+      STARTERS.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'starter-card';
+        card.onclick = () => selectStarter(i);
+        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100"></canvas><h3>${s.name}</h3><div class="stats">HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
+        container.appendChild(card);
+        drawMonsterIcon(document.getElementById(`starter-canvas-${i}`).getContext('2d'), s.name);
+      });
+    }
+    function selectStarter(idx) {
+      playerStats.party = [JSON.parse(JSON.stringify(STARTERS[idx]))];
+      document.getElementById('starter-screen').style.display = 'none';
+      updateHud();
+    }
+    initStarterScreen();
     draw();
   </script>
 </body>
