@@ -146,16 +146,32 @@
       party: [],
       gold: 50, inventory: []
     };
-    const MONSTER_DB = {
-      'Sylvaris': { hp: 120, mp: 15, atk: 8, skill: { name: 'Solar Bloom', cost: 5, mult: 1.2, heal: 15 }, drawType: 'plant' },
-      'Ignifrit': { hp: 80, mp: 10, atk: 16, skill: { name: 'Inferno', cost: 5, mult: 2.5 }, drawType: 'fire' },
-      'Aquasaur': { hp: 100, mp: 25, atk: 11, skill: { name: 'Tsunami', cost: 6, mult: 2.0 }, drawType: 'water' },
-      'Gloop': { hp: 40, mp: 10, atk: 4, skill: { name: 'Bouncy Slam', cost: 4, mult: 1.4 }, drawType: 'slime' },
-      'Boneguard': { hp: 50, mp: 12, atk: 7, skill: { name: 'Bone Shard', cost: 5, mult: 1.8 }, drawType: 'skeleton' },
-      'Medusoid': { hp: 60, mp: 20, atk: 6, skill: { name: 'Gaze', cost: 6, mult: 1.6 }, drawType: 'gorgon' },
-      'Voidshade': { hp: 45, mp: 30, atk: 8, skill: { name: 'Abyssal Pulse', cost: 7, mult: 1.9 }, drawType: 'shadow' },
-      'Aetherwing': { hp: 90, mp: 40, atk: 14, skill: { name: 'Sky Dive', cost: 10, mult: 2.5 }, drawType: 'dragon' }
+    const TYPE_CHART = {
+      'Fire': { weakTo: ['Water'], resist: ['Nature', 'Fire'] },
+      'Water': { weakTo: ['Nature'], resist: ['Fire', 'Water'] },
+      'Nature': { weakTo: ['Fire'], resist: ['Water', 'Nature'] },
+      'Dark': { weakTo: ['Holy'], resist: ['Dark'] },
+      'Holy': { weakTo: ['Dark'], resist: ['Holy'] },
+      'Normal': { weakTo: [], resist: [] }
     };
+    const MONSTER_DB = {
+      'Sylvaris': { hp: 120, mp: 15, atk: 8, type: 'Nature', skill: { name: 'Solar Bloom', cost: 5, mult: 1.2, heal: 15, type: 'Nature' }, drawType: 'plant' },
+      'Ignifrit': { hp: 80, mp: 10, atk: 16, type: 'Fire', skill: { name: 'Inferno', cost: 5, mult: 2.5, type: 'Fire' }, drawType: 'fire' },
+      'Aquasaur': { hp: 100, mp: 25, atk: 11, type: 'Water', skill: { name: 'Tsunami', cost: 6, mult: 2.0, type: 'Water' }, drawType: 'water' },
+      'Gloop': { hp: 40, mp: 10, atk: 4, type: 'Nature', skill: { name: 'Bouncy Slam', cost: 4, mult: 1.4, type: 'Normal' }, drawType: 'slime' },
+      'Boneguard': { hp: 50, mp: 12, atk: 7, type: 'Dark', skill: { name: 'Bone Shard', cost: 5, mult: 1.8, type: 'Dark' }, drawType: 'skeleton' },
+      'Medusoid': { hp: 60, mp: 20, atk: 6, type: 'Nature', skill: { name: 'Gaze', cost: 6, mult: 1.6, type: 'Dark' }, drawType: 'gorgon' },
+      'Voidshade': { hp: 45, mp: 30, atk: 8, type: 'Dark', skill: { name: 'Abyssal Pulse', cost: 7, mult: 1.9, type: 'Dark' }, drawType: 'shadow' },
+      'Aetherwing': { hp: 90, mp: 40, atk: 14, type: 'Fire', skill: { name: 'Sky Dive', cost: 10, mult: 2.5, type: 'Fire' }, drawType: 'dragon' }
+    };
+    function calculateSkillDamage(attacker, defender, skill) {
+      let dmg = attacker.atk * (skill.mult || 1.5);
+      if (skill.type === attacker.type) dmg *= 1.5;
+      const chart = TYPE_CHART[defender.type] || { weakTo: [], resist: [] };
+      if (chart.weakTo.includes(skill.type)) dmg *= 2;
+      if (chart.resist.includes(skill.type)) dmg *= 0.5;
+      return Math.floor(dmg);
+    }
     const ENCOUNTER_POOLS = {
       'beginner': [ { key: 'Gloop', weight: 0.8 }, { key: 'Boneguard', weight: 0.2 } ],
       'intermediate': [ { key: 'Medusoid', weight: 0.5 }, { key: 'Boneguard', weight: 0.4 }, { key: 'Voidshade', weight: 0.1 } ],
@@ -310,6 +326,7 @@
       content.innerHTML = `
         <h3 style="margin-top: 0;">${p.name} Details</h3>
         <div style="font-size: 0.9em; line-height: 1.4; text-align: left; padding: 0 5px;">
+          <div style="margin-bottom: 5px;"><strong>Type:</strong> ${p.type}</div>
           <div style="margin-bottom: 5px;"><strong>Level:</strong> ${p.lvl}</div>
           <div style="margin-bottom: 5px;"><strong>HP:</strong> ${Math.ceil(p.hp)} / ${p.maxHp}</div>
           <div style="margin-bottom: 5px;"><strong>MP:</strong> ${Math.ceil(p.mp)} / ${p.maxMp}</div>
@@ -317,8 +334,8 @@
           <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
           <strong>Skills:</strong><br>
-          • Basic Attack<br>
-          • ${p.skill ? p.skill.name : 'Power Strike'} (${p.skill ? p.skill.cost : 5} MP)
+          • Basic Attack (Normal)<br>
+          • ${p.skill ? p.skill.name : 'Power Strike'} (${p.skill ? p.skill.type : 'Normal'}, ${p.skill ? p.skill.cost : 5} MP)
         </div>
         <button class="menu-btn" style="margin-top: 15px; color: #e74c3c;" onclick="releaseMonster(${idx})">Release Monster</button>
         <button class="menu-btn" onclick="showParty()">Back</button>
@@ -593,7 +610,7 @@
       playerStats.party.forEach((p, i) => {
         const div = document.createElement('div');
         div.className = 'battle-card' + (i === currentActorIndex ? ' active-actor' : '');
-        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.8em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div></div>`;
+        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.7em">L${p.lvl} (${p.type})</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div></div>`;
         partyList.appendChild(div);
         drawMonsterIcon(document.getElementById(`p-canv-${i}`).getContext('2d'), p.name);
       });
@@ -601,7 +618,7 @@
         const div = document.createElement('div');
         div.className = 'battle-card';
         div.style.flexDirection = 'row-reverse'; div.style.textAlign = 'right';
-        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.8em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
+        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.7em">L${currentEnemy.lvl} (${currentEnemy.type})</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
         enemyList.appendChild(div);
         drawMonsterIcon(document.getElementById('e-canv').getContext('2d'), currentEnemy.name);
       }
@@ -658,13 +675,16 @@
         currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
         msg = `${actor.name} hit for ${dmg}! `;
       } else if (type === 'skill') {
-        const skill = actor.skill || { name: 'Power Strike', cost: 5, mult: 1.8 };
+        const skill = actor.skill || { name: 'Power Strike', cost: 5, mult: 1.8, type: 'Normal' };
         if (actor.mp >= skill.cost) {
           actor.mp -= skill.cost;
-          const dmg = Math.floor(actor.atk * skill.mult);
+          const dmg = calculateSkillDamage(actor, currentEnemy, skill);
           currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
           if (skill.heal) actor.hp = Math.min(actor.maxHp, actor.hp + skill.heal);
           msg = `${actor.name} used ${skill.name} for ${dmg}! `;
+          const chart = TYPE_CHART[currentEnemy.type] || { weakTo: [], resist: [] };
+          if (chart.weakTo.includes(skill.type)) msg += "It's super effective! ";
+          if (chart.resist.includes(skill.type)) msg += "It's not very effective... ";
         } else { alert("Not enough MP!"); battleBusy = false; return; }
       } else if (type === 'flee') {
         if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
@@ -712,9 +732,19 @@
           if (currentActorIndex >= playerStats.party.length) {
             const targets = playerStats.party.filter(p => p.hp > 0);
             const target = targets[Math.floor(Math.random() * targets.length)];
-            const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 3));
+            let eDmg = 0; let eMove = "";
+            if (currentEnemy.mp >= (currentEnemy.skill?.cost || 99) && Math.random() > 0.4) {
+              currentEnemy.mp -= currentEnemy.skill.cost;
+              eDmg = calculateSkillDamage(currentEnemy, target, currentEnemy.skill);
+              eMove = `${currentEnemy.name} uses ${currentEnemy.skill.name}`;
+              const chart = TYPE_CHART[target.type] || { weakTo: [], resist: [] };
+              if (chart.weakTo.includes(currentEnemy.skill.type)) eMove += " (Super effective!)";
+            } else {
+              eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 3));
+              eMove = `${currentEnemy.name} hits ${target.name}`;
+            }
             target.hp = Math.max(0, target.hp - eDmg);
-            updateBattleUI(`${msg}${currentEnemy.name} hits ${target.name} for ${eDmg}!`);
+            updateBattleUI(`${msg}${eMove} for ${Math.ceil(eDmg)}!`);
             if (playerStats.party.every(p => p.hp <= 0)) { alert("The party has fallen..."); location.reload(); }
             setTimeout(() => {
               currentActorIndex = 0; while (playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
@@ -764,7 +794,7 @@
         const card = document.createElement('div');
         card.className = 'starter-card';
         card.onclick = () => selectStarter(i);
-        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100" style="width:80px; height:80px;"></canvas><h3>${s.name}</h3><div class="stats">HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
+        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100" style="width:80px; height:80px;"></canvas><h3>${s.name}</h3><div class="stats">Type: ${s.type}<br>HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
         container.appendChild(card);
         drawMonsterIcon(document.getElementById(`starter-canvas-${i}`).getContext('2d'), s.name);
       });
