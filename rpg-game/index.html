@@ -139,17 +139,14 @@
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
         map[y] = [];
         for (let x = 0; x < MAP_SIZE_TILES; x++) {
-          const isDungeon = x < 12 && y < 12;
-          if (isDungeon) {
-            map[y][x] = { 
-              type: 'dungeon', 
-              color: `rgb(${40 + Math.random() * 20}, 30, ${60 + Math.random() * 20})` 
-            };
+          if (x < 10 && y < 10) {
+            map[y][x] = { type: 'dungeon', levelRange: [1, 3], color: `rgb(${40 + Math.random() * 20}, 30, ${60 + Math.random() * 20})` };
+          } else if (x > 20 && y > 20) {
+            map[y][x] = { type: 'dungeon', levelRange: [10, 15], color: `rgb(${60 + Math.random() * 20}, 20, ${40 + Math.random() * 20})` };
+          } else if (x > 22 && y < 8) {
+            map[y][x] = { type: 'dungeon', levelRange: [5, 8], color: `rgb(40, ${40 + Math.random() * 20}, ${80 + Math.random() * 20})` };
           } else {
-            map[y][x] = { 
-              type: 'grass', 
-              color: `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)` 
-            };
+            map[y][x] = { type: 'grass', color: `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)` };
           }
         }
       }
@@ -242,7 +239,7 @@
         const tx = Math.floor(player.x / TILE_SIZE);
         const ty = Math.floor(player.y / TILE_SIZE);
         if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
-          if (Math.random() < 0.012) startBattle();
+          if (Math.random() < 0.012) startBattle(map[ty][tx]);
         }
       } else {
         player.x = player.targetX;
@@ -332,25 +329,28 @@
       });
     }
 
-    function startBattle() {
+    function startBattle(zone) {
       player.isWalking = false;
       player.targetX = player.x;
       player.targetY = player.y;
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
+      const range = zone.levelRange || [1, 5];
+      const level = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
       currentEnemy = {
         name: ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)],
-        hp: 25 + playerStats.lvl * 8, maxHp: 25 + playerStats.lvl * 8, atk: 6 + playerStats.lvl * 2, xp: 20 + playerStats.lvl * 5, gold: 15 + playerStats.lvl * 5
+        level: level,
+        hp: 15 + level * 12, maxHp: 15 + level * 12, atk: 4 + level * 3, xp: 15 + level * 10, gold: 10 + level * 8
       };
       document.getElementById('battle-screen').style.display = 'flex';
-      updateBattleUI("A wild " + currentEnemy.name + " appeared!");
+      updateBattleUI(`A wild Lvl ${currentEnemy.level} ${currentEnemy.name} appeared!`);
     }
 
     function updateBattleUI(msg) {
       document.getElementById('p-hp').innerText = `HP: ${playerStats.hp}/${playerStats.maxHp}`;
       document.getElementById('p-mp').innerText = `MP: ${playerStats.mp}/${playerStats.maxMp}`;
-      document.getElementById('e-name').innerText = currentEnemy.name;
+      document.getElementById('e-name').innerText = `Lvl ${currentEnemy.level} ${currentEnemy.name}`;
       document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
       if (msg) document.getElementById('battle-msg').innerText = msg;
       drawMonster(currentEnemy.name);
