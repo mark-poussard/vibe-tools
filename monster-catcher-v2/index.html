@@ -49,13 +49,14 @@
     .battle-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; max-width: 400px; margin-top: auto; }
     .battle-actions button { padding: 12px; font-size: 1em; cursor: pointer; background: #444; color: white; border: 2px solid #888; flex: 1 1 120px; }
     .battle-actions button:hover { background: #666; }
-    #battle-msg { font-size: 1.1em; color: #ffeb3b; text-align: center; margin-bottom: 15px; min-height: 1.5em; }
+    #battle-msg { font-size: 1.1em; color: #ffeb3b; text-align: center; margin: 10px 0; min-height: 1.5em; }
     #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 300; }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
     .dungeon-info { color: #ff66ff; font-weight: bold; }
-    .bar-container { width: 80px; height: 6px; background: #333; border: 1px solid #555; margin: 4px 0; position: relative; }
+    .bar-container { width: 100px; height: 14px; background: #333; border: 1px solid #555; margin: 4px 0; position: relative; border-radius: 2px; overflow: hidden; }
     .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
+    .bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; font-size: 9px; line-height: 14px; text-align: center; color: white; text-shadow: 1px 1px 1px black; font-weight: bold; pointer-events: none; }
     .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; }
     .battle-card { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px; font-size: 0.75em; border: 2px solid transparent; background: rgba(255,255,255,0.05); border-radius: 4px; width: 100%; box-sizing: border-box; }
     .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); }
@@ -86,7 +87,6 @@
   </div>
   <div id="flash-overlay"></div>
   <div id="battle-screen">
-    <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
       <div style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; padding-right: 8px; min-width: 0;">
         <div style="font-weight: bold; border-bottom: 1px solid #555; margin-bottom: 5px; font-size: 0.8em;">PARTY</div>
@@ -98,6 +98,7 @@
       </div>
     </div>
     <div id="acting-name" style="color: #4caf50; font-weight: bold; margin: 8px 0; text-align: center; font-size: 0.9em;"></div>
+    <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-actions">
       <button onclick="battleAction('attack')">Attack</button>
       <button onclick="battleAction('skill')">Skill</button>
@@ -579,7 +580,7 @@
       playerStats.party.forEach((p, i) => {
         const div = document.createElement('div');
         div.className = 'battle-card' + (i === currentActorIndex ? ' active-actor' : '');
-        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.8em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div></div></div>`;
+        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.8em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div></div>`;
         partyList.appendChild(div);
         drawMonsterIcon(document.getElementById(`p-canv-${i}`).getContext('2d'), p.name);
       });
@@ -587,7 +588,7 @@
         const div = document.createElement('div');
         div.className = 'battle-card';
         div.style.flexDirection = 'row-reverse'; div.style.textAlign = 'right';
-        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.8em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div></div></div>`;
+        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.8em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
         enemyList.appendChild(div);
         drawMonsterIcon(document.getElementById('e-canv').getContext('2d'), currentEnemy.name);
       }
