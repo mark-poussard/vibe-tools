@@ -45,11 +45,13 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
       z-index: 100;
     }
-    #shop {
+    #shop, #menu-modal {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
-      width: 250px; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 150;
+      width: 280px; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 150;
     }
+    .menu-btn { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #eee; border: 1px solid #ccc; font-family: monospace; }
+    .menu-btn:hover { background: #ddd; }
     .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
     .shop-item button { cursor: pointer; padding: 5px 10px; background: #4caf50; color: white; border: none; }
     #battle-screen {
@@ -80,7 +82,7 @@
   </style>
 </head>
 <body>
-  <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span></div>
+  <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span><button onclick="toggleMenu()" style="pointer-events: auto; margin-left: 10px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button></div>
   <div id="flash-overlay"></div>
   <div id="battle-screen">
     <div id="battle-msg">A wild monster appears!</div>
@@ -107,6 +109,9 @@
     <div id="shop-items"></div>
     <button onclick="closeShop()" style="margin-top: 15px; width: 100%; cursor: pointer;">Exit Shop</button>
   </div>
+  <div id="menu-modal">
+    <div id="menu-content"></div>
+  </div>
   <canvas id="gameCanvas"></canvas>
 
   <script>
@@ -132,7 +137,7 @@
     };
 
     const playerStats = {
-      hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0, gold: 0
+      hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0, gold: 0, inventory: []
     };
     
     let currentEnemy = null;
@@ -197,19 +202,18 @@
       merchant.items.forEach(item => {
         const div = document.createElement('div');
         div.className = 'shop-item';
-        div.innerHTML = `<span>${item.name} (${item.price}G)</span><button onclick="buyItem('${item.type}', ${item.price}, ${item.value})">Buy</button>`;
+        div.innerHTML = `<span>${item.name} (${item.price}G)</span><button onclick="buyItem('${item.name}', '${item.type}', ${item.price}, ${item.value})">Buy</button>`;
         container.appendChild(div);
       });
       document.getElementById('shop').style.display = 'block';
       dialogActive = true;
     }
 
-    function buyItem(type, price, val) {
+    function buyItem(name, type, price, val) {
       if (playerStats.gold >= price) {
         playerStats.gold -= price;
-        if (type === 'hp') playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + val);
-        if (type === 'mp') playerStats.mp = Math.min(playerStats.maxMp, playerStats.mp + val);
-        document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+        playerStats.inventory.push({ name, type, val });
+        updateHud();
         openShop();
       } else {
         alert("Not enough gold!");
@@ -219,6 +223,56 @@
     function closeShop() {
       document.getElementById('shop').style.display = 'none';
       dialogActive = false;
+    }
+
+    function toggleMenu() {
+      if (gameState !== 'EXPLORE' || document.getElementById('shop').style.display === 'block') return;
+      const m = document.getElementById('menu-modal');
+      if (m.style.display === 'block') {
+        m.style.display = 'none';
+        dialogActive = false;
+      } else {
+        m.style.display = 'block';
+        showMainMenu();
+        dialogActive = true;
+      }
+    }
+
+    function showMainMenu() {
+      const content = document.getElementById('menu-content');
+      content.innerHTML = `
+        <h3 style="margin-top: 0;">Menu</h3>
+        <button class="menu-btn" onclick="showInventory()">Inventory</button>
+        <button class="menu-btn" onclick="toggleMenu()">Close</button>
+      `;
+    }
+
+    function showInventory() {
+      const content = document.getElementById('menu-content');
+      let html = `<h3 style="margin-top: 0;">Inventory</h3><div style="max-height: 200px; overflow-y: auto;">`;
+      if (playerStats.inventory.length === 0) {
+        html += `<p>Empty</p>`;
+      } else {
+        playerStats.inventory.forEach((item, idx) => {
+          html += `<div class="shop-item"><span>${item.name}</span><button onclick="useItem(${idx})">Use</button></div>`;
+        });
+      }
+      html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMainMenu()">Back</button>`;
+      content.innerHTML = html;
+    }
+
+    function useItem(idx) {
+      const item = playerStats.inventory[idx];
+      if (item.type === 'hp') {
+        if (playerStats.hp >= playerStats.maxHp) { alert("HP already full!"); return; }
+        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + item.val);
+      } else if (item.type === 'mp') {
+        if (playerStats.mp >= playerStats.maxMp) { alert("MP already full!"); return; }
+        playerStats.mp = Math.min(playerStats.maxMp, playerStats.mp + item.val);
+      }
+      playerStats.inventory.splice(idx, 1);
+      showInventory();
+      updateHud();
     }
 
     canvas.addEventListener('mousedown', (e) => {
@@ -275,9 +329,13 @@
       return { x: camX, y: camY };
     }
 
+    function updateHud() {
+      document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+    }
+
     function update() {
       if (dialogActive || gameState === 'BATTLE') return;
-      document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+      updateHud();
       const dx = player.targetX - player.x;
       const dy = player.targetY - player.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
