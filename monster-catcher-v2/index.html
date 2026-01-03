@@ -283,6 +283,7 @@
         <h3 style="margin-top: 0;">Menu</h3>
         <button class="menu-btn" onclick="showParty()">Party</button>
         <button class="menu-btn" onclick="showInventory()">Inventory</button>
+        <button class="menu-btn" onclick="saveGame()">Save Game</button>
         <button class="menu-btn" onclick="toggleMenu()">Close</button>
       `;
     }
@@ -418,6 +419,31 @@
       if (playerStats.party.length === 0) return;
       const hero = playerStats.party[0];
       document.getElementById('player-hud').innerText = `Lvl ${hero.lvl} | HP ${Math.ceil(hero.hp)}/${hero.maxHp} | Gold ${playerStats.gold} | Party: ${playerStats.party.length}`;
+    }
+
+    function saveGame() {
+      const saveData = {
+        playerStats: playerStats,
+        player: { x: player.x, y: player.y }
+      };
+      localStorage.setItem('monsterCatcherV2_Save', JSON.stringify(saveData));
+      alert("Game Saved!");
+      toggleMenu();
+    }
+
+    function loadGame() {
+      const saved = localStorage.getItem('monsterCatcherV2_Save');
+      if (!saved) return;
+      const data = JSON.parse(saved);
+      playerStats.party = data.playerStats.party;
+      playerStats.gold = data.playerStats.gold;
+      playerStats.inventory = data.playerStats.inventory;
+      player.x = data.player.x;
+      player.y = data.player.y;
+      player.targetX = data.player.x;
+      player.targetY = data.player.y;
+      document.getElementById('starter-screen').style.display = 'none';
+      updateHud();
     }
 
     function update() {
@@ -690,6 +716,17 @@
     function initStarterScreen() {
       const screen = document.getElementById('starter-screen');
       const container = screen.querySelector('.starter-cards');
+      const savedData = localStorage.getItem('monsterCatcherV2_Save');
+      if (savedData) {
+        const btn = document.createElement('button');
+        btn.className = 'menu-btn';
+        btn.style.width = '240px';
+        btn.style.marginBottom = '20px';
+        btn.style.pointerEvents = 'auto';
+        btn.innerText = 'Continue Last Save';
+        btn.onclick = loadGame;
+        screen.insertBefore(btn, container);
+      }
       STARTERS.forEach((s, i) => {
         const card = document.createElement('div');
         card.className = 'starter-card';
