@@ -678,10 +678,23 @@
             battleBusy = false;
             return;
           }
-          const captured = JSON.parse(JSON.stringify(currentEnemy));
-          playerStats.party.push(captured); item.count--; if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
+          const highestLvl = Math.max(...playerStats.party.map(p => p.lvl));
+          const hpRatio = currentEnemy.hp / currentEnemy.maxHp;
+          const levelRatio = highestLvl / currentEnemy.lvl;
+          const captureChance = 0.2 + (0.5 * (1 - hpRatio)) + (0.1 * Math.min(3, levelRatio));
+          
+          item.count--; 
+          if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
           if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
-          endBattle(`Captured ${captured.name}!`); return;
+
+          if (Math.random() < captureChance) {
+            const captured = JSON.parse(JSON.stringify(currentEnemy));
+            playerStats.party.push(captured);
+            endBattle(`Success! Captured ${captured.name}!`); 
+            return;
+          } else {
+            msg = `Oh no! The ${currentEnemy.name} broke free! `;
+          }
         } else if (item.type === 'hp') { actor.hp = Math.min(actor.maxHp, actor.hp + item.val); msg = `${actor.name} healed! `; }
         else if (item.type === 'mp') { actor.mp = Math.min(actor.maxMp, actor.mp + item.val); msg = `${actor.name} restored MP! `; }
         item.count--; if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
