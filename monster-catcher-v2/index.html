@@ -22,63 +22,54 @@
       cursor: pointer;
     }
     #ui {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: white;
-      font-family: monospace;
-      pointer-events: none;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
+      position: absolute; top: 0; left: 0; right: 0; color: white; font-family: monospace;
+      pointer-events: none; background: rgba(0,0,0,0.6); padding: 8px 12px; font-size: 11px;
+      display: flex; justify-content: space-between; align-items: center; z-index: 150;
     }
     #dialog {
-      display: none;
-      position: absolute;
-      bottom: 50px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      padding: 20px;
-      border: 4px solid #444;
-      font-family: monospace;
-      max-width: 80%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      z-index: 100;
+      display: none; position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+      background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
+      width: 90%; max-width: 400px; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 100;
     }
     #shop, #menu-modal {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
-      width: 280px; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 250;
+      width: 90%; max-width: 320px; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 250;
     }
-    .menu-btn { width: 100%; padding: 10px; margin: 5px 0; cursor: pointer; background: #eee; border: 1px solid #ccc; font-family: monospace; }
+    .menu-btn { width: 100%; padding: 12px; margin: 5px 0; cursor: pointer; background: #eee; border: 1px solid #ccc; font-family: monospace; font-size: 14px; }
     .menu-btn:hover { background: #ddd; }
     .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .shop-item button { cursor: pointer; padding: 5px 10px; background: #4caf50; color: white; border: none; }
+    .shop-item button { cursor: pointer; padding: 8px 12px; background: #4caf50; color: white; border: none; }
     #battle-screen {
-      display: none;
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #111;
-      color: white;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-family: monospace;
-      z-index: 200;
+      display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: #111; color: white; flex-direction: column; align-items: center; justify-content: center;
+      font-family: monospace; z-index: 200; padding: 15px; box-sizing: border-box;
     }
-    .battle-stats { display: flex; gap: 40px; margin-bottom: 30px; font-size: 1.4em; text-align: center; }
-    .battle-actions button {
-      padding: 15px 30px; font-size: 1.1em; cursor: pointer; margin: 10px; background: #444; color: white; border: 2px solid #888;
-    }
+    .battle-stats { display: flex; gap: 10px; margin-bottom: 20px; font-size: 0.9em; text-align: center; width: 100%; flex-wrap: wrap; justify-content: center; }
+    .battle-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; max-width: 400px; }
+    .battle-actions button { padding: 12px; font-size: 1em; cursor: pointer; background: #444; color: white; border: 2px solid #888; flex: 1 1 120px; }
     .battle-actions button:hover { background: #666; }
-    #battle-msg { font-size: 1.2em; margin-bottom: 20px; color: #ffeb3b; height: 1.5em; }
-    #flash-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: white; opacity: 0; pointer-events: none; z-index: 300;
-    }
+    #battle-msg { font-size: 1.1em; color: #ffeb3b; text-align: center; margin-bottom: 15px; height: 1.5em; }
+    #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 300; }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
-    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 120px; height: 12px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; } .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; } .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); } #starter-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-family: monospace; } .starter-cards { display: flex; gap: 20px; margin-top: 30px; } .starter-card { background: #333; border: 4px solid #555; padding: 20px; width: 180px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; } .starter-card:hover { transform: scale(1.05); border-color: #ffeb3b; } .starter-card h3 { margin: 10px 0; color: #ffeb3b; } .starter-card .stats { font-size: 0.8em; text-align: left; margin: 10px 0; line-height: 1.4; }
+    .dungeon-info { color: #ff66ff; font-weight: bold; }
+    .bar-container { width: 100px; height: 10px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; }
+    .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
+    .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; }
+    .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; }
+    .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); }
+    #starter-screen {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 500;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
+      font-family: monospace; overflow-y: auto; padding: 20px; box-sizing: border-box;
+    }
+    #starter-screen h1 { font-size: 1.5em; text-align: center; margin: 10px 0; }
+    .starter-cards { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; justify-content: center; width: 100%; }
+    .starter-card { background: #333; border: 4px solid #555; padding: 15px; width: 140px; text-align: center; cursor: pointer; transition: transform 0.2s, border-color 0.2s; }
+    .starter-card:hover { transform: scale(1.05); border-color: #ffeb3b; }
+    .starter-card h3 { margin: 8px 0; color: #ffeb3b; font-size: 1em; }
+    .starter-card .stats { font-size: 0.75em; text-align: left; margin: 8px 0; line-height: 1.3; }
   </style>
 </head>
 <body>
@@ -86,22 +77,27 @@
     <h1>Choose Your Starter Monster</h1>
     <div class="starter-cards"></div>
   </div>
-  <div id="ui">Click to move. <span class="dungeon-info">Purple zone = Dungeon (Battles!)</span> | <span id="player-hud"></span><button onclick="toggleMenu()" style="pointer-events: auto; margin-left: 10px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button></div>
+  <div id="ui">
+    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; margin-right: 10px;">
+      <span class="dungeon-info">Purple=Dungeon</span> | <span id="player-hud"></span>
+    </div>
+    <button onclick="toggleMenu()" style="pointer-events: auto; padding: 4px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button>
+  </div>
   <div id="flash-overlay"></div>
   <div id="battle-screen">
     <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
-      <div id="party-stats" style="flex: 1; text-align: left;"></div>
-      <div style="font-size: 1.5em; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
-        VS
+      <div id="party-stats" style="flex: 1 1 120px; text-align: left;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1 1 80px;">
+        <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; width: 70px; height: 70px; margin-bottom: 5px;"></canvas>
+        <div style="font-weight: bold; font-size: 1.1em;">VS</div>
       </div>
-      <div style="flex: 1; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div><span id="e-mp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-mp-bar" class="bar-fill mp-fill"></div></div></div>
+      <div style="flex: 1 1 120px; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container" style="margin: 4px 0 4px auto;"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div><span id="e-mp" style="font-size: 0.8em;"></span><div class="bar-container" style="margin: 4px 0 4px auto;"><div id="e-mp-bar" class="bar-fill mp-fill"></div></div></div>
     </div>
+    <div id="acting-name" style="color: #4caf50; font-weight: bold; margin-bottom: 10px; text-align: center; font-size: 0.9em;"></div>
     <div class="battle-actions">
-      <div id="acting-name" style="color: #4caf50; font-weight: bold; margin-bottom: 10px;"></div>
       <button onclick="battleAction('attack')">Attack</button>
-      <button onclick="battleAction('skill')">Skill (5MP)</button>
+      <button onclick="battleAction('skill')">Skill</button>
       <button onclick="openBattleBag()">Bag</button>
       <button onclick="battleAction('flee')">Flee</button>
     </div>
@@ -418,7 +414,7 @@
     function updateHud() {
       if (playerStats.party.length === 0) return;
       const hero = playerStats.party[0];
-      document.getElementById('player-hud').innerText = `Lvl ${hero.lvl} | HP ${Math.ceil(hero.hp)}/${hero.maxHp} | Gold ${playerStats.gold} | Party: ${playerStats.party.length}`;
+      document.getElementById('player-hud').innerText = `L:${hero.lvl} HP:${Math.ceil(hero.hp)} G:${playerStats.gold} P:${playerStats.party.length}`;
     }
 
     function saveGame() {
@@ -731,7 +727,7 @@
         const card = document.createElement('div');
         card.className = 'starter-card';
         card.onclick = () => selectStarter(i);
-        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100"></canvas><h3>${s.name}</h3><div class="stats">HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
+        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100" style="width:80px; height:80px;"></canvas><h3>${s.name}</h3><div class="stats">HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
         container.appendChild(card);
         drawMonsterIcon(document.getElementById(`starter-canvas-${i}`).getContext('2d'), s.name);
       });
