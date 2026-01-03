@@ -69,7 +69,7 @@
     }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
-    .dungeon-info { color: #ff66ff; font-weight: bold; }
+    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 150px; height: 15px; background: #333; border: 2px solid #555; margin: 5px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; }
   </style>
 </head>
 <body>
@@ -78,12 +78,12 @@
   <div id="battle-screen">
     <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
-      <div>PLAYER<br><span id="p-hp"></span><br><span id="p-mp"></span></div>
+      <div>PLAYER<br><span id="p-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="p-hp-bar" class="bar-fill hp-fill"></div></div><span id="p-mp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="p-mp-bar" class="bar-fill mp-fill"></div></div></div>
       <div style="font-size: 2em; display: flex; flex-direction: column; align-items: center;">
         <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
         VS
       </div>
-      <div>ENEMY<br><span id="e-name"></span><br><span id="e-hp"></span></div>
+      <div>ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div></div>
     </div>
     <div class="battle-actions">
       <button onclick="battleAction('attack')">Attack</button>
@@ -350,8 +350,11 @@
     function updateBattleUI(msg) {
       document.getElementById('p-hp').innerText = `HP: ${playerStats.hp}/${playerStats.maxHp}`;
       document.getElementById('p-mp').innerText = `MP: ${playerStats.mp}/${playerStats.maxMp}`;
+      document.getElementById('p-hp-bar').style.width = (playerStats.hp / playerStats.maxHp * 100) + '%';
+      document.getElementById('p-mp-bar').style.width = (playerStats.mp / playerStats.maxMp * 100) + '%';
       document.getElementById('e-name').innerText = `Lvl ${currentEnemy.level} ${currentEnemy.name}`;
       document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+      document.getElementById('e-hp-bar').style.width = (currentEnemy.hp / currentEnemy.maxHp * 100) + '%';
       if (msg) document.getElementById('battle-msg').innerText = msg;
       drawMonster(currentEnemy.name);
     }
@@ -400,13 +403,13 @@
       let msg = "";
       if (type === 'attack') {
         const dmg = playerStats.atk + Math.floor(Math.random() * 5);
-        currentEnemy.hp -= dmg;
+        currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
         msg = `You hit for ${dmg}! `;
       } else if (type === 'skill') {
         if (playerStats.mp >= 5) {
           playerStats.mp -= 5;
           const dmg = playerStats.atk * 2;
-          currentEnemy.hp -= dmg;
+          currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
           msg = `Fireball hit for ${dmg}! `;
         } else {
           updateBattleUI("Not enough MP!");
@@ -425,7 +428,7 @@
       } else {
         setTimeout(() => {
           const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 5));
-          playerStats.hp -= eDmg;
+          playerStats.hp = Math.max(0, playerStats.hp - eDmg);
           updateBattleUI(msg + `${currentEnemy.name} attacks for ${eDmg}!`);
           if (playerStats.hp <= 0) { alert("You perished."); location.reload(); }
           battleBusy = false;
