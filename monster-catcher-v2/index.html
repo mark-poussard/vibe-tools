@@ -45,20 +45,21 @@
       background: #111; color: white; flex-direction: column; align-items: center; justify-content: center;
       font-family: monospace; z-index: 200; padding: 15px; box-sizing: border-box;
     }
-    .battle-stats { display: flex; gap: 10px; margin-bottom: 20px; font-size: 0.9em; text-align: center; width: 100%; flex-wrap: wrap; justify-content: center; }
-    .battle-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; max-width: 400px; }
+    .battle-stats { display: flex; gap: 10px; margin-bottom: 10px; font-size: 0.9em; width: 100%; flex: 1; min-height: 0; overflow-y: auto; }
+    .battle-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; width: 100%; max-width: 400px; margin-top: auto; }
     .battle-actions button { padding: 12px; font-size: 1em; cursor: pointer; background: #444; color: white; border: 2px solid #888; flex: 1 1 120px; }
     .battle-actions button:hover { background: #666; }
-    #battle-msg { font-size: 1.1em; color: #ffeb3b; text-align: center; margin-bottom: 15px; height: 1.5em; }
+    #battle-msg { font-size: 1.1em; color: #ffeb3b; text-align: center; margin-bottom: 15px; min-height: 1.5em; }
     #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 300; }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
     .dungeon-info { color: #ff66ff; font-weight: bold; }
-    .bar-container { width: 100px; height: 10px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; }
+    .bar-container { width: 80px; height: 6px; background: #333; border: 1px solid #555; margin: 4px 0; position: relative; }
     .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; }
     .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; }
-    .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; }
+    .battle-card { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px; font-size: 0.75em; border: 2px solid transparent; background: rgba(255,255,255,0.05); border-radius: 4px; width: 100%; box-sizing: border-box; }
     .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); }
+    .battle-card-canvas { background: #222; border: 1px solid #444; border-radius: 50%; width: 50px; height: 50px; flex-shrink: 0; }
     #starter-screen {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #222; z-index: 500;
       display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
@@ -87,14 +88,16 @@
   <div id="battle-screen">
     <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
-      <div id="party-stats" style="flex: 1 1 120px; text-align: left;"></div>
-      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1 1 80px;">
-        <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; width: 70px; height: 70px; margin-bottom: 5px;"></canvas>
-        <div style="font-weight: bold; font-size: 1.1em;">VS</div>
+      <div style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid #333; padding-right: 8px; min-width: 0;">
+        <div style="font-weight: bold; border-bottom: 1px solid #555; margin-bottom: 5px; font-size: 0.8em;">PARTY</div>
+        <div id="party-list"></div>
       </div>
-      <div style="flex: 1 1 120px; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container" style="margin: 4px 0 4px auto;"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div><span id="e-mp" style="font-size: 0.8em;"></span><div class="bar-container" style="margin: 4px 0 4px auto;"><div id="e-mp-bar" class="bar-fill mp-fill"></div></div></div>
+      <div style="flex: 1; display: flex; flex-direction: column; padding-left: 8px; align-items: flex-end; min-width: 0;">
+        <div style="font-weight: bold; border-bottom: 1px solid #555; margin-bottom: 5px; width: 100%; text-align: right; font-size: 0.8em;">ENEMIES</div>
+        <div id="enemy-list"></div>
+      </div>
     </div>
-    <div id="acting-name" style="color: #4caf50; font-weight: bold; margin-bottom: 10px; text-align: center; font-size: 0.9em;"></div>
+    <div id="acting-name" style="color: #4caf50; font-weight: bold; margin: 8px 0; text-align: center; font-size: 0.9em;"></div>
     <div class="battle-actions">
       <button onclick="battleAction('attack')">Attack</button>
       <button onclick="battleAction('skill')">Skill</button>
@@ -569,22 +572,27 @@
     }
 
     function updateBattleUI(msg) {
-      const partyContainer = document.getElementById('party-stats');
-      partyContainer.innerHTML = 'PARTY<br>';
+      const partyList = document.getElementById('party-list');
+      const enemyList = document.getElementById('enemy-list');
+      if (!partyList || !enemyList) return;
+      partyList.innerHTML = ''; enemyList.innerHTML = '';
       playerStats.party.forEach((p, i) => {
         const div = document.createElement('div');
-        div.className = 'party-row' + (i === currentActorIndex ? ' active-actor' : '');
-        div.innerHTML = `<div>${p.name}<br>HP:${Math.ceil(p.hp)} MP:${Math.ceil(p.mp)}</div><div style="display:flex;flex-direction:column;gap:2px;"><div class="bar-container" style="width:60px;height:6px;margin:0;"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div><div class="bar-container" style="width:60px;height:6px;margin:0;"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div></div></div>`;
-        partyContainer.appendChild(div);
+        div.className = 'battle-card' + (i === currentActorIndex ? ' active-actor' : '');
+        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.8em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div></div></div>`;
+        partyList.appendChild(div);
+        drawMonsterIcon(document.getElementById(`p-canv-${i}`).getContext('2d'), p.name);
       });
+      if (currentEnemy) {
+        const div = document.createElement('div');
+        div.className = 'battle-card';
+        div.style.flexDirection = 'row-reverse'; div.style.textAlign = 'right';
+        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.8em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div></div></div>`;
+        enemyList.appendChild(div);
+        drawMonsterIcon(document.getElementById('e-canv').getContext('2d'), currentEnemy.name);
+      }
       document.getElementById('acting-name').innerText = playerStats.party[currentActorIndex] ? `Turn: ${playerStats.party[currentActorIndex].name}` : "";
-      document.getElementById('e-name').innerText = `Lvl ${currentEnemy.lvl} ${currentEnemy.name}`;
-      document.getElementById('e-hp').innerText = `HP: ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}`;
-      document.getElementById('e-hp-bar').style.width = (currentEnemy.hp / currentEnemy.maxHp * 100) + '%';
-      document.getElementById('e-mp').innerText = `MP: ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}`;
-      document.getElementById('e-mp-bar').style.width = (currentEnemy.mp / currentEnemy.maxMp * 100) + '%';
       if (msg) document.getElementById('battle-msg').innerText = msg;
-      drawMonster(currentEnemy.name);
     }
 
     function drawMonsterIcon(mCtx, name) {
@@ -623,11 +631,7 @@
       }
       mCtx.restore();
     }
-    function drawMonster(name) {
-      const mCanvas = document.getElementById('monster-canvas');
-      if (!mCanvas) return;
-      drawMonsterIcon(mCanvas.getContext('2d'), name);
-    }
+    // drawMonster removed, illustrations handled in updateBattleUI
 
     function battleAction(type, itemIdx = null) {
       if (battleBusy || gameState !== 'BATTLE') return;
