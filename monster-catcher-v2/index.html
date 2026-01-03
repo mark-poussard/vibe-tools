@@ -45,6 +45,13 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.5);
       z-index: 100;
     }
+    #shop {
+      display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
+      width: 250px; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 150;
+    }
+    .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+    .shop-item button { cursor: pointer; padding: 5px 10px; background: #4caf50; color: white; border: none; }
     #battle-screen {
       display: none;
       position: absolute;
@@ -95,6 +102,11 @@
     <div id="dialogText"></div>
     <div style="margin-top: 10px; font-size: 0.8em; color: #666; text-align: right;">Click anywhere to close</div>
   </div>
+  <div id="shop">
+    <h3 style="margin: 0 0 10px 0;">Village Shop</h3>
+    <div id="shop-items"></div>
+    <button onclick="closeShop()" style="margin-top: 15px; width: 100%; cursor: pointer;">Exit Shop</button>
+  </div>
   <canvas id="gameCanvas"></canvas>
 
   <script>
@@ -127,11 +139,17 @@
     let battleBusy = false;
 
     const npc = {
-      tileX: 16,
-      tileY: 15,
+      tileX: 16, tileY: 15,
       dialog: "Hello fellow adventurer, how is your quest going ?"
     };
-    let isInteractingWithNpc = false;
+    const merchant = {
+      tileX: 14, tileY: 15,
+      items: [
+        { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
+        { name: 'Mana Potion', price: 15, type: 'mp', value: 10 }
+      ]
+    };
+    let activeInteractionTarget = null;
     let dialogActive = false;
 
     const map = [];
@@ -169,39 +187,73 @@
 
     function hideDialog() {
       document.getElementById('dialog').style.display = 'none';
+      document.getElementById('shop').style.display = 'none';
+      dialogActive = false;
+    }
+
+    function openShop() {
+      const container = document.getElementById('shop-items');
+      container.innerHTML = '';
+      merchant.items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'shop-item';
+        div.innerHTML = `<span>${item.name} (${item.price}G)</span><button onclick="buyItem('${item.type}', ${item.price}, ${item.value})">Buy</button>`;
+        container.appendChild(div);
+      });
+      document.getElementById('shop').style.display = 'block';
+      dialogActive = true;
+    }
+
+    function buyItem(type, price, val) {
+      if (playerStats.gold >= price) {
+        playerStats.gold -= price;
+        if (type === 'hp') playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + val);
+        if (type === 'mp') playerStats.mp = Math.min(playerStats.maxMp, playerStats.mp + val);
+        document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+        openShop();
+      } else {
+        alert("Not enough gold!");
+      }
+    }
+
+    function closeShop() {
+      document.getElementById('shop').style.display = 'none';
       dialogActive = false;
     }
 
     canvas.addEventListener('mousedown', (e) => {
       if (dialogActive || gameState === 'BATTLE') {
-        if (dialogActive) hideDialog();
+        if (dialogActive && document.getElementById('dialog').style.display === 'block') hideDialog();
         return;
       }
       const rect = canvas.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
-      
       const cam = getCameraOffset();
       const worldX = screenX + cam.x;
       const worldY = screenY + cam.y;
-      
       const targetTileX = Math.floor(worldX / TILE_SIZE);
       const targetTileY = Math.floor(worldY / TILE_SIZE);
 
-      if (targetTileX === npc.tileX && targetTileY === npc.tileY) {
-        const dx = targetTileX - player.x / TILE_SIZE;
-        const dy = targetTileY - player.y / TILE_SIZE;
-        let adjX = npc.tileX;
-        let adjY = npc.tileY;
+      let clicked = null;
+      if (targetTileX === npc.tileX && targetTileY === npc.tileY) clicked = 'npc';
+      if (targetTileX === merchant.tileX && targetTileY === merchant.tileY) clicked = 'merchant';
+
+      if (clicked) {
+        const tx = clicked === 'npc' ? npc.tileX : merchant.tileX;
+        const ty = clicked === 'npc' ? npc.tileY : merchant.tileY;
+        const dx = tx - player.x / TILE_SIZE;
+        const dy = ty - player.y / TILE_SIZE;
+        let adjX = tx; let adjY = ty;
         if (Math.abs(dx) > Math.abs(dy)) adjX -= Math.sign(dx) || 1;
         else adjY -= Math.sign(dy) || 1;
         player.targetX = adjX * TILE_SIZE + TILE_SIZE / 2;
         player.targetY = adjY * TILE_SIZE + TILE_SIZE / 2;
-        isInteractingWithNpc = true;
+        activeInteractionTarget = clicked;
       } else {
         player.targetX = targetTileX * TILE_SIZE + TILE_SIZE / 2;
         player.targetY = targetTileY * TILE_SIZE + TILE_SIZE / 2;
-        isInteractingWithNpc = false;
+        activeInteractionTarget = null;
       }
     });
 
@@ -244,10 +296,12 @@
       } else {
         player.x = player.targetX;
         player.y = player.targetY;
-        if (isInteractingWithNpc) {
+        if (activeInteractionTarget === 'npc') {
           showDialog(npc.dialog);
-          isInteractingWithNpc = false;
+        } else if (activeInteractionTarget === 'merchant') {
+          openShop();
         }
+        activeInteractionTarget = null;
         player.isWalking = false;
       }
     }
@@ -274,21 +328,19 @@
         }
       }
 
-      // Draw NPC
-      const npcX = npc.tileX * TILE_SIZE + TILE_SIZE / 2;
-      const npcY = npc.tileY * TILE_SIZE + TILE_SIZE / 2;
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(npcX, npcY + 15, 15, 8, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#4444ff';
-      ctx.beginPath();
-      ctx.roundRect(npcX - 15, npcY - 45, 30, 45, 10);
-      ctx.fill();
-      ctx.fillStyle = '#ffdbac';
-      ctx.beginPath();
-      ctx.arc(npcX, npcY - 50, 12, 0, Math.PI * 2);
-      ctx.fill();
+      // Draw NPCs
+      const drawNpc = (tx, ty, color) => {
+        const nx = tx * TILE_SIZE + TILE_SIZE / 2;
+        const ny = ty * TILE_SIZE + TILE_SIZE / 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.ellipse(nx, ny + 15, 15, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.roundRect(nx - 15, ny - 45, 30, 45, 10); ctx.fill();
+        ctx.fillStyle = '#ffdbac';
+        ctx.beginPath(); ctx.arc(nx, ny - 50, 12, 0, Math.PI * 2); ctx.fill();
+      };
+      drawNpc(npc.tileX, npc.tileY, '#4444ff');
+      drawNpc(merchant.tileX, merchant.tileY, '#f1c40f');
 
       // Draw Player Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
