@@ -96,7 +96,7 @@
         <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
         VS
       </div>
-      <div style="flex: 1; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div></div>
+      <div style="flex: 1; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div><span id="e-mp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-mp-bar" class="bar-fill mp-fill"></div></div></div>
     </div>
     <div class="battle-actions">
       <div id="acting-name" style="color: #4caf50; font-weight: bold; margin-bottom: 10px;"></div>
@@ -552,13 +552,15 @@
       playerStats.party.forEach((p, i) => {
         const div = document.createElement('div');
         div.className = 'party-row' + (i === currentActorIndex ? ' active-actor' : '');
-        div.innerHTML = `<div>${p.name}<br>HP:${Math.ceil(p.hp)}/${p.maxHp}</div><div class="bar-container" style="width:60px;"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div>`;
+        div.innerHTML = `<div>${p.name}<br>HP:${Math.ceil(p.hp)} MP:${Math.ceil(p.mp)}</div><div style="display:flex;flex-direction:column;gap:2px;"><div class="bar-container" style="width:60px;height:6px;margin:0;"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div><div class="bar-container" style="width:60px;height:6px;margin:0;"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div></div></div>`;
         partyContainer.appendChild(div);
       });
       document.getElementById('acting-name').innerText = playerStats.party[currentActorIndex] ? `Turn: ${playerStats.party[currentActorIndex].name}` : "";
       document.getElementById('e-name').innerText = `Lvl ${currentEnemy.lvl} ${currentEnemy.name}`;
       document.getElementById('e-hp').innerText = `HP: ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}`;
       document.getElementById('e-hp-bar').style.width = (currentEnemy.hp / currentEnemy.maxHp * 100) + '%';
+      document.getElementById('e-mp').innerText = `MP: ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}`;
+      document.getElementById('e-mp-bar').style.width = (currentEnemy.mp / currentEnemy.maxMp * 100) + '%';
       if (msg) document.getElementById('battle-msg').innerText = msg;
       drawMonster(currentEnemy.name);
     }
