@@ -79,7 +79,10 @@
     <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
       <div>PLAYER<br><span id="p-hp"></span><br><span id="p-mp"></span></div>
-      <div style="font-size: 2em;">VS</div>
+      <div style="font-size: 2em; display: flex; flex-direction: column; align-items: center;">
+        <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
+        VS
+      </div>
       <div>ENEMY<br><span id="e-name"></span><br><span id="e-hp"></span></div>
     </div>
     <div class="battle-actions">
@@ -350,6 +353,45 @@
       document.getElementById('e-name').innerText = currentEnemy.name;
       document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
       if (msg) document.getElementById('battle-msg').innerText = msg;
+      drawMonster(currentEnemy.name);
+    }
+
+    function drawMonster(name) {
+      const mCanvas = document.getElementById('monster-canvas');
+      const mCtx = mCanvas.getContext('2d');
+      mCtx.clearRect(0, 0, 100, 100);
+      mCtx.save();
+      mCtx.translate(50, 75);
+      if (name === 'Slime') {
+        mCtx.fillStyle = '#4ade80';
+        mCtx.beginPath(); mCtx.arc(0, 0, 30, Math.PI, 0); mCtx.ellipse(0, 0, 30, 15, 0, 0, Math.PI); mCtx.fill();
+        mCtx.fillStyle = 'white';
+        mCtx.beginPath(); mCtx.arc(-10, -10, 4, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(10, -10, 4, 0, Math.PI*2); mCtx.fill();
+      } else if (name === 'Skeleton') {
+        mCtx.fillStyle = '#f3f4f6';
+        mCtx.fillRect(-12, -35, 24, 35);
+        mCtx.beginPath(); mCtx.arc(0, -45, 15, 0, Math.PI*2); mCtx.fill();
+        mCtx.fillStyle = '#111';
+        mCtx.beginPath(); mCtx.arc(-6, -48, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(6, -48, 3, 0, Math.PI*2); mCtx.fill();
+      } else if (name === 'Gorgon') {
+        mCtx.fillStyle = '#166534';
+        mCtx.beginPath(); mCtx.arc(0, -25, 20, 0, Math.PI*2); mCtx.fill();
+        mCtx.strokeStyle = '#15803d'; mCtx.lineWidth = 4;
+        for(let i=0; i<8; i++) {
+          mCtx.beginPath(); mCtx.moveTo(0, -35);
+          mCtx.quadraticCurveTo(Math.sin(i)*50, -60, Math.sin(i)*40, -40);
+          mCtx.stroke();
+        }
+      } else if (name === 'Shadow') {
+        mCtx.fillStyle = 'rgba(0,0,0,0.8)';
+        mCtx.beginPath(); mCtx.moveTo(-25, 0); mCtx.quadraticCurveTo(0, -90, 25, 0); mCtx.fill();
+        mCtx.fillStyle = '#ef4444';
+        mCtx.beginPath(); mCtx.arc(-8, -45, 3, 0, Math.PI*2); mCtx.fill();
+        mCtx.beginPath(); mCtx.arc(8, -45, 3, 0, Math.PI*2); mCtx.fill();
+      }
+      mCtx.restore();
     }
 
     function battleAction(type) {
