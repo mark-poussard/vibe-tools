@@ -320,8 +320,21 @@
           • Basic Attack<br>
           • ${p.skill ? p.skill.name : 'Power Strike'} (${p.skill ? p.skill.cost : 5} MP)
         </div>
-        <button class="menu-btn" style="margin-top: 15px;" onclick="showParty()">Back</button>
+        <button class="menu-btn" style="margin-top: 15px; color: #e74c3c;" onclick="releaseMonster(${idx})">Release Monster</button>
+        <button class="menu-btn" onclick="showParty()">Back</button>
       `;
+    }
+
+    function releaseMonster(idx) {
+      if (playerStats.party.length <= 1) {
+        alert("You cannot release your only monster!");
+        return;
+      }
+      if (confirm(`Release ${playerStats.party[idx].name}? It will be gone forever.`)) {
+        playerStats.party.splice(idx, 1);
+        showParty();
+        updateHud();
+      }
     }
 
     function openBattleBag() {
@@ -659,6 +672,12 @@
       } else if (type === 'item') {
         const item = playerStats.inventory[itemIdx];
         if (item.type === 'capture') {
+          if (playerStats.party.length >= 4) {
+            alert("Party is full! (Max 4)");
+            if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
+            battleBusy = false;
+            return;
+          }
           const captured = JSON.parse(JSON.stringify(currentEnemy));
           playerStats.party.push(captured); item.count--; if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
           if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
