@@ -78,7 +78,7 @@
     }
     @keyframes flash-anim { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
     .flashing { animation: flash-anim 0.5s ease-out; }
-    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 150px; height: 15px; background: #333; border: 2px solid #555; margin: 5px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; }
+    .dungeon-info { color: #ff66ff; font-weight: bold; } .bar-container { width: 120px; height: 12px; background: #333; border: 2px solid #555; margin: 4px auto; position: relative; } .bar-fill { height: 100%; width: 100%; transition: width 0.3s ease; } .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; } .party-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; padding: 4px; font-size: 0.75em; border: 1px solid transparent; } .active-actor { border-color: #ffeb3b; background: rgba(255,235,59,0.1); }
   </style>
 </head>
 <body>
@@ -87,16 +87,18 @@
   <div id="battle-screen">
     <div id="battle-msg">A wild monster appears!</div>
     <div class="battle-stats">
-      <div>PLAYER<br><span id="p-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="p-hp-bar" class="bar-fill hp-fill"></div></div><span id="p-mp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="p-mp-bar" class="bar-fill mp-fill"></div></div></div>
-      <div style="font-size: 2em; display: flex; flex-direction: column; align-items: center;">
+      <div id="party-stats" style="flex: 1; text-align: left;"></div>
+      <div style="font-size: 1.5em; display: flex; flex-direction: column; align-items: center; justify-content: center;">
         <canvas id="monster-canvas" width="100" height="100" style="background: #222; border: 2px solid #555; border-radius: 50%; margin-bottom: 10px;"></canvas>
         VS
       </div>
-      <div>ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div></div>
+      <div style="flex: 1; text-align: right;">ENEMY<br><span id="e-name" style="font-size: 0.8em;"></span><br><span id="e-hp" style="font-size: 0.8em;"></span><div class="bar-container"><div id="e-hp-bar" class="bar-fill hp-fill"></div></div></div>
     </div>
     <div class="battle-actions">
+      <div id="acting-name" style="color: #4caf50; font-weight: bold; margin-bottom: 10px;"></div>
       <button onclick="battleAction('attack')">Attack</button>
-      <button onclick="battleAction('skill')">Fireball (5MP)</button>
+      <button onclick="battleAction('skill')">Skill (5MP)</button>
+      <button onclick="openBattleBag()">Bag</button>
       <button onclick="battleAction('flee')">Flee</button>
     </div>
   </div>
@@ -137,8 +139,10 @@
     };
 
     const playerStats = {
-      hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0, gold: 0, inventory: []
+      party: [{ name: 'Hero', hp: 100, maxHp: 100, mp: 20, maxMp: 20, atk: 10, lvl: 1, xp: 0 }],
+      gold: 0, inventory: []
     };
+    let currentActorIndex = 0;
     
     let currentEnemy = null;
     let battleBusy = false;
@@ -151,7 +155,8 @@
       tileX: 14, tileY: 15,
       items: [
         { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
-        { name: 'Mana Potion', price: 15, type: 'mp', value: 10 }
+        { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
+        { name: 'Monster Ball', price: 50, type: 'capture' }
       ]
     };
     let activeInteractionTarget = null;
@@ -252,32 +257,40 @@
       `;
     }
 
-    function showInventory() {
+    function openBattleBag() {
+      showInventory(true);
+      document.getElementById('menu-modal').style.display = 'block';
+      dialogActive = true;
+    }
+
+    function showInventory(isBattle = false) {
       const content = document.getElementById('menu-content');
       let html = `<h3 style="margin-top: 0;">Inventory</h3><div style="max-height: 200px; overflow-y: auto;">`;
       if (playerStats.inventory.length === 0) {
         html += `<p>Empty</p>`;
       } else {
         playerStats.inventory.forEach((item, idx) => {
-          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span><button onclick="useItem(${idx})">Use</button></div>`;
+          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span><button onclick="useItem(${idx}, ${isBattle})">Use</button></div>`;
         });
       }
-      html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMainMenu()">Back</button>`;
+      html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="${isBattle ? 'toggleMenu()' : 'showMainMenu()'}">Back</button>`;
       content.innerHTML = html;
     }
 
-    function useItem(idx) {
+    function useItem(idx, isBattle = false) {
+      if (isBattle) { battleAction('item', idx); return; }
       const item = playerStats.inventory[idx];
+      const hero = playerStats.party[0];
       if (item.type === 'hp') {
-        if (playerStats.hp >= playerStats.maxHp) { alert("HP already full!"); return; }
-        playerStats.hp = Math.min(playerStats.maxHp, playerStats.hp + item.val);
+        if (hero.hp >= hero.maxHp) { alert("HP already full!"); return; }
+        hero.hp = Math.min(hero.maxHp, hero.hp + item.val);
       } else if (item.type === 'mp') {
-        if (playerStats.mp >= playerStats.maxMp) { alert("MP already full!"); return; }
-        playerStats.mp = Math.min(playerStats.maxMp, playerStats.mp + item.val);
-      }
+        if (hero.mp >= hero.maxMp) { alert("MP already full!"); return; }
+        hero.mp = Math.min(hero.maxMp, hero.mp + item.val);
+      } else { alert("Cannot use this now!"); return; }
       item.count--;
       if (item.count <= 0) playerStats.inventory.splice(idx, 1);
-      showInventory();
+      showInventory(false);
       updateHud();
     }
 
@@ -336,7 +349,8 @@
     }
 
     function updateHud() {
-      document.getElementById('player-hud').innerText = `Lvl ${playerStats.lvl} | HP ${playerStats.hp}/${playerStats.maxHp} | Gold ${playerStats.gold}`;
+      const hero = playerStats.party[0];
+      document.getElementById('player-hud').innerText = `Lvl ${hero.lvl} | HP ${hero.hp}/${hero.maxHp} | Gold ${playerStats.gold} | Party: ${playerStats.party.length}`;
     }
 
     function update() {
@@ -446,9 +460,7 @@
     }
 
     function startBattle(zone) {
-      player.isWalking = false;
-      player.targetX = player.x;
-      player.targetY = player.y;
+      player.isWalking = false; player.targetX = player.x; player.targetY = player.y;
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
@@ -457,19 +469,27 @@
       currentEnemy = {
         name: ["Gorgon", "Skeleton", "Slime", "Shadow"][Math.floor(Math.random() * 4)],
         level: level,
-        hp: 15 + level * 12, maxHp: 15 + level * 12, atk: 4 + level * 3, xp: 15 + level * 10, gold: 10 + level * 8
+        hp: 15 + level * 12, maxHp: 15 + level * 12, atk: 4 + level * 3, xp: 15 + level * 10, gold: 10 + level * 8,
+        mp: 10 + level * 2, maxMp: 10 + level * 2, lvl: level
       };
+      currentActorIndex = 0;
+      while (playerStats.party[currentActorIndex] && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
       document.getElementById('battle-screen').style.display = 'flex';
       updateBattleUI(`A wild Lvl ${currentEnemy.level} ${currentEnemy.name} appeared!`);
     }
 
     function updateBattleUI(msg) {
-      document.getElementById('p-hp').innerText = `HP: ${playerStats.hp}/${playerStats.maxHp}`;
-      document.getElementById('p-mp').innerText = `MP: ${playerStats.mp}/${playerStats.maxMp}`;
-      document.getElementById('p-hp-bar').style.width = (playerStats.hp / playerStats.maxHp * 100) + '%';
-      document.getElementById('p-mp-bar').style.width = (playerStats.mp / playerStats.maxMp * 100) + '%';
+      const partyContainer = document.getElementById('party-stats');
+      partyContainer.innerHTML = 'PARTY<br>';
+      playerStats.party.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'party-row' + (i === currentActorIndex ? ' active-actor' : '');
+        div.innerHTML = `<div>${p.name}<br>HP:${Math.ceil(p.hp)}/${p.maxHp}</div><div class="bar-container" style="width:60px;"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div></div>`;
+        partyContainer.appendChild(div);
+      });
+      document.getElementById('acting-name').innerText = playerStats.party[currentActorIndex] ? `Turn: ${playerStats.party[currentActorIndex].name}` : "";
       document.getElementById('e-name').innerText = `Lvl ${currentEnemy.level} ${currentEnemy.name}`;
-      document.getElementById('e-hp').innerText = `HP: ${currentEnemy.hp}/${currentEnemy.maxHp}`;
+      document.getElementById('e-hp').innerText = `HP: ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}`;
       document.getElementById('e-hp-bar').style.width = (currentEnemy.hp / currentEnemy.maxHp * 100) + '%';
       if (msg) document.getElementById('battle-msg').innerText = msg;
       drawMonster(currentEnemy.name);
@@ -513,53 +533,71 @@
       mCtx.restore();
     }
 
-    function battleAction(type) {
+    function battleAction(type, itemIdx = null) {
       if (battleBusy || gameState !== 'BATTLE') return;
       battleBusy = true;
+      const actor = playerStats.party[currentActorIndex];
       let msg = "";
+
       if (type === 'attack') {
-        const dmg = playerStats.atk + Math.floor(Math.random() * 5);
+        const dmg = actor.atk + Math.floor(Math.random() * 5);
         currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-        msg = `You hit for ${dmg}! `;
+        msg = `${actor.name} hit for ${dmg}! `;
       } else if (type === 'skill') {
-        if (playerStats.mp >= 5) {
-          playerStats.mp -= 5;
-          const dmg = playerStats.atk * 2;
-          currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-          msg = `Fireball hit for ${dmg}! `;
-        } else {
-          updateBattleUI("Not enough MP!");
-          battleBusy = false;
-          return;
-        }
+        if (actor.mp >= 5) {
+          actor.mp -= 5; const dmg = actor.atk * 2; currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+          msg = `${actor.name} used Fireball for ${dmg}! `;
+        } else { alert("Not enough MP!"); battleBusy = false; return; }
       } else if (type === 'flee') {
         if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
         msg = "Flee failed! ";
+      } else if (type === 'item') {
+        const item = playerStats.inventory[itemIdx];
+        if (item.type === 'capture') {
+          const captured = JSON.parse(JSON.stringify(currentEnemy));
+          playerStats.party.push(captured); item.count--; if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
+          if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
+          endBattle(`Captured ${captured.name}!`); return;
+        } else if (item.type === 'hp') { actor.hp = Math.min(actor.maxHp, actor.hp + item.val); msg = `${actor.name} healed! `; }
+        else if (item.type === 'mp') { actor.mp = Math.min(actor.maxMp, actor.mp + item.val); msg = `${actor.name} restored MP! `; }
+        item.count--; if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
+        if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
       }
+
       updateBattleUI(msg);
       if (currentEnemy.hp <= 0) {
-        playerStats.gold += currentEnemy.gold;
-        gainXp(currentEnemy.xp);
+        playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.xp);
         endBattle(`Victorious! Gained ${currentEnemy.xp}XP & ${currentEnemy.gold}G.`);
       } else {
         setTimeout(() => {
-          const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 5));
-          playerStats.hp = Math.max(0, playerStats.hp - eDmg);
-          updateBattleUI(msg + `${currentEnemy.name} attacks for ${eDmg}!`);
-          if (playerStats.hp <= 0) { alert("You perished."); location.reload(); }
-          battleBusy = false;
-        }, 700);
+          currentActorIndex++;
+          while (currentActorIndex < playerStats.party.length && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
+          if (currentActorIndex >= playerStats.party.length) {
+            const targets = playerStats.party.filter(p => p.hp > 0);
+            const target = targets[Math.floor(Math.random() * targets.length)];
+            const eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 3));
+            target.hp = Math.max(0, target.hp - eDmg);
+            updateBattleUI(`${msg}${currentEnemy.name} hits ${target.name} for ${eDmg}!`);
+            if (playerStats.party.every(p => p.hp <= 0)) { alert("The party has fallen..."); location.reload(); }
+            setTimeout(() => {
+              currentActorIndex = 0; while (playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
+              battleBusy = false; updateBattleUI();
+            }, 800);
+          } else { battleBusy = false; updateBattleUI(); }
+        }, 600);
       }
     }
 
     function gainXp(amt) {
-      playerStats.xp += amt;
-      if (playerStats.xp >= playerStats.lvl * 50) {
-        playerStats.lvl++;
-        playerStats.maxHp += 20; playerStats.hp = playerStats.maxHp;
-        playerStats.maxMp += 5; playerStats.mp = playerStats.maxMp;
-        playerStats.atk += 4;
-      }
+      playerStats.party.forEach(member => {
+        if (member.hp <= 0) return;
+        member.xp = (member.xp || 0) + amt;
+        const req = member.lvl * 50;
+        if (member.xp >= req) {
+          member.lvl++; member.maxHp += 15; member.hp = member.maxHp;
+          member.maxMp += 5; member.mp = member.maxMp; member.atk += 3;
+        }
+      });
     }
 
     function endBattle(msg) {
