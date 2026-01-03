@@ -252,8 +252,45 @@
       const content = document.getElementById('menu-content');
       content.innerHTML = `
         <h3 style="margin-top: 0;">Menu</h3>
+        <button class="menu-btn" onclick="showParty()">Party</button>
         <button class="menu-btn" onclick="showInventory()">Inventory</button>
         <button class="menu-btn" onclick="toggleMenu()">Close</button>
+      `;
+    }
+
+    function showParty() {
+      const content = document.getElementById('menu-content');
+      let html = `<h3 style="margin-top: 0;">Party</h3><div style="max-height: 260px; overflow-y: auto;">`;
+      playerStats.party.forEach((p, i) => {
+        html += `
+          <button class="menu-btn" onclick="showMemberDetail(${i})" style="text-align: left;">
+            <div style="font-weight: bold;">${p.name} (Lvl ${p.lvl})</div>
+            <div style="font-size: 0.8em; margin-top: 4px;">HP: ${Math.ceil(p.hp)}/${p.maxHp} | MP: ${Math.ceil(p.mp)}/${p.maxMp}</div>
+          </button>
+        `;
+      });
+      html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMainMenu()">Back</button>`;
+      content.innerHTML = html;
+    }
+
+    function showMemberDetail(idx) {
+      const p = playerStats.party[idx];
+      const content = document.getElementById('menu-content');
+      const req = p.lvl * 50;
+      content.innerHTML = `
+        <h3 style="margin-top: 0;">${p.name} Details</h3>
+        <div style="font-size: 0.9em; line-height: 1.4; text-align: left; padding: 0 5px;">
+          <div style="margin-bottom: 5px;"><strong>Level:</strong> ${p.lvl}</div>
+          <div style="margin-bottom: 5px;"><strong>HP:</strong> ${Math.ceil(p.hp)} / ${p.maxHp}</div>
+          <div style="margin-bottom: 5px;"><strong>MP:</strong> ${Math.ceil(p.mp)} / ${p.maxMp}</div>
+          <div style="margin-bottom: 5px;"><strong>Attack:</strong> ${p.atk}</div>
+          <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+          <strong>Skills:</strong><br>
+          • Basic Attack (Damage: Atk)<br>
+          • Fireball (5 MP, Damage: Atk * 2)
+        </div>
+        <button class="menu-btn" style="margin-top: 15px;" onclick="showParty()">Back</button>
       `;
     }
 
