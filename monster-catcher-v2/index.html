@@ -212,7 +212,12 @@
     function buyItem(name, type, price, val) {
       if (playerStats.gold >= price) {
         playerStats.gold -= price;
-        playerStats.inventory.push({ name, type, val });
+        const existing = playerStats.inventory.find(i => i.name === name);
+        if (existing) {
+          existing.count++;
+        } else {
+          playerStats.inventory.push({ name, type, val, count: 1 });
+        }
         updateHud();
         openShop();
       } else {
@@ -254,7 +259,7 @@
         html += `<p>Empty</p>`;
       } else {
         playerStats.inventory.forEach((item, idx) => {
-          html += `<div class="shop-item"><span>${item.name}</span><button onclick="useItem(${idx})">Use</button></div>`;
+          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span><button onclick="useItem(${idx})">Use</button></div>`;
         });
       }
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMainMenu()">Back</button>`;
@@ -270,7 +275,8 @@
         if (playerStats.mp >= playerStats.maxMp) { alert("MP already full!"); return; }
         playerStats.mp = Math.min(playerStats.maxMp, playerStats.mp + item.val);
       }
-      playerStats.inventory.splice(idx, 1);
+      item.count--;
+      if (item.count <= 0) playerStats.inventory.splice(idx, 1);
       showInventory();
       updateHud();
     }
