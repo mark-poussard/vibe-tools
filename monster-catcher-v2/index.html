@@ -224,75 +224,74 @@
     let currentEnemy = null;
     let battleBusy = false;
 
-    const npc = {
-      tileX: 26, tileY: 15,
-      dialog: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
-    };
-    const merchant = {
-      tileX: 11, tileY: 13,
-      items: [
-        { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
-        { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
-        { name: 'Monster Ball', price: 50, type: 'capture' }
-      ]
-    };
+    const NPC_LOCATIONS = [
+      { 
+        x: 26, y: 15, type: 'dialog', color: '#4444ff', 
+        text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
+      },
+      { 
+        x: 11, y: 13, type: 'merchant', color: '#f1c40f', 
+        items: [
+          { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
+          { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
+          { name: 'Monster Ball', price: 50, type: 'capture' }
+        ]
+      }
+    ];
     let activeInteractionTarget = null;
     let dialogActive = false;
 
     const map = [];
+    const MAP_LAYOUT = [
+      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTffffTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbfffTfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmbDffffffffff    TT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbfffTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
+      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
+      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT"
+    ];
     function initMap() {
+      const charMap = {
+        'T': { type: 'tree', color: '#064e3b', traversable: false },
+        ' ': { type: 'grass', color: '#2ecc71', traversable: true },
+        'D': { type: 'dirt', color: '#d35400', traversable: true },
+        'f': { type: 'dungeon', color: '#1b5e20', traversable: true, pool: 'forest', levelRange: [1, 6] },
+        'm': { type: 'dungeon', color: '#7f8c8d', traversable: true, pool: 'mountain', levelRange: [7, 14] },
+        's': { type: 'dungeon', color: '#f1c40f', traversable: true, pool: 'desert', levelRange: [15, 25] },
+        'w': { type: 'water', color: '#3498db', traversable: false },
+        'b': { type: 'boulder', color: '#475569', traversable: false }
+      };
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
         map[y] = [];
+        const row = MAP_LAYOUT[y];
         for (let x = 0; x < MAP_SIZE_TILES; x++) {
-          map[y][x] = { type: 'tree', color: '#064e3b', traversable: false };
+          const char = row[x] || 'T';
+          map[y][x] = { ...charMap[char] };
         }
-      }
-      const paint = (x, y, type, color, traversable, pool = null, range = null) => {
-        if (x >= 0 && x < 30 && y >= 0 && y < 30) {
-          map[y][x] = { type, color, traversable, pool, levelRange: range };
-        }
-      };
-      const drawPath = (x1, y1, x2, y2, type, color, pool, range) => {
-        const startX = Math.min(x1, x2), endX = Math.max(x1, x2);
-        const startY = Math.min(y1, y2), endY = Math.max(y1, y2);
-        for (let y = startY; y <= endY; y++) {
-          for (let x = startX; x <= endX; x++) {
-            paint(x, y, type, color, true, pool, range);
-          }
-        }
-      };
-      // Village area
-      for (let y = 13; y <= 17; y++) for (let x = 24; x <= 28; x++) paint(x, y, 'grass', '#2ecc71', true);
-      paint(23, 15, 'dirt', '#d35400', true);
-      // Extended Labyrinth Forest Paths
-      drawPath(14, 15, 22, 15, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(18, 5, 18, 15, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(14, 5, 18, 5, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(20, 15, 20, 25, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(14, 25, 20, 25, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(16, 5, 16, 25, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(22, 10, 19, 10, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(22, 20, 19, 20, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(14, 10, 15, 10, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(14, 20, 15, 20, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      // Dead end diversions
-      drawPath(22, 5, 22, 9, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(22, 21, 22, 25, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      // Connecting forest to central world
-      drawPath(12, 10, 14, 10, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      drawPath(12, 20, 14, 20, 'dungeon', '#1b5e20', 'forest', [1, 6]);
-      // Central Merchant Region
-      for (let y = 11; y <= 19; y++) for (let x = 6; x <= 15; x++) paint(x, y, 'grass', '#2ecc71', true);
-      for (let y = 14; y <= 16; y++) for (let x = 9; x <= 11; x++) paint(x, y, 'water', '#3498db', false);
-      for (let y = 0; y <= 10; y++) {
-        for (let x = 9; x <= 12; x++) paint(x, y, 'dungeon', '#7f8c8d', true, 'mountain', [7, 14]);
-        paint(8, y, 'boulder', '#34495e', false);
-        paint(13, y, 'boulder', '#34495e', false);
-      }
-      for (let y = 20; y <= 29; y++) {
-        for (let x = 9; x <= 12; x++) paint(x, y, 'dungeon', '#f1c40f', true, 'desert', [15, 25]);
-        paint(8, y, 'boulder', '#34495e', false);
-        paint(13, y, 'boulder', '#34495e', false);
       }
     }
 
@@ -317,10 +316,12 @@
       dialogActive = false;
     }
 
-    function openShop() {
+    let currentShopItems = null;
+    function openShop(items) {
+      if (items) currentShopItems = items;
       const container = document.getElementById('shop-items');
       container.innerHTML = '';
-      merchant.items.forEach(item => {
+      currentShopItems.forEach(item => {
         const div = document.createElement('div');
         div.className = 'shop-item';
         div.innerHTML = `<span>${item.name} (${item.price}G)</span><button onclick="buyItem('${item.name}', '${item.type}', ${item.price}, ${item.value})">Buy</button>`;
@@ -502,13 +503,11 @@
       const targetTileX = Math.floor(worldX / TILE_SIZE);
       const targetTileY = Math.floor(worldY / TILE_SIZE);
 
-      let clicked = null;
-      if (targetTileX === npc.tileX && targetTileY === npc.tileY) clicked = 'npc';
-      if (targetTileX === merchant.tileX && targetTileY === merchant.tileY) clicked = 'merchant';
+      let clickedNpc = NPC_LOCATIONS.find(n => n.x === targetTileX && n.y === targetTileY);
 
-      if (clicked) {
-        const tx = clicked === 'npc' ? npc.tileX : merchant.tileX;
-        const ty = clicked === 'npc' ? npc.tileY : merchant.tileY;
+      if (clickedNpc) {
+        const tx = clickedNpc.x;
+        const ty = clickedNpc.y;
         const dx = tx - player.x / TILE_SIZE;
         const dy = ty - player.y / TILE_SIZE;
         let adjX = tx; let adjY = ty;
@@ -516,7 +515,7 @@
         else adjY -= Math.sign(dy) || 1;
         player.targetX = adjX * TILE_SIZE + TILE_SIZE / 2;
         player.targetY = adjY * TILE_SIZE + TILE_SIZE / 2;
-        activeInteractionTarget = clicked;
+        activeInteractionTarget = clickedNpc;
       } else {
         player.targetX = targetTileX * TILE_SIZE + TILE_SIZE / 2;
         player.targetY = targetTileY * TILE_SIZE + TILE_SIZE / 2;
@@ -602,10 +601,9 @@
       } else {
         player.x = player.targetX;
         player.y = player.targetY;
-        if (activeInteractionTarget === 'npc') {
-          showDialog(npc.dialog);
-        } else if (activeInteractionTarget === 'merchant') {
-          openShop();
+        if (activeInteractionTarget) {
+           if (activeInteractionTarget.type === 'dialog') showDialog(activeInteractionTarget.text);
+           else if (activeInteractionTarget.type === 'merchant') openShop(activeInteractionTarget.items);
         }
         activeInteractionTarget = null;
         player.isWalking = false;
@@ -656,8 +654,7 @@
         ctx.fillStyle = '#ffdbac';
         ctx.beginPath(); ctx.arc(nx, ny - 50, 12, 0, Math.PI * 2); ctx.fill();
       };
-      drawNpc(npc.tileX, npc.tileY, '#4444ff');
-      drawNpc(merchant.tileX, merchant.tileY, '#f1c40f');
+      NPC_LOCATIONS.forEach(n => drawNpc(n.x, n.y, n.color));
 
       // Draw Player Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
