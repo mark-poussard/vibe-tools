@@ -155,44 +155,44 @@
       'Normal': { weakTo: [], resist: [] }
     };
     const MONSTER_DB = {
-      'Sylvaris': { hp: 120, mp: 15, atk: 8, type: 'Nature', drawType: 'plant', skills: [
+      'Sylvaris': { hp: 120, mp: 15, atk: 8, spd: 10, type: 'Nature', drawType: 'plant', skills: [
           { name: 'Solar Bloom', lvl: 1, cost: 5, mult: 1.2, heal: 15, type: 'Nature' },
           { name: 'Razor Leaf', lvl: 5, cost: 8, mult: 1.8, type: 'Nature' },
           { name: 'Nature Embrace', lvl: 16, cost: 18, mult: 2.2, heal: 30, type: 'Nature' },
           { name: 'Thorn Blast', lvl: 24, cost: 25, mult: 3.5, type: 'Nature' },
           { name: 'Genesis Wave', lvl: 38, cost: 60, mult: 5.5, type: 'Nature' }
       ]},
-      'Ignifrit': { hp: 80, mp: 10, atk: 16, type: 'Fire', drawType: 'fire', skills: [
+      'Ignifrit': { hp: 80, mp: 10, atk: 16, spd: 15, type: 'Fire', drawType: 'fire', skills: [
           { name: 'Ember', lvl: 1, cost: 4, mult: 1.5, type: 'Fire' },
           { name: 'Fireball', lvl: 7, cost: 10, mult: 2.2, type: 'Fire' },
           { name: 'Lava Burst', lvl: 14, cost: 20, mult: 3.2, type: 'Fire' },
           { name: 'Phoenix Strike', lvl: 26, cost: 35, mult: 4.5, type: 'Fire' },
           { name: 'Supernova', lvl: 41, cost: 70, mult: 6.5, type: 'Fire' }
       ]},
-      'Aquasaur': { hp: 100, mp: 25, atk: 11, type: 'Water', drawType: 'water', skills: [
+      'Aquasaur': { hp: 100, mp: 25, atk: 11, spd: 8, type: 'Water', drawType: 'water', skills: [
           { name: 'Bubble', lvl: 1, cost: 4, mult: 1.4, type: 'Water' },
           { name: 'Tsunami', lvl: 4, cost: 12, mult: 2.0, type: 'Water' },
           { name: 'Hydro Cannon', lvl: 15, cost: 22, mult: 3.0, type: 'Water' },
           { name: 'Ice Beam', lvl: 25, cost: 38, mult: 4.2, type: 'Water' },
           { name: 'Oceanic Ruin', lvl: 39, cost: 65, mult: 5.8, type: 'Water' }
       ]},
-      'Gloop': { hp: 40, mp: 10, atk: 4, type: 'Nature', drawType: 'slime', skills: [
+      'Gloop': { hp: 40, mp: 10, atk: 4, spd: 5, type: 'Nature', drawType: 'slime', skills: [
           { name: 'Bouncy Slam', lvl: 1, cost: 4, mult: 1.4, type: 'Normal' },
           { name: 'Slime Trap', lvl: 10, cost: 12, mult: 2.5, type: 'Nature' }
       ]},
-      'Boneguard': { hp: 50, mp: 12, atk: 7, type: 'Dark', drawType: 'skeleton', skills: [
+      'Boneguard': { hp: 50, mp: 12, atk: 7, spd: 12, type: 'Dark', drawType: 'skeleton', skills: [
           { name: 'Bone Shard', lvl: 1, cost: 5, mult: 1.8, type: 'Dark' },
           { name: 'Grave Chill', lvl: 12, cost: 15, mult: 3.0, type: 'Dark' }
       ]},
-      'Medusoid': { hp: 60, mp: 20, atk: 6, type: 'Nature', drawType: 'gorgon', skills: [
+      'Medusoid': { hp: 60, mp: 20, atk: 6, spd: 7, type: 'Nature', drawType: 'gorgon', skills: [
           { name: 'Gaze', lvl: 1, cost: 6, mult: 1.6, type: 'Dark' },
           { name: 'Stone Curse', lvl: 15, cost: 20, mult: 3.5, type: 'Dark' }
       ]},
-      'Voidshade': { hp: 45, mp: 30, atk: 8, type: 'Dark', drawType: 'shadow', skills: [
+      'Voidshade': { hp: 45, mp: 30, atk: 8, spd: 20, type: 'Dark', drawType: 'shadow', skills: [
           { name: 'Abyssal Pulse', lvl: 1, cost: 7, mult: 1.9, type: 'Dark' },
           { name: 'Event Horizon', lvl: 20, cost: 40, mult: 4.5, type: 'Dark' }
       ]},
-      'Aetherwing': { hp: 90, mp: 40, atk: 14, type: 'Fire', drawType: 'dragon', skills: [
+      'Aetherwing': { hp: 90, mp: 40, atk: 14, spd: 25, type: 'Fire', drawType: 'dragon', skills: [
           { name: 'Sky Dive', lvl: 1, cost: 10, mult: 2.5, type: 'Fire' },
           { name: 'Star Fall', lvl: 22, cost: 50, mult: 5.0, type: 'Fire' }
       ]}
@@ -213,17 +213,17 @@
     function createMonster(key, lvl) {
       const t = MONSTER_DB[key]; if (!t) return null;
       const m = JSON.parse(JSON.stringify(t));
-      m.name = key; m.lvl = lvl; m.xp = 0;
+      m.name = key; m.lvl = lvl; m.xp = 0; m.ap = 0;
       m.maxHp = t.hp + (lvl - 1) * 15; m.hp = m.maxHp;
       m.maxMp = t.mp + (lvl - 1) * 5; m.mp = m.maxMp;
       m.atk = t.atk + (lvl - 1) * 3;
+      m.spd = (t.spd || 10) + (lvl - 1) * 2;
       m.learnedSkills = (t.skills || []).filter(s => s.lvl <= lvl);
       if (m.learnedSkills.length > 0) m.skill = m.learnedSkills[m.learnedSkills.length - 1];
       return m;
     }
     const STARTERS = [ createMonster('Sylvaris', 1), createMonster('Ignifrit', 1), createMonster('Aquasaur', 1) ];
-    let currentActorIndex = 0;
-    
+    let activeActor = null;
     let currentEnemy = null;
     let battleBusy = false;
 
@@ -366,6 +366,7 @@
           <div style="margin-bottom: 5px;"><strong>HP:</strong> ${Math.ceil(p.hp)} / ${p.maxHp}</div>
           <div style="margin-bottom: 5px;"><strong>MP:</strong> ${Math.ceil(p.mp)} / ${p.maxMp}</div>
           <div style="margin-bottom: 5px;"><strong>Attack:</strong> ${p.atk}</div>
+          <div style="margin-bottom: 5px;"><strong>Speed:</strong> ${p.spd}</div>
           <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
           <strong>Skills:</strong><br>
@@ -395,7 +396,8 @@
       dialogActive = true;
     }
     function openSkillMenu() {
-      const actor = playerStats.party[currentActorIndex];
+      const actor = activeActor;
+      if (!actor || actor === currentEnemy) return;
       const content = document.getElementById('menu-content');
       let html = `<h3 style="margin-top: 0;">Select Skill</h3><div style="max-height: 200px; overflow-y: auto;">`;
       if (!actor.learnedSkills || actor.learnedSkills.length === 0) {
@@ -655,10 +657,11 @@
       for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
       currentEnemy = createMonster(selectedKey, level);
       currentEnemy.gold = 10 + level * 8; currentEnemy.xp = 15 + level * 10;
-      currentActorIndex = 0;
-      while (playerStats.party[currentActorIndex] && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
+      playerStats.party.forEach(p => p.ap = 0);
+      currentEnemy.ap = 0;
+      activeActor = null;
       document.getElementById('battle-screen').style.display = 'flex';
-      updateBattleUI(`A wild Lvl ${currentEnemy.lvl} ${currentEnemy.name} appeared!`);
+      nextTurn(`A wild Lvl ${currentEnemy.lvl} ${currentEnemy.name} appeared!`);
     }
 
     function updateBattleUI(msg) {
@@ -668,20 +671,20 @@
       partyList.innerHTML = ''; enemyList.innerHTML = '';
       playerStats.party.forEach((p, i) => {
         const div = document.createElement('div');
-        div.className = 'battle-card' + (i === currentActorIndex ? ' active-actor' : '');
-        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.7em">L${p.lvl} (${p.type})</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div></div>`;
+        div.className = 'battle-card' + (p === activeActor ? ' active-actor' : '');
+        div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.7em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div></div>`;
         partyList.appendChild(div);
         drawMonsterIcon(document.getElementById(`p-canv-${i}`).getContext('2d'), p.name);
       });
       if (currentEnemy) {
         const div = document.createElement('div');
-        div.className = 'battle-card';
+        div.className = 'battle-card' + (currentEnemy === activeActor ? ' active-actor' : '');
         div.style.flexDirection = 'row-reverse'; div.style.textAlign = 'right';
-        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.7em">L${currentEnemy.lvl} (${currentEnemy.type})</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
+        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.7em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
         enemyList.appendChild(div);
         drawMonsterIcon(document.getElementById('e-canv').getContext('2d'), currentEnemy.name);
       }
-      document.getElementById('acting-name').innerText = playerStats.party[currentActorIndex] ? `Turn: ${playerStats.party[currentActorIndex].name}` : "";
+      document.getElementById('acting-name').innerText = activeActor ? `Turn: ${activeActor.name}` : "";
       if (msg) document.getElementById('battle-msg').innerText = msg;
     }
 
@@ -723,103 +726,94 @@
     }
     // drawMonster removed, illustrations handled in updateBattleUI
 
-    function battleAction(type, data = null) {
-      if (battleBusy && type !== 'useSkill') return;
+    function nextTurn(msg) {
       if (gameState !== 'BATTLE') return;
-      if (type === 'skill') { openSkillMenu(); return; }
-      
-      battleBusy = true;
-      const actor = playerStats.party[currentActorIndex];
-      let msg = "";
+      const combatants = [...playerStats.party.filter(p => p.hp > 0), currentEnemy];
+      while (true) {
+        combatants.sort((a, b) => b.ap - a.ap);
+        if (combatants[0].ap >= 100) {
+          activeActor = combatants[0];
+          updateBattleUI(msg);
+          if (activeActor === currentEnemy) setTimeout(enemyTurn, 800);
+          else battleBusy = false;
+          return;
+        }
+        for (let c of combatants) c.ap = (c.ap || 0) + c.spd;
+      }
+    }
 
+    function enemyTurn() {
+      if (gameState !== 'BATTLE' || currentEnemy.hp <= 0) return;
+      const targets = playerStats.party.filter(p => p.hp > 0);
+      if (targets.length === 0) return;
+      const usableSkills = (currentEnemy.learnedSkills || []).filter(s => currentEnemy.mp >= s.cost);
+      let target = null, skillToUse = null;
+      for (const s of usableSkills) {
+        const weakTarget = targets.find(t => (TYPE_CHART[t.type] || { weakTo: [] }).weakTo.includes(s.type));
+        if (weakTarget) { target = weakTarget; skillToUse = s; break; }
+      }
+      if (!target) {
+        target = targets[Math.floor(Math.random() * targets.length)];
+        if (usableSkills.length > 0) skillToUse = usableSkills[usableSkills.length - 1];
+      }
+      let dmg = 0, txt = "";
+      if (skillToUse) {
+        currentEnemy.mp -= skillToUse.cost;
+        dmg = calculateSkillDamage(currentEnemy, target, skillToUse);
+        txt = `${currentEnemy.name} uses ${skillToUse.name} on ${target.name} for ${dmg}!`;
+      } else {
+        dmg = currentEnemy.atk + Math.floor(Math.random() * 5);
+        txt = `${currentEnemy.name} attacks ${target.name} for ${dmg}!`;
+      }
+      target.hp = Math.max(0, target.hp - dmg);
+      updateBattleUI(txt);
+      if (playerStats.party.every(p => p.hp <= 0)) { alert("Defeat..."); location.reload(); return; }
+      activeActor.ap -= 100;
+      setTimeout(nextTurn, 800);
+    }
+
+    function battleAction(type, data = null) {
+      if (battleBusy || !activeActor || activeActor === currentEnemy) return;
+      if (type === 'skill') { openSkillMenu(); return; }
+      battleBusy = true;
+      let msg = "";
       if (type === 'attack') {
-        const dmg = actor.atk + Math.floor(Math.random() * 5);
+        const dmg = activeActor.atk + Math.floor(Math.random() * 5);
         currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-        msg = `${actor.name} hit for ${dmg}! `;
+        msg = `${activeActor.name} hit for ${dmg}! `;
       } else if (type === 'useSkill') {
-        const skill = actor.learnedSkills[data];
-        actor.mp -= skill.cost;
-        const dmg = calculateSkillDamage(actor, currentEnemy, skill);
+        const skill = activeActor.learnedSkills[data];
+        activeActor.mp -= skill.cost;
+        const dmg = calculateSkillDamage(activeActor, currentEnemy, skill);
         currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-        if (skill.heal) actor.hp = Math.min(actor.maxHp, actor.hp + skill.heal);
-        msg = `${actor.name} used ${skill.name} for ${dmg}! `;
-        const chart = TYPE_CHART[currentEnemy.type] || { weakTo: [], resist: [] };
-        if (chart.weakTo.includes(skill.type)) msg += "It's super effective! ";
-        if (chart.resist.includes(skill.type)) msg += "It's not very effective... ";
+        if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
+        msg = `${activeActor.name} used ${skill.name} for ${dmg}! `;
       } else if (type === 'flee') {
         if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
         msg = "Flee failed! ";
       } else if (type === 'item') {
         const item = playerStats.inventory[data];
         if (item.type === 'capture') {
-          if (playerStats.party.length >= 4) {
-            alert("Party is full! (Max 4)");
-            if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
-            battleBusy = false;
-            return;
-          }
-          const highestLvl = Math.max(...playerStats.party.map(p => p.lvl));
-          const hpRatio = currentEnemy.hp / currentEnemy.maxHp;
-          const levelRatio = highestLvl / currentEnemy.lvl;
-          const captureChance = 0.2 + (0.5 * (1 - hpRatio)) + (0.1 * Math.min(3, levelRatio));
-          
-          item.count--; 
-          if (item.count <= 0) playerStats.inventory.splice(data, 1);
-          if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
-
-          if (Math.random() < captureChance) {
-            const captured = JSON.parse(JSON.stringify(currentEnemy));
-            playerStats.party.push(captured);
-            endBattle(`Success! Captured ${captured.name}!`); 
-            return;
-          } else {
-            msg = `Oh no! The ${currentEnemy.name} broke free! `;
-          }
-        } else if (item.type === 'hp') { actor.hp = Math.min(actor.maxHp, actor.hp + item.val); msg = `${actor.name} healed! `; }
-        else if (item.type === 'mp') { actor.mp = Math.min(actor.maxMp, actor.mp + item.val); msg = `${actor.name} restored MP! `; }
-        item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
-        if (document.getElementById('menu-modal').style.display === 'block') toggleMenu();
+          if (playerStats.party.length >= 4) { alert("Party full!"); toggleMenu(); battleBusy = false; return; }
+          const chance = 0.2 + (0.5 * (1 - (currentEnemy.hp / currentEnemy.maxHp)));
+          item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
+          toggleMenu();
+          if (Math.random() < chance) { playerStats.party.push(JSON.parse(JSON.stringify(currentEnemy))); endBattle("Captured!"); return; }
+          else msg = "Capture failed! ";
+        } else {
+          if (item.type === 'hp') activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + item.val);
+          if (item.type === 'mp') activeActor.mp = Math.min(activeActor.maxMp, activeActor.mp + item.val);
+          item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
+          toggleMenu(); msg = "Item used! ";
+        }
       }
-
       updateBattleUI(msg);
       if (currentEnemy.hp <= 0) {
         playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.xp);
-        endBattle(`Victorious! Gained ${currentEnemy.xp}XP & ${currentEnemy.gold}G.`);
+        endBattle(`Victorious! +${currentEnemy.xp}XP`);
       } else {
-        setTimeout(() => {
-          currentActorIndex++;
-          while (currentActorIndex < playerStats.party.length && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
-          if (currentActorIndex >= playerStats.party.length) {
-            const targets = playerStats.party.filter(p => p.hp > 0);
-            const usableSkills = (currentEnemy.learnedSkills || []).filter(s => currentEnemy.mp >= s.cost);
-            let target = null, skillToUse = null;
-            for (const s of usableSkills) {
-              const weakTarget = targets.find(t => (TYPE_CHART[t.type] || { weakTo: [] }).weakTo.includes(s.type));
-              if (weakTarget) { target = weakTarget; skillToUse = s; break; }
-            }
-            if (!target && targets.length > 0) {
-              target = targets.reduce((min, p) => p.lvl < min.lvl ? p : min, targets[0]);
-              if (usableSkills.length > 0) skillToUse = usableSkills[usableSkills.length - 1];
-            }
-            let eDmg = 0, eMove = "";
-            if (skillToUse && target) {
-              currentEnemy.mp -= skillToUse.cost;
-              eDmg = calculateSkillDamage(currentEnemy, target, skillToUse);
-              eMove = `${currentEnemy.name} uses ${skillToUse.name} on ${target.name}`;
-              if ((TYPE_CHART[target.type] || { weakTo: [] }).weakTo.includes(skillToUse.type)) eMove += " (Super effective!)";
-            } else if (target) {
-              eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 3));
-              eMove = `${currentEnemy.name} hits ${target.name}`;
-            }
-            if (target) target.hp = Math.max(0, target.hp - eDmg);
-            updateBattleUI(`${msg}${eMove} for ${Math.ceil(eDmg)}!`);
-            if (playerStats.party.every(p => p.hp <= 0)) { alert("The party has fallen..."); location.reload(); }
-            setTimeout(() => {
-              currentActorIndex = 0; while (playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
-              battleBusy = false; updateBattleUI();
-            }, 800);
-          } else { battleBusy = false; updateBattleUI(); }
-        }, 600);
+        activeActor.ap -= 100;
+        setTimeout(nextTurn, 600);
       }
     }
 
@@ -832,7 +826,7 @@
           member.lvl++;
           member.maxHp += 15; member.hp = member.maxHp;
           member.maxMp += 5; member.mp = member.maxMp;
-          member.atk += 3;
+          member.atk += 3; member.spd += 2;
           const t = MONSTER_DB[member.name];
           if (t && t.skills) {
             const newOnes = t.skills.filter(s => s.lvl === member.lvl);
@@ -877,7 +871,7 @@
         const card = document.createElement('div');
         card.className = 'starter-card';
         card.onclick = () => selectStarter(i);
-        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100" style="width:80px; height:80px;"></canvas><h3>${s.name}</h3><div class="stats">Type: ${s.type}<br>HP: ${s.maxHp}<br>ATK: ${s.atk}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
+        card.innerHTML = `<canvas id="starter-canvas-${i}" width="100" height="100" style="width:80px; height:80px;"></canvas><h3>${s.name}</h3><div class="stats">Type: ${s.type}<br>HP: ${s.maxHp}<br>ATK: ${s.atk}<br>SPD: ${s.spd}<br>MP: ${s.maxMp}<br>Skill: ${s.skill.name}</div><button class="menu-btn" style="pointer-events:none">Select</button>`;
         container.appendChild(card);
         drawMonsterIcon(document.getElementById(`starter-canvas-${i}`).getContext('2d'), s.name);
       });
