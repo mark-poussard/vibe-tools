@@ -81,7 +81,7 @@
   </div>
   <div id="ui">
     <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; margin-right: 10px;">
-      <span class="dungeon-info">Green=Forest | Gray=Mtn | Yellow=Desert</span> | <span id="player-hud"></span>
+      <span class="dungeon-info">Green=Forest | Blue=Lake | Gray=Mtn | Yellow=Desert</span> | <span id="player-hud"></span>
     </div>
     <button onclick="toggleMenu()" style="pointer-events: auto; padding: 4px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button>
   </div>
@@ -223,6 +223,7 @@
     }
     const ENCOUNTER_POOLS = {
       'forest': [ { key: 'Leafy', weight: 0.4 }, { key: 'Sprout', weight: 0.3 }, { key: 'Rabbite', weight: 0.2 }, { key: 'Birby', weight: 0.1 } ],
+      'lake': [ { key: 'Aquasaur', weight: 0.4 }, { key: 'Gloop', weight: 0.3 }, { key: 'Medusoid', weight: 0.3 } ],
       'mountain': [ { key: 'Cliff-Ram', weight: 0.3 }, { key: 'Sky-Shredder', weight: 0.3 }, { key: 'Rockogolem', weight: 0.2 }, { key: 'Zephyros', weight: 0.2 } ],
       'desert': [ { key: 'Sand-Stinger', weight: 0.3 }, { key: 'Sun-Cactus', weight: 0.3 }, { key: 'Mindbug', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 } ]
     };
@@ -249,7 +250,7 @@
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
       },
       { 
-        x: 11, y: 13, type: 'merchant', color: '#f1c40f', 
+        x: 6, y: 13, type: 'merchant', color: '#f1c40f', 
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -262,36 +263,36 @@
 
     const map = [];
     const MAP_LAYOUT = [
-      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTffffTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbfffTfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmbDffffffffff    TT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTT   bmmb   TfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbfffTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbmmbTfTTfTTTTTTTTTTTT",
-      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT",
-      "TTTTTTTTTbssbTTTTTTTTTTTTTTTTT"
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmbmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmbmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmbmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmbmmmmTTTTTTTTTTTTTTTTTTTT",
+      "mmmmmmmmmmTTTTTTTTTTTTTTTTTTTT",
+      "TTTTTTDTTTTTTTTTTTTTTTTTTTTTTT",
+      "TTTTTTDTTTTTTTTTTTTTTTTTTTTTTT",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTwwwwwwDffffffffff D       T",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTwwwwwwTTTfffffffffTTT     T",
+      "TTTTTTDTTTTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssbsssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "sssssbssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT",
+      "sssssssssbTTTTTTTTTTTTTTTTTTTT",
+      "ssssssssssTTTTTTTTTTTTTTTTTTTT"
     ];
     function initMap() {
       const charMap = {
@@ -299,9 +300,9 @@
         ' ': { type: 'grass', color: '#2ecc71', traversable: true },
         'D': { type: 'dirt', color: '#d35400', traversable: true },
         'f': { type: 'dungeon', color: '#1b5e20', traversable: true, pool: 'forest', levelRange: [1, 6] },
-        'm': { type: 'dungeon', color: '#7f8c8d', traversable: true, pool: 'mountain', levelRange: [7, 14] },
-        's': { type: 'dungeon', color: '#f1c40f', traversable: true, pool: 'desert', levelRange: [15, 25] },
-        'w': { type: 'water', color: '#3498db', traversable: false },
+        'm': { type: 'dungeon', color: '#7f8c8d', traversable: true, pool: 'mountain', levelRange: [15, 25] },
+        's': { type: 'dungeon', color: '#f1c40f', traversable: true, pool: 'desert', levelRange: [25, 40] },
+        'w': { type: 'dungeon', color: '#3498db', traversable: true, pool: 'lake', levelRange: [7, 14] },
         'b': { type: 'boulder', color: '#475569', traversable: false }
       };
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
