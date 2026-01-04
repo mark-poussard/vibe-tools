@@ -744,7 +744,7 @@
       let selectedKey = pool[0].key;
       for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
       currentEnemy = createMonster(selectedKey, level);
-      currentEnemy.gold = 10 + level * 8; currentEnemy.xp = 15 + level * 10;
+      currentEnemy.gold = 10 + level * 8; currentEnemy.rewardXp = 15 + level * 10;
       playerStats.party.forEach(p => p.ap = 0);
       currentEnemy.ap = 0;
       activeActor = null;
@@ -764,7 +764,7 @@
             card = document.createElement('div');
             card.className = 'battle-card';
             if (isEnemy) { card.style.flexDirection = 'row-reverse'; card.style.textAlign = 'right'; }
-            card.innerHTML = `<canvas class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div class="card-name" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill hp-fill"></div><div class="bar-text hp-txt"></div></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill mp-fill"></div><div class="bar-text mp-txt"></div></div>${!isEnemy?'<div class="bar-container"><div class="bar-fill xp-fill"></div><div class="bar-text" style="font-size:8px">XP</div></div>':''}</div>`;
+            card.innerHTML = `<canvas class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div class="card-name" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill hp-fill"></div><div class="bar-text hp-txt"></div></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill mp-fill"></div><div class="bar-text mp-txt"></div></div>${!isEnemy?'<div class="bar-container" style="height:1px; border:none; background:rgba(255,255,255,0.1); margin-top:2px;"><div class="bar-fill xp-fill"></div></div>':''}</div>`;
             container.appendChild(card);
           }
           card.className = 'battle-card' + (m === activeActor ? ' active-actor' : '');
@@ -879,8 +879,8 @@
       }
       updateBattleUI(msg);
       if (currentEnemy.hp <= 0) {
-        playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.xp);
-        endBattle(`Victorious! +${currentEnemy.xp}XP`);
+        playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.rewardXp);
+        endBattle(`Victorious! +${currentEnemy.rewardXp}XP`);
       } else {
         activeActor.ap -= 100;
         setTimeout(nextTurn, 600);
