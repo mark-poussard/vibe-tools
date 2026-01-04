@@ -252,7 +252,7 @@
 
     const NPC_LOCATIONS = [
       { 
-        x: 26, y: 15, type: 'dialog', color: '#4444ff', 
+        x: 26, y: 17, type: 'dialog', color: '#4444ff', 
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
       },
       { 
@@ -262,6 +262,10 @@
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
           { name: 'Monster Ball', price: 50, type: 'capture' }
         ]
+      },
+      { 
+        x: 4, y: 15, type: 'healer', color: '#10b981', 
+        text: "Welcome to the lake! I have healed your monsters to full health."
       }
     ];
     let activeInteractionTarget = null;
@@ -544,8 +548,7 @@
         }
         if (bestPath) {
           if (bestPath.length === 0) {
-            if (clickedNpc.type === 'dialog') showDialog(clickedNpc.text);
-            else if (clickedNpc.type === 'merchant') openShop(clickedNpc.items);
+            triggerNpc(clickedNpc);
             player.path = [];
           } else {
             player.path = bestPath;
@@ -583,6 +586,16 @@
       if (playerStats.party.length === 0) return;
       const hero = playerStats.party[0];
       document.getElementById('player-hud').innerText = `L:${hero.lvl} HP:${Math.ceil(hero.hp)} G:${playerStats.gold} P:${playerStats.party.length}`;
+    }
+
+    function triggerNpc(npc) {
+      if (npc.type === 'dialog') showDialog(npc.text);
+      else if (npc.type === 'merchant') openShop(npc.items);
+      else if (npc.type === 'healer') {
+        playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+        updateHud();
+        showDialog(npc.text);
+      }
     }
 
     function saveGame() {
@@ -635,8 +648,7 @@
           if (player.path.length === 0) {
             player.isWalking = false;
             if (activeInteractionTarget) {
-              if (activeInteractionTarget.type === 'dialog') showDialog(activeInteractionTarget.text);
-              else if (activeInteractionTarget.type === 'merchant') openShop(activeInteractionTarget.items);
+              triggerNpc(activeInteractionTarget);
               activeInteractionTarget = null;
             }
           }
