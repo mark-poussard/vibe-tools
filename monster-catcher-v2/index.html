@@ -81,7 +81,7 @@
   </div>
   <div id="ui">
     <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; margin-right: 10px;">
-      <span class="dungeon-info">Purple=Dungeon</span> | <span id="player-hud"></span>
+      <span class="dungeon-info">Green=Forest | Gray=Mtn | Yellow=Desert</span> | <span id="player-hud"></span>
     </div>
     <button onclick="toggleMenu()" style="pointer-events: auto; padding: 4px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button>
   </div>
@@ -133,10 +133,10 @@
     // State
     let gameState = 'EXPLORE'; // EXPLORE, BATTLE
     const player = {
-      x: MAP_PIXEL_SIZE / 2,
-      y: MAP_PIXEL_SIZE / 2,
-      targetX: MAP_PIXEL_SIZE / 2,
-      targetY: MAP_PIXEL_SIZE / 2,
+      x: 26 * TILE_SIZE + 32,
+      y: 15 * TILE_SIZE + 32,
+      targetX: 26 * TILE_SIZE + 32,
+      targetY: 15 * TILE_SIZE + 32,
       size: 40,
       isWalking: false,
       animFrame: 0
@@ -162,6 +162,12 @@
       'Kaiju': { weakTo: ['Aether', 'Psionic'], resist: ['Fire', 'Water', 'Earth', 'Normal'] }
     };
     const MONSTER_DB = {
+      'Leafy': { hp: 45, mp: 10, atk: 7, spd: 10, type: 'Nature', drawType: 'plant', skills: [{ name: 'Leaf Blade', lvl: 1, cost: 0, mult: 1.3, type: 'Nature' }] },
+      'Sprout': { hp: 42, mp: 15, atk: 6, spd: 12, type: 'Nature', drawType: 'plant', skills: [{ name: 'Vine Whip', lvl: 1, cost: 0, mult: 1.2, type: 'Nature' }] },
+      'Cliff-Ram': { hp: 100, mp: 20, atk: 18, spd: 15, type: 'Earth', drawType: 'animal', skills: [{ name: 'Headbutt', lvl: 1, cost: 5, mult: 1.5, type: 'Earth' }] },
+      'Sky-Shredder': { hp: 85, mp: 30, atk: 22, spd: 28, type: 'Air', drawType: 'bird', skills: [{ name: 'Aerial Ace', lvl: 1, cost: 8, mult: 1.6, type: 'Air' }] },
+      'Sand-Stinger': { hp: 140, mp: 40, atk: 30, spd: 20, type: 'Dark', drawType: 'insect', skills: [{ name: 'Poison Jab', lvl: 1, cost: 10, mult: 1.8, type: 'Dark' }] },
+      'Sun-Cactus': { hp: 160, mp: 50, atk: 26, spd: 12, type: 'Fire', drawType: 'plant', skills: [{ name: 'Needle Blast', lvl: 1, cost: 12, mult: 2.0, type: 'Fire' }] },
       'Rabbite': { hp: 35, mp: 5, atk: 5, spd: 8, type: 'Normal', drawType: 'animal', skills: [{ name: 'Bite', lvl: 1, cost: 0, mult: 1.2, type: 'Normal' }] },
       'Birby': { hp: 30, mp: 5, atk: 4, spd: 12, type: 'Normal', drawType: 'bird', skills: [{ name: 'Peck', lvl: 1, cost: 0, mult: 1.1, type: 'Normal' }] },
       'Cattus': { hp: 40, mp: 8, atk: 6, spd: 10, type: 'Normal', drawType: 'animal', skills: [{ name: 'Scratch', lvl: 1, cost: 0, mult: 1.3, type: 'Normal' }] },
@@ -272,10 +278,9 @@
       return Math.floor(dmg);
     }
     const ENCOUNTER_POOLS = {
-      'beginner': [ { key: 'Rabbite', weight: 0.3 }, { key: 'Birby', weight: 0.3 }, { key: 'Cattus', weight: 0.3 }, { key: 'Gloop', weight: 0.1 } ],
-      'intermediate': [ { key: 'Terramole', weight: 0.15 }, { key: 'Rockogolem', weight: 0.15 }, { key: 'Sparkat', weight: 0.15 }, { key: 'Voltix', weight: 0.15 }, { key: 'Zephyros', weight: 0.15 }, { key: 'Galehawk', weight: 0.1 } ],
-      'advanced': [ { key: 'Mindbug', weight: 0.2 }, { key: 'Telecrane', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 }, { key: 'Glitcher', weight: 0.2 }, { key: 'Voidshade', weight: 0.2 } ],
-      'master': [ { key: 'Omnistar', weight: 0.25 }, { key: 'Cosmogazer', weight: 0.25 }, { key: 'Giga-Rex', weight: 0.25 }, { key: 'Abyssal-Terror', weight: 0.25 } ]
+      'forest': [ { key: 'Leafy', weight: 0.4 }, { key: 'Sprout', weight: 0.3 }, { key: 'Rabbite', weight: 0.2 }, { key: 'Birby', weight: 0.1 } ],
+      'mountain': [ { key: 'Cliff-Ram', weight: 0.3 }, { key: 'Sky-Shredder', weight: 0.3 }, { key: 'Rockogolem', weight: 0.2 }, { key: 'Zephyros', weight: 0.2 } ],
+      'desert': [ { key: 'Sand-Stinger', weight: 0.3 }, { key: 'Sun-Cactus', weight: 0.3 }, { key: 'Mindbug', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 } ]
     };
     function createMonster(key, lvl) {
       const t = MONSTER_DB[key]; if (!t) return null;
@@ -295,11 +300,11 @@
     let battleBusy = false;
 
     const npc = {
-      tileX: 16, tileY: 15,
-      dialog: "Hello fellow adventurer, how is your quest going ?"
+      tileX: 26, tileY: 15,
+      dialog: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
     };
     const merchant = {
-      tileX: 14, tileY: 15,
+      tileX: 11, tileY: 13,
       items: [
         { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
         { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -314,18 +319,32 @@
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
         map[y] = [];
         for (let x = 0; x < MAP_SIZE_TILES; x++) {
-          if (x < 10 && y < 10) {
-            map[y][x] = { type: 'dungeon', pool: 'beginner', levelRange: [1, 3], color: `rgb(${40 + Math.random() * 20}, 30, ${60 + Math.random() * 20})` };
-          } else if (x > 20 && y > 20) {
-            map[y][x] = { type: 'dungeon', pool: 'advanced', levelRange: [10, 15], color: `rgb(${60 + Math.random() * 20}, 20, ${40 + Math.random() * 20})` };
-          } else if (x > 22 && y < 8) {
-            map[y][x] = { type: 'dungeon', pool: 'intermediate', levelRange: [5, 8], color: `rgb(40, ${40 + Math.random() * 20}, ${80 + Math.random() * 20})` };
-          } else if (x > 12 && x < 18 && y > 12 && y < 18) {
-            map[y][x] = { type: 'dungeon', pool: 'master', levelRange: [25, 35], color: 'rgb(0,0,0)' };
-          } else {
-            map[y][x] = { type: 'grass', color: `rgb(50, ${150 + Math.floor(Math.random() * 50)}, 50)` };
-          }
+          map[y][x] = { type: 'tree', color: '#064e3b', traversable: false };
         }
+      }
+      const paint = (x, y, type, color, traversable, pool = null, range = null) => {
+        if (x >= 0 && x < 30 && y >= 0 && y < 30) {
+          map[y][x] = { type, color, traversable, pool, levelRange: range };
+        }
+      };
+      for (let y = 13; y <= 17; y++) for (let x = 24; x <= 28; x++) paint(x, y, 'grass', '#2ecc71', true);
+      paint(23, 15, 'dirt', '#d35400', true);
+      for (let x = 16; x <= 22; x++) {
+        paint(x, 15, 'dungeon', '#1b5e20', true, 'forest', [1, 6]);
+        if (x % 2 === 0) paint(x, 14, 'dungeon', '#1b5e20', true, 'forest', [1, 6]);
+        else paint(x, 16, 'dungeon', '#1b5e20', true, 'forest', [1, 6]);
+      }
+      for (let y = 11; y <= 19; y++) for (let x = 6; x <= 15; x++) paint(x, y, 'grass', '#2ecc71', true);
+      for (let y = 14; y <= 16; y++) for (let x = 9; x <= 11; x++) paint(x, y, 'water', '#3498db', false);
+      for (let y = 0; y <= 10; y++) {
+        for (let x = 9; x <= 12; x++) paint(x, y, 'dungeon', '#7f8c8d', true, 'mountain', [7, 14]);
+        paint(8, y, 'boulder', '#34495e', false);
+        paint(13, y, 'boulder', '#34495e', false);
+      }
+      for (let y = 20; y <= 29; y++) {
+        for (let x = 9; x <= 12; x++) paint(x, y, 'dungeon', '#f1c40f', true, 'desert', [15, 25]);
+        paint(8, y, 'boulder', '#34495e', false);
+        paint(13, y, 'boulder', '#34495e', false);
       }
     }
 
@@ -614,15 +633,23 @@
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist > PLAYER_SPEED) {
-        player.isWalking = true;
-        player.x += (dx / dist) * PLAYER_SPEED;
-        player.y += (dy / dist) * PLAYER_SPEED;
-        player.animFrame += 0.15;
+        const nextX = player.x + (dx / dist) * PLAYER_SPEED;
+        const nextY = player.y + (dy / dist) * PLAYER_SPEED;
+        const tx = Math.floor(nextX / TILE_SIZE);
+        const ty = Math.floor(nextY / TILE_SIZE);
 
-        const tx = Math.floor(player.x / TILE_SIZE);
-        const ty = Math.floor(player.y / TILE_SIZE);
-        if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
-          if (Math.random() < 0.012) startBattle(map[ty][tx]);
+        if (map[ty] && map[ty][tx] && map[ty][tx].traversable) {
+          player.isWalking = true;
+          player.x = nextX;
+          player.y = nextY;
+          player.animFrame += 0.15;
+          if (map[ty][tx].type === 'dungeon' && Math.random() < 0.012) {
+            startBattle(map[ty][tx]);
+          }
+        } else {
+          player.targetX = player.x;
+          player.targetY = player.y;
+          player.isWalking = false;
         }
       } else {
         player.x = player.targetX;
@@ -717,7 +744,7 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      const pool = ENCOUNTER_POOLS[zone.pool] || ENCOUNTER_POOLS['beginner'];
+      const pool = ENCOUNTER_POOLS[zone.pool] || ENCOUNTER_POOLS['forest'];
       const range = zone.levelRange || [1, 5];
       const level = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
       let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
