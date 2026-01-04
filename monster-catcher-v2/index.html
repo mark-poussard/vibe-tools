@@ -228,10 +228,8 @@
       'desert': [ { key: 'Sand-Stinger', weight: 0.3 }, { key: 'Sun-Cactus', weight: 0.3 }, { key: 'Mindbug', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 } ]
     };
     function getExpRequired(lvl, growth) {
-      const baseCount = 0.025 * lvl * lvl - 0.25 * lvl + 5;
-      const enemyXp = 15 + lvl * 10;
-      const mult = growth === 'fast' ? 1 : (growth === 'slow' ? 3 : 1.5);
-      return Math.floor(mult * baseCount * enemyXp);
+      const mult = growth === 'fast' ? 0.66 : (growth === 'slow' ? 2.0 : 1.0);
+      return Math.floor(mult * 260 * (Math.pow(1.3, lvl) - 1));
     }
     function createMonster(key, lvl) {
       const t = MONSTER_DB[key]; if (!t) return null;
@@ -756,7 +754,7 @@
       let selectedKey = pool[0].key;
       for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
       currentEnemy = createMonster(selectedKey, level);
-      currentEnemy.gold = 10 + level * 8; currentEnemy.rewardXp = 15 + level * 10;
+      currentEnemy.gold = 10 + level * 8; currentEnemy.rewardXp = Math.floor(20 * Math.pow(1.3, level));
       playerStats.party.forEach(p => p.ap = 0);
       currentEnemy.ap = 0;
       activeActor = null;
