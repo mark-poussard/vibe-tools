@@ -55,7 +55,7 @@
     .flashing { animation: flash-anim 0.5s ease-out; }
     .dungeon-info { color: #ff66ff; font-weight: bold; }
     .bar-container { width: 100px; height: 14px; background: #333; border: 1px solid #555; margin: 4px 0; position: relative; border-radius: 2px; overflow: hidden; }
-    .bar-fill { height: 100%; width: 100%; transition: width 0.6s ease-in-out; }
+    .bar-fill { height: 100%; width: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     .bar-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; font-size: 9px; line-height: 14px; text-align: center; color: white; text-shadow: 1px 1px 1px black; font-weight: bold; pointer-events: none; }
     .hp-fill { background: #4caf50; } .mp-fill { background: #2196f3; } .xp-fill { background: #ffeb3b; }
     .battle-card { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px; font-size: 0.75em; border: 2px solid transparent; background: rgba(255,255,255,0.05); border-radius: 4px; width: 100%; box-sizing: border-box; }
@@ -430,7 +430,7 @@
           <div style="margin-bottom: 5px;"><strong>MP:</strong> ${Math.ceil(p.mp)} / ${p.maxMp}</div>
           <div style="margin-bottom: 5px;"><strong>Attack:</strong> ${p.atk}</div>
           <div style="margin-bottom: 5px;"><strong>Speed:</strong> ${p.spd}</div>
-          <div style="margin-bottom: 5px;"><strong>XP:</strong> ${Math.floor(p.xp)} / ${req}</div><div class="bar-container" style="width:100%; height:8px;"><div class="bar-fill xp-fill" style="width:${Math.max(0, Math.min(100, ((p.xp - (p.lvl > 1 ? getExpRequired(p.lvl - 1, p.growth) : 0)) / (req - (p.lvl > 1 ? getExpRequired(p.lvl - 1, p.growth) : 0))) * 100))}%"></div></div>
+          <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
           <strong>Skills:</strong><br>
           • Basic Attack (Normal)<br>
@@ -744,7 +744,7 @@
       let selectedKey = pool[0].key;
       for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
       currentEnemy = createMonster(selectedKey, level);
-      currentEnemy.rewardGold = 10 + level * 8; currentEnemy.rewardXp = 15 + level * 10;
+      currentEnemy.gold = 10 + level * 8; currentEnemy.xp = 15 + level * 10;
       playerStats.party.forEach(p => p.ap = 0);
       currentEnemy.ap = 0;
       activeActor = null;
@@ -756,22 +756,32 @@
       const partyList = document.getElementById('party-list');
       const enemyList = document.getElementById('enemy-list');
       if (!partyList || !enemyList) return;
-      partyList.innerHTML = ''; enemyList.innerHTML = '';
-      playerStats.party.forEach((p, i) => {
-        const div = document.createElement('div');
-        div.className = 'battle-card' + (p === activeActor ? ' active-actor' : '');
-        const curReq = getExpRequired(p.lvl, p.growth); const prevReq = p.lvl > 1 ? getExpRequired(p.lvl - 1, p.growth) : 0; const xpPerc = Math.max(0, Math.min(100, ((p.xp - prevReq) / (curReq - prevReq)) * 100)); div.innerHTML = `<canvas id="p-canv-${i}" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name} <span style="font-size:0.7em">L${p.lvl}</span></div><div class="bar-container"><div class="bar-fill hp-fill" style="width:${(p.hp/p.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(p.hp)}/${p.maxHp}</div></div><div class="bar-container"><div class="bar-fill mp-fill" style="width:${(p.mp/p.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(p.mp)}/${p.maxMp}</div></div><div class="bar-container" style="height:6px; margin-top:2px;"><div class="bar-fill xp-fill" style="width:${xpPerc}%"></div></div></div>`;
-        partyList.appendChild(div);
-        drawMonsterIcon(document.getElementById(`p-canv-${i}`).getContext('2d'), p.name);
-      });
-      if (currentEnemy) {
-        const div = document.createElement('div');
-        div.className = 'battle-card' + (currentEnemy === activeActor ? ' active-actor' : '');
-        div.style.flexDirection = 'row-reverse'; div.style.textAlign = 'right';
-        div.innerHTML = `<canvas id="e-canv" class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${currentEnemy.name} <span style="font-size:0.7em">L${currentEnemy.lvl}</span></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill hp-fill" style="width:${(currentEnemy.hp/currentEnemy.maxHp*100)}%"></div><div class="bar-text">HP ${Math.ceil(currentEnemy.hp)}/${currentEnemy.maxHp}</div></div><div class="bar-container" style="margin-left:auto"><div class="bar-fill mp-fill" style="width:${(currentEnemy.mp/currentEnemy.maxMp*100)}%"></div><div class="bar-text">MP ${Math.ceil(currentEnemy.mp)}/${currentEnemy.maxMp}</div></div></div>`;
-        enemyList.appendChild(div);
-        drawMonsterIcon(document.getElementById('e-canv').getContext('2d'), currentEnemy.name);
-      }
+      const updateContainer = (container, monsters, isEnemy) => {
+        if (container.children.length !== monsters.length) container.innerHTML = '';
+        monsters.forEach((m, i) => {
+          let card = container.children[i];
+          if (!card) {
+            card = document.createElement('div');
+            card.className = 'battle-card';
+            if (isEnemy) { card.style.flexDirection = 'row-reverse'; card.style.textAlign = 'right'; }
+            card.innerHTML = `<canvas class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div class="card-name" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill hp-fill"></div><div class="bar-text hp-txt"></div></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill mp-fill"></div><div class="bar-text mp-txt"></div></div>${!isEnemy?'<div class="bar-container"><div class="bar-fill xp-fill"></div><div class="bar-text" style="font-size:8px">XP</div></div>':''}</div>`;
+            container.appendChild(card);
+          }
+          card.className = 'battle-card' + (m === activeActor ? ' active-actor' : '');
+          card.querySelector('.card-name').innerHTML = `${m.name} <span style="font-size:0.7em">L${m.lvl}</span>`;
+          card.querySelector('.hp-fill').style.width = (m.hp/m.maxHp*100) + '%';
+          card.querySelector('.hp-txt').innerText = `HP ${Math.ceil(m.hp)}/${m.maxHp}`;
+          card.querySelector('.mp-fill').style.width = (m.mp/m.maxMp*100) + '%';
+          card.querySelector('.mp-txt').innerText = `MP ${Math.ceil(m.mp)}/${m.maxMp}`;
+          if (!isEnemy) {
+            const curReq = getExpRequired(m.lvl, m.growth), prevReq = m.lvl > 1 ? getExpRequired(m.lvl - 1, m.growth) : 0;
+            card.querySelector('.xp-fill').style.width = Math.max(0, Math.min(100, ((m.xp-prevReq)/(curReq-prevReq))*100)) + '%';
+          }
+          drawMonsterIcon(card.querySelector('canvas').getContext('2d'), m.name);
+        });
+      };
+      updateContainer(partyList, playerStats.party, false);
+      updateContainer(enemyList, currentEnemy ? [currentEnemy] : [], true);
       document.getElementById('acting-name').innerText = activeActor ? `Turn: ${activeActor.name}` : "";
       if (msg) document.getElementById('battle-msg').innerText = msg;
     }
@@ -868,7 +878,9 @@
         }
       }
       updateBattleUI(msg);
-if (currentEnemy.hp <= 0) {\n        playerStats.gold += currentEnemy.rewardGold; gainXp(currentEnemy.rewardXp);\n        endBattle(`Victorious! +${currentEnemy.rewardXp}XP`);
+      if (currentEnemy.hp <= 0) {
+        playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.xp);
+        endBattle(`Victorious! +${currentEnemy.xp}XP`);
       } else {
         activeActor.ap -= 100;
         setTimeout(nextTurn, 600);
