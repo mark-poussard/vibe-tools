@@ -791,19 +791,27 @@
           while (currentActorIndex < playerStats.party.length && playerStats.party[currentActorIndex].hp <= 0) currentActorIndex++;
           if (currentActorIndex >= playerStats.party.length) {
             const targets = playerStats.party.filter(p => p.hp > 0);
-            const target = targets[Math.floor(Math.random() * targets.length)];
-            let eDmg = 0; let eMove = "";
-            if (currentEnemy.mp >= (currentEnemy.skill?.cost || 99) && Math.random() > 0.4) {
-              currentEnemy.mp -= currentEnemy.skill.cost;
-              eDmg = calculateSkillDamage(currentEnemy, target, currentEnemy.skill);
-              eMove = `${currentEnemy.name} uses ${currentEnemy.skill.name}`;
-              const chart = TYPE_CHART[target.type] || { weakTo: [], resist: [] };
-              if (chart.weakTo.includes(currentEnemy.skill.type)) eMove += " (Super effective!)";
-            } else {
+            const usableSkills = (currentEnemy.learnedSkills || []).filter(s => currentEnemy.mp >= s.cost);
+            let target = null, skillToUse = null;
+            for (const s of usableSkills) {
+              const weakTarget = targets.find(t => (TYPE_CHART[t.type] || { weakTo: [] }).weakTo.includes(s.type));
+              if (weakTarget) { target = weakTarget; skillToUse = s; break; }
+            }
+            if (!target && targets.length > 0) {
+              target = targets.reduce((min, p) => p.lvl < min.lvl ? p : min, targets[0]);
+              if (usableSkills.length > 0) skillToUse = usableSkills[usableSkills.length - 1];
+            }
+            let eDmg = 0, eMove = "";
+            if (skillToUse && target) {
+              currentEnemy.mp -= skillToUse.cost;
+              eDmg = calculateSkillDamage(currentEnemy, target, skillToUse);
+              eMove = `${currentEnemy.name} uses ${skillToUse.name} on ${target.name}`;
+              if ((TYPE_CHART[target.type] || { weakTo: [] }).weakTo.includes(skillToUse.type)) eMove += " (Super effective!)";
+            } else if (target) {
               eDmg = Math.max(1, currentEnemy.atk + Math.floor(Math.random() * 3));
               eMove = `${currentEnemy.name} hits ${target.name}`;
             }
-            target.hp = Math.max(0, target.hp - eDmg);
+            if (target) target.hp = Math.max(0, target.hp - eDmg);
             updateBattleUI(`${msg}${eMove} for ${Math.ceil(eDmg)}!`);
             if (playerStats.party.every(p => p.hp <= 0)) { alert("The party has fallen..."); location.reload(); }
             setTimeout(() => {
