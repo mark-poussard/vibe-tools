@@ -135,12 +135,31 @@
     const player = {
       x: 26 * TILE_SIZE + 32,
       y: 15 * TILE_SIZE + 32,
-      targetX: 26 * TILE_SIZE + 32,
-      targetY: 15 * TILE_SIZE + 32,
+      path: [],
       size: 40,
       isWalking: false,
       animFrame: 0
     };
+
+    function findPath(startTX, startTY, endTX, endTY) {
+      if (startTX === endTX && startTY === endTY) return [];
+      const queue = [[startTX, startTY, []]];
+      const visited = new Set([`${startTX},${startTY}`]);
+      while (queue.length > 0) {
+        const [cx, cy, path] = queue.shift();
+        const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        for (const [dx, dy] of neighbors) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx >= 0 && nx < MAP_SIZE_TILES && ny >= 0 && ny < MAP_SIZE_TILES && map[ny][nx].traversable && !visited.has(`${nx},${ny}`)) {
+            const newPath = [...path, { x: nx * TILE_SIZE + TILE_SIZE / 2, y: ny * TILE_SIZE + TILE_SIZE / 2 }];
+            if (nx === endTX && ny === endTY) return newPath;
+            visited.add(`${nx},${ny}`);
+            queue.push([nx, ny, newPath]);
+          }
+        }
+      }
+      return null;
+    }
 
     const playerStats = {
       party: [],
@@ -502,24 +521,36 @@
       const worldY = screenY + cam.y;
       const targetTileX = Math.floor(worldX / TILE_SIZE);
       const targetTileY = Math.floor(worldY / TILE_SIZE);
-
+      const startTX = Math.floor(player.x / TILE_SIZE);
+      const startTY = Math.floor(player.y / TILE_SIZE);
       let clickedNpc = NPC_LOCATIONS.find(n => n.x === targetTileX && n.y === targetTileY);
 
       if (clickedNpc) {
-        const tx = clickedNpc.x;
-        const ty = clickedNpc.y;
-        const dx = tx - player.x / TILE_SIZE;
-        const dy = ty - player.y / TILE_SIZE;
-        let adjX = tx; let adjY = ty;
-        if (Math.abs(dx) > Math.abs(dy)) adjX -= Math.sign(dx) || 1;
-        else adjY -= Math.sign(dy) || 1;
-        player.targetX = adjX * TILE_SIZE + TILE_SIZE / 2;
-        player.targetY = adjY * TILE_SIZE + TILE_SIZE / 2;
-        activeInteractionTarget = clickedNpc;
-      } else {
-        player.targetX = targetTileX * TILE_SIZE + TILE_SIZE / 2;
-        player.targetY = targetTileY * TILE_SIZE + TILE_SIZE / 2;
-        activeInteractionTarget = null;
+        const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        let bestPath = null;
+        for (const [dx, dy] of neighbors) {
+          const nx = clickedNpc.x + dx, ny = clickedNpc.y + dy;
+          if (nx >= 0 && nx < MAP_SIZE_TILES && ny >= 0 && ny < MAP_SIZE_TILES && map[ny][nx].traversable) {
+            const p = findPath(startTX, startTY, nx, ny);
+            if (p && (!bestPath || p.length < bestPath.length)) bestPath = p;
+          }
+        }
+        if (bestPath) {
+          if (bestPath.length === 0) {
+            if (clickedNpc.type === 'dialog') showDialog(clickedNpc.text);
+            else if (clickedNpc.type === 'merchant') openShop(clickedNpc.items);
+            player.path = [];
+          } else {
+            player.path = bestPath;
+            activeInteractionTarget = clickedNpc;
+          }
+        }
+      } else if (map[targetTileY] && map[targetTileY][targetTileX] && map[targetTileY][targetTileX].traversable) {
+        const p = findPath(startTX, startTY, targetTileX, targetTileY);
+        if (p) {
+          player.path = p;
+          activeInteractionTarget = null;
+        }
       }
     });
 
@@ -566,8 +597,7 @@
       playerStats.inventory = data.playerStats.inventory;
       player.x = data.player.x;
       player.y = data.player.y;
-      player.targetX = data.player.x;
-      player.targetY = data.player.y;
+      player.path = [];
       document.getElementById('starter-screen').style.display = 'none';
       updateHud();
     }
@@ -575,37 +605,36 @@
     function update() {
       if (dialogActive || gameState === 'BATTLE') return;
       updateHud();
-      const dx = player.targetX - player.x;
-      const dy = player.targetY - player.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist > PLAYER_SPEED) {
-        const nextX = player.x + (dx / dist) * PLAYER_SPEED;
-        const nextY = player.y + (dy / dist) * PLAYER_SPEED;
-        const tx = Math.floor(nextX / TILE_SIZE);
-        const ty = Math.floor(nextY / TILE_SIZE);
-
-        if (map[ty] && map[ty][tx] && map[ty][tx].traversable) {
+      if (player.path && player.path.length > 0) {
+        const target = player.path[0];
+        const dx = target.x - player.x;
+        const dy = target.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > PLAYER_SPEED) {
           player.isWalking = true;
-          player.x = nextX;
-          player.y = nextY;
+          player.x += (dx / dist) * PLAYER_SPEED;
+          player.y += (dy / dist) * PLAYER_SPEED;
           player.animFrame += 0.15;
-          if (map[ty][tx].type === 'dungeon' && Math.random() < 0.012) {
+          const tx = Math.floor(player.x / TILE_SIZE);
+          const ty = Math.floor(player.y / TILE_SIZE);
+          if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon' && Math.random() < 0.012) {
+            player.path = [];
             startBattle(map[ty][tx]);
           }
         } else {
-          player.targetX = player.x;
-          player.targetY = player.y;
-          player.isWalking = false;
+          player.x = target.x;
+          player.y = target.y;
+          player.path.shift();
+          if (player.path.length === 0) {
+            player.isWalking = false;
+            if (activeInteractionTarget) {
+              if (activeInteractionTarget.type === 'dialog') showDialog(activeInteractionTarget.text);
+              else if (activeInteractionTarget.type === 'merchant') openShop(activeInteractionTarget.items);
+              activeInteractionTarget = null;
+            }
+          }
         }
       } else {
-        player.x = player.targetX;
-        player.y = player.targetY;
-        if (activeInteractionTarget) {
-           if (activeInteractionTarget.type === 'dialog') showDialog(activeInteractionTarget.text);
-           else if (activeInteractionTarget.type === 'merchant') openShop(activeInteractionTarget.items);
-        }
-        activeInteractionTarget = null;
         player.isWalking = false;
       }
     }
@@ -696,7 +725,7 @@
     }
 
     function startBattle(zone) {
-      player.isWalking = false; player.targetX = player.x; player.targetY = player.y;
+      player.isWalking = false; player.path = [];
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
