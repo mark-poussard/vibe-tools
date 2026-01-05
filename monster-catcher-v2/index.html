@@ -170,7 +170,8 @@
     const playerStats = {
       party: [],
       gold: 150, inventory: [],
-      lastHealLocation: null
+      lastHealLocation: null,
+      defeatedNpcIds: []
     };
     const MORPHOLOGY_SLOTS = {
       'Bipedal': ['Head', 'Chest', 'Hands', 'Feet'],
@@ -320,7 +321,7 @@
 
     let NPC_LOCATIONS = [
       { 
-        x: 26, y: 17, type: 'dialog', color: '#4444ff', 
+        id: 'guide', x: 26, y: 17, type: 'dialog', color: '#4444ff', 
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -331,7 +332,7 @@
         }
       },
       { 
-        x: 9, y: 15, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
+        id: 'boss_cliffram', x: 9, y: 15, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
         equipment: { 'Head': 'Iron Helmet', 'Chest': 'Steel Plate' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
@@ -340,7 +341,7 @@
         }
       },
       { 
-        x: 6, y: 13, type: 'merchant', color: '#f1c40f', 
+        id: 'merchant', x: 6, y: 13, type: 'merchant', color: '#f1c40f', 
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -360,7 +361,7 @@
         }
       },
       { 
-        x: 26, y: 13, type: 'healer', color: '#10b981', 
+        id: 'healer', x: 26, y: 13, type: 'healer', color: '#10b981', 
         text: "Welcome to the adventure! I have healed your monsters to full health.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -372,7 +373,7 @@
         }
       },
       { 
-        x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
+        id: 'boss_omnistar', x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
         equipment: { 'Core': 'Fire Orb' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
@@ -770,6 +771,17 @@
       playerStats.gold = data.playerStats.gold;
       playerStats.inventory = data.playerStats.inventory;
       playerStats.lastHealLocation = data.playerStats.lastHealLocation || null;
+      playerStats.defeatedNpcIds = data.playerStats.defeatedNpcIds || [];
+      
+      playerStats.defeatedNpcIds.forEach(id => {
+        const idx = NPC_LOCATIONS.findIndex(n => n.id === id);
+        if (idx !== -1) {
+          const npc = NPC_LOCATIONS[idx];
+          if (map[npc.y] && map[npc.y][npc.x]) map[npc.y][npc.x].traversable = true;
+          NPC_LOCATIONS.splice(idx, 1);
+        }
+      });
+
       player.x = data.player.x;
       player.y = data.player.y;
       player.path = [];
@@ -1140,6 +1152,7 @@
         if (activeBossNpc && enemies.every(e => e.hp <= 0)) {
           const idx = NPC_LOCATIONS.indexOf(activeBossNpc);
           if (idx > -1) {
+            if (activeBossNpc.id) playerStats.defeatedNpcIds.push(activeBossNpc.id);
             map[activeBossNpc.y][activeBossNpc.x].traversable = true;
             NPC_LOCATIONS.splice(idx, 1);
           }
