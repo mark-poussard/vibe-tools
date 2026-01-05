@@ -251,7 +251,7 @@
     let pendingAction = null;
     let pendingSkillIdx = null;
 
-    const NPC_LOCATIONS = [
+    let NPC_LOCATIONS = [
       { 
         x: 26, y: 17, type: 'dialog', color: '#4444ff', 
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
@@ -290,9 +290,26 @@
           c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
           c.fillStyle = 'white'; c.beginPath(); c.moveTo(x-8, y-52); c.lineTo(x+8, y-52); c.lineTo(x, y-60); c.closePath(); c.fill();
         }
+      },
+      { 
+        x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#fde047'; c.beginPath();
+          for(let i=0;i<5;i++){
+            let a=(i*72-90)*Math.PI/180;
+            c.lineTo(x + Math.cos(a)*25, y - 20 + Math.sin(a)*25);
+            a=((i*72+36)-90)*Math.PI/180;
+            c.lineTo(x + Math.cos(a)*10, y - 20 + Math.sin(a)*10);
+          }
+          c.closePath(); c.fill();
+          c.strokeStyle = '#facc15'; c.lineWidth = 2; c.stroke();
+          c.fillStyle = 'white'; c.beginPath(); c.arc(x-5, y-22, 3, 0, Math.PI*2); c.arc(x+5, y-22, 3, 0, Math.PI*2); c.fill();
+        }
       }
     ];
     let activeInteractionTarget = null;
+    let activeBossNpc = null;
     let dialogActive = false;
 
     const map = [];
@@ -347,6 +364,9 @@
           map[y][x] = { ...charMap[char] };
         }
       }
+      NPC_LOCATIONS.forEach(npc => {
+        if (map[npc.y] && map[npc.y][npc.x]) map[npc.y][npc.x].traversable = false;
+      });
     }
 
     function resize() {
@@ -615,6 +635,7 @@
     function triggerNpc(npc) {
       if (npc.type === 'dialog') showDialog(npc.text);
       else if (npc.type === 'merchant') openShop(npc.items);
+      else if (npc.type === 'boss') startBossBattle(npc);
       else if (npc.type === 'healer') {
         playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
         playerStats.lastHealLocation = { x: player.x, y: player.y };
@@ -794,6 +815,22 @@
       activeActor = null; pendingAction = null; pendingSkillIdx = null;
       document.getElementById('battle-screen').style.display = 'flex';
       nextTurn(`A group of ${enemies.length} monsters appeared!`);
+    }
+
+    function startBossBattle(npc) {
+      activeBossNpc = npc;
+      player.isWalking = false; player.path = [];
+      document.getElementById('flash-overlay').classList.add('flashing');
+      setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
+      gameState = 'BATTLE';
+      let m = createMonster(npc.monsterKey, npc.level);
+      m.gold = 500;
+      m.rewardXp = 2500;
+      enemies = [m];
+      playerStats.party.forEach(p => p.ap = 0);
+      activeActor = null; pendingAction = null; pendingSkillIdx = null;
+      document.getElementById('battle-screen').style.display = 'flex';
+      nextTurn(`The legendary ${npc.monsterKey} appeared!`);
     }
 
     function updateBattleUI(msg) {
@@ -998,6 +1035,14 @@
     function endBattle(msg) {
       updateBattleUI(msg);
       setTimeout(() => {
+        if (activeBossNpc && enemies.every(e => e.hp <= 0)) {
+          const idx = NPC_LOCATIONS.indexOf(activeBossNpc);
+          if (idx > -1) {
+            map[activeBossNpc.y][activeBossNpc.x].traversable = true;
+            NPC_LOCATIONS.splice(idx, 1);
+          }
+        }
+        activeBossNpc = null;
         document.getElementById('battle-screen').style.display = 'none';
         gameState = 'EXPLORE';
         battleBusy = false;
@@ -1009,6 +1054,7 @@
       alert("All your monsters have fainted! You lost some gold and rushed back to safety...");
       playerStats.gold = Math.floor(playerStats.gold * 0.9);
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+      activeBossNpc = null;
       const respawn = playerStats.lastHealLocation || { x: 26 * TILE_SIZE + 32, y: 15 * TILE_SIZE + 32 };
       player.x = respawn.x;
       player.y = respawn.y;
