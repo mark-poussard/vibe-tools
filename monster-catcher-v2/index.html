@@ -163,7 +163,8 @@
 
     const playerStats = {
       party: [],
-      gold: 50, inventory: []
+      gold: 50, inventory: [],
+      lastHealLocation: null
     };
     const TYPE_CHART = {
       'Fire': { weakTo: ['Water', 'Earth'], resist: ['Nature', 'Fire'] },
@@ -591,6 +592,7 @@
       else if (npc.type === 'merchant') openShop(npc.items);
       else if (npc.type === 'healer') {
         playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+        playerStats.lastHealLocation = { x: player.x, y: player.y };
         updateHud();
         showDialog(npc.text);
       }
@@ -613,6 +615,7 @@
       playerStats.party = data.playerStats.party;
       playerStats.gold = data.playerStats.gold;
       playerStats.inventory = data.playerStats.inventory;
+      playerStats.lastHealLocation = data.playerStats.lastHealLocation || null;
       player.x = data.player.x;
       player.y = data.player.y;
       player.path = [];
@@ -847,7 +850,10 @@
       }
       target.hp = Math.max(0, target.hp - dmg);
       updateBattleUI(txt);
-      if (playerStats.party.every(p => p.hp <= 0)) { alert("Defeat..."); location.reload(); return; }
+      if (playerStats.party.every(p => p.hp <= 0)) {
+        setTimeout(handleDefeat, 800);
+        return;
+      }
       activeActor.ap -= 100;
       setTimeout(nextTurn, 800);
     }
@@ -933,6 +939,20 @@
       }, 1500);
     }
 
+    function handleDefeat() {
+      alert("All your monsters have fainted! You lost some gold and rushed back to safety...");
+      playerStats.gold = Math.floor(playerStats.gold * 0.9);
+      playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+      const respawn = playerStats.lastHealLocation || { x: 26 * TILE_SIZE + 32, y: 15 * TILE_SIZE + 32 };
+      player.x = respawn.x;
+      player.y = respawn.y;
+      player.path = [];
+      document.getElementById('battle-screen').style.display = 'none';
+      gameState = 'EXPLORE';
+      battleBusy = false;
+      updateHud();
+    }
+
     function initStarterScreen() {
       const screen = document.getElementById('starter-screen');
       const container = screen.querySelector('.starter-cards');
@@ -958,6 +978,7 @@
     }
     function selectStarter(idx) {
       playerStats.party = [JSON.parse(JSON.stringify(STARTERS[idx]))];
+      playerStats.lastHealLocation = null;
       document.getElementById('starter-screen').style.display = 'none';
       updateHud();
     }
