@@ -631,27 +631,42 @@
       } else {
         playerStats.inventory.forEach((item, idx) => {
           const canUse = isBattle ? ['hp', 'mp', 'capture'].includes(item.type) : ['hp', 'mp'].includes(item.type);
-          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span>${canUse ? `<button onclick="useItem(${idx}, ${isBattle})\">Use</button>` : ''}</div>`;
+          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span>${canUse ? `<button onclick="inventoryAction(${idx}, ${isBattle})">Use</button>` : ''}</div>`;
         });
       }
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="${isBattle ? 'toggleMenu()' : 'showMainMenu()'}">Back</button>`;
       content.innerHTML = html;
     }
 
-    function useItem(idx, isBattle = false) {
+    function inventoryAction(idx, isBattle) {
       if (isBattle) { battleAction('item', idx); return; }
       const item = playerStats.inventory[idx];
-      const hero = playerStats.party[0];
+      if (item.type === 'hp' || item.type === 'mp') showMemberSelectForItem(idx);
+    }
+
+    function showMemberSelectForItem(itemIdx) {
+      const content = document.getElementById('menu-content');
+      let html = `<h3 style="margin-top: 0;">Use ${playerStats.inventory[itemIdx].name}</h3><div style="max-height: 260px; overflow-y: auto;">`;
+      playerStats.party.forEach((p, i) => {
+        html += `<button class="menu-btn" onclick="applyItemToMember(${i}, ${itemIdx})">${p.name} (HP: ${Math.ceil(p.hp)}/${p.maxHp})</button>`;
+      });
+      html += `</div><button class="menu-btn" onclick="showInventory()">Back</button>`;
+      content.innerHTML = html;
+    }
+
+    function applyItemToMember(mIdx, itemIdx) {
+      const item = playerStats.inventory[itemIdx];
+      const p = playerStats.party[mIdx];
       if (item.type === 'hp') {
-        if (hero.hp >= hero.maxHp) { alert("HP already full!"); return; }
-        hero.hp = Math.min(hero.maxHp, hero.hp + item.val);
+        if (p.hp >= p.maxHp) { alert("HP full!"); return; }
+        p.hp = Math.min(p.maxHp, p.hp + item.val);
       } else if (item.type === 'mp') {
-        if (hero.mp >= hero.maxMp) { alert("MP already full!"); return; }
-        hero.mp = Math.min(hero.maxMp, hero.mp + item.val);
-      } else { alert("Cannot use this now!"); return; }
+        if (p.mp >= p.maxMp) { alert("MP full!"); return; }
+        p.mp = Math.min(p.maxMp, p.mp + item.val);
+      }
       item.count--;
-      if (item.count <= 0) playerStats.inventory.splice(idx, 1);
-      showInventory(false);
+      if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
+      showInventory();
       updateHud();
     }
 
@@ -938,10 +953,11 @@
             card.innerHTML = `<canvas class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div class="card-name" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill hp-fill"></div><div class="bar-text hp-txt"></div></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill mp-fill"></div><div class="bar-text mp-txt"></div></div>${!isEnemy?'<div class="bar-container" style="height:1px; border:none; background:rgba(255,255,255,0.1); margin-top:2px;"><div class="bar-fill xp-fill"></div></div>':''}</div>`;
             container.appendChild(card);
           }
-          card.onclick = (isEnemy && pendingAction && m.hp > 0) ? () => selectTarget(i) : null;
-          card.style.cursor = (isEnemy && pendingAction && m.hp > 0) ? 'pointer' : 'default';
+          const isSelectable = (isEnemy && (pendingAction === 'attack' || pendingAction === 'useSkill' || pendingAction === 'itemEnemy') && m.hp > 0) || (!isEnemy && pendingAction === 'itemParty' && m.hp > 0);
+          card.onclick = isSelectable ? () => selectTarget(i) : null;
+          card.style.cursor = isSelectable ? 'pointer' : 'default';
           card.style.opacity = m.hp <= 0 ? '0.4' : '1';
-          if (isEnemy && pendingAction && m.hp > 0) card.style.boxShadow = 'inset 0 0 10px #ffeb3b';
+          if (isSelectable) card.style.boxShadow = 'inset 0 0 10px #ffeb3b';
           else card.style.boxShadow = 'none';
           card.className = 'battle-card' + (m === activeActor ? ' active-actor' : '');
           card.querySelector('.card-name').innerHTML = `${m.name} <span style="font-size:0.7em">L${m.lvl}</span>`;
@@ -1023,57 +1039,71 @@
         return;
       }
       const aliveEnemies = enemies.filter(e => e.hp > 0);
-      if (type === 'attack' || type === 'useSkill' || (type === 'item' && playerStats.inventory[data].type === 'capture')) {
+      if (type === 'attack' || type === 'useSkill') {
         if (aliveEnemies.length > 1) {
           pendingAction = type; pendingSkillIdx = data;
           updateBattleUI("Select a target monster.");
-          if (type === 'item') toggleMenu();
           return;
         }
         executeBattleAction(type, enemies.indexOf(aliveEnemies[0]), data);
       } else if (type === 'item') {
-        executeBattleAction(type, null, data);
+        const item = playerStats.inventory[data];
+        if (item.type === 'capture') {
+          if (aliveEnemies.length > 1) {
+            pendingAction = 'itemEnemy'; pendingSkillIdx = data;
+            updateBattleUI("Select target to capture.");
+            toggleMenu(); return;
+          }
+          executeBattleAction('itemEnemy', enemies.indexOf(aliveEnemies[0]), data);
+        } else {
+          pendingAction = 'itemParty'; pendingSkillIdx = data;
+          updateBattleUI("Select monster to heal.");
+          toggleMenu();
+        }
       }
     }
 
     function executeBattleAction(type, targetIdx, data) {
       battleBusy = true; pendingAction = null; let msg = "";
-      const target = targetIdx !== null ? enemies[targetIdx] : null;
       if (type === 'attack') {
+        const target = enemies[targetIdx];
         const a = getMonsterFinalStats(activeActor), d = getMonsterFinalStats(target);
         const dmg = Math.max(1, (a.atk + Math.floor(Math.random() * 5)) - d.def);
         target.hp = Math.max(0, target.hp - dmg); msg = `${activeActor.name} hit for ${dmg}! `;
+        if (target.hp <= 0) { gainXp(target.rewardXp); msg += `${target.name} defeated! `; }
       } else if (type === 'useSkill') {
+        const target = enemies[targetIdx];
         const equipSkills = []; for (let s in activeActor.equipment) { const itm = EQUIPMENT_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
         const skill = [...(activeActor.learnedSkills || []), ...equipSkills][data];
         activeActor.mp -= skill.cost; const dmg = calculateSkillDamage(activeActor, target, skill);
         target.hp = Math.max(0, target.hp - dmg); if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
         msg = `${activeActor.name} used ${skill.name}! `;
-      } else if (type === 'item') {
+        if (target.hp <= 0) { gainXp(target.rewardXp); msg += `${target.name} defeated! `; }
+      } else if (type === 'itemEnemy' || type === 'itemParty') {
         const item = playerStats.inventory[data];
+        const itmTarget = type === 'itemEnemy' ? enemies[targetIdx] : playerStats.party[targetIdx];
         if (item.type === 'capture') {
           if (playerStats.party.length >= 4) { alert("Party full!"); toggleMenu(); battleBusy = false; return; }
-          const chance = 0.2 + (0.5 * (1 - (target.hp / target.maxHp)));
+          const chance = 0.2 + (0.5 * (1 - (itmTarget.hp / itmTarget.maxHp)));
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
           toggleMenu();
-          if (Math.random() < chance) { playerStats.party.push(JSON.parse(JSON.stringify(target))); target.hp = 0; msg = `Captured ${target.name}! `; }
-          else msg = "Capture failed! ";
+          if (Math.random() < chance) {
+            playerStats.party.push(JSON.parse(JSON.stringify(itmTarget))); itmTarget.hp = 0;
+            msg = `Captured ${itmTarget.name}! `; gainXp(itmTarget.rewardXp);
+          } else msg = "Capture failed! ";
         } else {
-          if (item.type === 'hp') activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + item.val);
-          if (item.type === 'mp') activeActor.mp = Math.min(activeActor.maxMp, activeActor.mp + item.val);
+          if (item.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + item.val);
+          if (item.type === 'mp') itmTarget.mp = Math.min(itmTarget.maxMp, itmTarget.mp + item.val);
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
-          toggleMenu(); msg = "Item used! ";
+          toggleMenu(); msg = `${item.name} used on ${itmTarget.name}! `;
         }
       }
       updateBattleUI(msg);
       if (enemies.every(e => e.hp <= 0)) {
-        let totalGold = 0, totalXp = 0;
-        enemies.forEach(e => { totalGold += e.gold; totalXp += e.rewardXp; });
-        playerStats.gold += totalGold; gainXp(totalXp);
-        endBattle(`Victorious! +${totalXp}XP +${totalGold}G`);
+        let totalGold = 0; enemies.forEach(e => { totalGold += e.gold; });
+        playerStats.gold += totalGold; endBattle(`Victorious! +${totalGold}G`);
       } else {
-        activeActor.ap -= 100;
-        setTimeout(nextTurn, 600);
+        activeActor.ap -= 100; setTimeout(nextTurn, 600);
       }
     }
 
