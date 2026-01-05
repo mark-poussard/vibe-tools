@@ -911,12 +911,13 @@
       gameState = 'BATTLE';
       const pool = ENCOUNTER_POOLS[zone.pool] || ENCOUNTER_POOLS['forest'];
       const range = zone.levelRange || [1, 5];
-      const maxLvl = range[1];
-      const minLvl = range[0];
       let count = 1;
       const r = Math.random();
       if (r < 0.15) count = 3; else if (r < 0.4) count = 2;
-      let totalLvl = Math.floor(Math.random() * (maxLvl - (count * minLvl) + 1)) + (count * minLvl);
+      const offset = 3 * (count - 1);
+      const adjMin = Math.max(1, range[0] - offset);
+      const adjMax = Math.max(1, range[1] - offset);
+      let totalLvl = (Math.floor(Math.random() * (adjMax - adjMin + 1)) + adjMin) * count;
       enemies = [];
       for (let i = 0; i < count; i++) {
         let monsterLvl = Math.max(1, Math.floor(totalLvl / (count - i)));
