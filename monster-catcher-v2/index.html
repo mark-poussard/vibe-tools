@@ -646,10 +646,17 @@
     }
 
     function showMemberSelectForItem(itemIdx) {
+      const item = playerStats.inventory[itemIdx];
       const content = document.getElementById('menu-content');
-      let html = `<h3 style="margin-top: 0;">Use ${playerStats.inventory[itemIdx].name}</h3><div style="max-height: 260px; overflow-y: auto;">`;
+      let html = `<h3 style="margin-top: 0;">Use ${item.name}</h3><div style="max-height: 260px; overflow-y: auto;">`;
       playerStats.party.forEach((p, i) => {
-        html += `<button class="menu-btn" onclick="applyItemToMember(${i}, ${itemIdx})">${p.name} (HP: ${Math.ceil(p.hp)}/${p.maxHp})</button>`;
+        const isFainted = p.hp <= 0;
+        const statLabel = item.type === 'mp' ? 'MP' : 'HP';
+        const statVal = item.type === 'mp' ? Math.ceil(p.mp) : Math.ceil(p.hp);
+        const statMax = item.type === 'mp' ? p.maxMp : p.maxHp;
+        const style = isFainted ? 'opacity: 0.5; cursor: not-allowed;' : '';
+        const click = isFainted ? '' : `applyItemToMember(${i}, ${itemIdx})`;
+        html += `<button class="menu-btn" style="${style}" onclick="${click}">${p.name} (${statLabel}: ${statVal}/${statMax})${isFainted ? ' [Fainted]' : ''}</button>`;
       });
       html += `</div><button class="menu-btn" onclick="showInventory()">Back</button>`;
       content.innerHTML = html;
@@ -658,6 +665,7 @@
     function applyItemToMember(mIdx, itemIdx) {
       const item = playerStats.inventory[itemIdx];
       const p = playerStats.party[mIdx];
+      if (p.hp <= 0) { alert("Cannot use items on fainted monsters!"); return; }
       if (item.type === 'hp') {
         if (p.hp >= p.maxHp) { alert("HP full!"); return; }
         p.hp = Math.min(p.maxHp, p.hp + item.val);
