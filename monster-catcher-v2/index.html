@@ -169,8 +169,30 @@
 
     const playerStats = {
       party: [],
-      gold: 50, inventory: [],
+      gold: 150, inventory: [],
       lastHealLocation: null
+    };
+    const MORPHOLOGY_SLOTS = {
+      'Bipedal': ['Head', 'Chest', 'Hands', 'Feet'],
+      'Quadrupedal': ['Head', 'Chest', 'Feet'],
+      'Aerial': ['Head', 'Chest', 'Wings'],
+      'Serpentine': ['Head', 'Body'],
+      'Amorphous': ['Core'],
+      'Arthropod': ['Head', 'Thorax', 'Legs'],
+      'Robotic': ['Chassis', 'Module']
+    };
+    const SLOT_TO_TYPE = {
+      'Head': 'Helmet', 'Chest': 'Armor', 'Hands': 'Gloves', 'Feet': 'Boots', 'Wings': 'Wing-Guard', 'Body': 'Scale-Mail', 'Core': 'Gem', 'Thorax': 'Carapace', 'Legs': 'Greaves', 'Chassis': 'Plate', 'Module': 'Chip'
+    };
+    const EQUIPMENT_DB = {
+      'Iron Helmet': { type: 'Helmet', stats: { def: 5 } },
+      'Leather Vest': { type: 'Armor', stats: { def: 3 } },
+      'Swift Sandals': { type: 'Boots', stats: { spd: 10 } },
+      'Power Bracers': { type: 'Gloves', stats: { atk: 8 } },
+      'Steel Plate': { type: 'Plate', stats: { def: 18 } },
+      'Obsidian Scales': { type: 'Scale-Mail', stats: { def: 12, resist: ['Fire'] } },
+      'Fire Orb': { type: 'Gem', stats: { FireBoost: 0.3, skill: { name: 'Ember Blast', cost: 10, mult: 2.2, type: 'Fire' } } },
+      'Wind Feather': { type: 'Wing-Guard', stats: { spd: 15, resist: ['Air'] } }
     };
     const TYPE_CHART = {
       'Fire': { weakTo: ['Water', 'Earth'], resist: ['Nature', 'Fire'] },
@@ -188,45 +210,64 @@
       'Kaiju': { weakTo: ['Aether', 'Psionic'], resist: ['Fire', 'Water', 'Earth', 'Normal'] }
     };
     const MONSTER_DB = {
-      'Leafy': { growth: 'fast', hp: 45, mp: 10, atk: 7, spd: 10, type: 'Nature', draw: (c) => { c.fillStyle = '#84cc16'; c.beginPath(); c.ellipse(0, 0, 25, 15, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#4d7c0f'; c.beginPath(); c.moveTo(0, -15); c.quadraticCurveTo(15, -35, 0, -45); c.quadraticCurveTo(-15, -35, 0, -15); c.fill(); }, skills: [{ name: 'Leaf Blade', lvl: 1, cost: 0, mult: 1.3, type: 'Nature' }] },
-      'Sprout': { growth: 'fast', hp: 42, mp: 15, atk: 6, spd: 12, type: 'Nature', draw: (c) => { c.fillStyle = '#a3e635'; c.beginPath(); c.arc(0, 0, 15, 0, Math.PI*2); c.fill(); c.fillStyle = '#3f6212'; c.beginPath(); c.moveTo(0,-15); c.lineTo(8,-22); c.moveTo(0,-15); c.lineTo(-8,-22); c.stroke(); }, skills: [{ name: 'Vine Whip', lvl: 1, cost: 0, mult: 1.2, type: 'Nature' }] },
-      'Cliff-Ram': { hp: 100, mp: 20, atk: 18, spd: 15, type: 'Earth', draw: (c) => { c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(-25, -35, 50, 35, 8); c.fill(); c.strokeStyle = 'white'; c.lineWidth = 4; c.beginPath(); c.moveTo(-15,-35); c.quadraticCurveTo(-25,-55, -35, -35); c.moveTo(15,-35); c.quadraticCurveTo(25,-55, 35, -35); c.stroke(); }, skills: [{ name: 'Headbutt', lvl: 1, cost: 5, mult: 1.5, type: 'Earth' }] },
-      'Sky-Shredder': { hp: 85, mp: 30, atk: 22, spd: 28, type: 'Air', draw: (c) => { c.fillStyle = '#38bdf8'; c.beginPath(); c.ellipse(0, -20, 25, 15, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#ef4444'; c.beginPath(); c.moveTo(-25,-20); c.lineTo(-45, -35); c.lineTo(-25, -10); c.fill(); c.beginPath(); c.moveTo(25,-20); c.lineTo(45, -35); c.lineTo(25, -10); c.fill(); }, skills: [{ name: 'Aerial Ace', lvl: 1, cost: 8, mult: 1.6, type: 'Air' }] },
-      'Sand-Stinger': { hp: 140, mp: 40, atk: 30, spd: 20, type: 'Dark', draw: (c) => { c.fillStyle = '#9333ea'; c.beginPath(); c.ellipse(0, 0, 20, 12, 0, 0, Math.PI*2); c.fill(); c.strokeStyle = '#9333ea'; c.lineWidth = 5; c.beginPath(); c.moveTo(0,-10); c.quadraticCurveTo(30, -50, 10, -60); c.stroke(); }, skills: [{ name: 'Poison Jab', lvl: 1, cost: 10, mult: 1.8, type: 'Dark' }] },
-      'Sun-Cactus': { hp: 160, mp: 50, atk: 26, spd: 12, type: 'Fire', draw: (c) => { c.fillStyle = '#166534'; c.beginPath(); c.roundRect(-15, -50, 30, 50, 10); c.fill(); c.fillStyle = '#fde047'; c.beginPath(); c.arc(0, -55, 8, 0, Math.PI*2); c.fill(); }, skills: [{ name: 'Needle Blast', lvl: 1, cost: 12, mult: 2.0, type: 'Fire' }] },
-      'Rabbite': { growth: 'fast', hp: 35, mp: 5, atk: 5, spd: 8, type: 'Normal', draw: (c) => { c.fillStyle = 'white'; c.beginPath(); c.arc(0, -15, 20, 0, Math.PI*2); c.fill(); c.beginPath(); c.ellipse(-8, -40, 6, 15, -0.1, 0, Math.PI*2); c.fill(); c.beginPath(); c.ellipse(8, -40, 6, 15, 0.1, 0, Math.PI*2); c.fill(); }, skills: [{ name: 'Bite', lvl: 1, cost: 0, mult: 1.2, type: 'Normal' }] },
-      'Birby': { growth: 'fast', hp: 30, mp: 5, atk: 4, spd: 12, type: 'Normal', draw: (c) => { c.fillStyle = '#facc15'; c.beginPath(); c.arc(0, -15, 18, 0, Math.PI*2); c.fill(); c.fillStyle = '#f97316'; c.beginPath(); c.moveTo(10, -15); c.lineTo(22, -12); c.lineTo(10, -9); c.fill(); }, skills: [{ name: 'Peck', lvl: 1, cost: 0, mult: 1.1, type: 'Normal' }] },
-      'Cattus': { hp: 40, mp: 8, atk: 6, spd: 10, type: 'Normal', draw: (c) => { c.fillStyle = '#fb923c'; c.beginPath(); c.arc(0, -20, 22, 0, Math.PI*2); c.fill(); c.beginPath(); c.moveTo(-18,-35); c.lineTo(-10,-45); c.lineTo(-2,-35); c.fill(); c.beginPath(); c.moveTo(18,-35); c.lineTo(10,-45); c.lineTo(2,-35); c.fill(); }, skills: [{ name: 'Scratch', lvl: 1, cost: 0, mult: 1.3, type: 'Normal' }] },
-      'Terramole': { hp: 120, mp: 20, atk: 12, spd: 6, type: 'Earth', draw: (c) => { c.fillStyle = '#78350f'; c.beginPath(); c.ellipse(0, -15, 25, 20, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#451a03'; c.beginPath(); c.moveTo(-20, 0); c.lineTo(-30, -10); c.lineTo(-20, -5); c.fill(); c.beginPath(); c.moveTo(20, 0); c.lineTo(30, -10); c.lineTo(20, -5); c.fill(); }, skills: [ { name: 'Mud Slap', lvl: 1, cost: 5, mult: 1.4, type: 'Earth' }, { name: 'Earthquake', lvl: 12, cost: 18, mult: 2.8, type: 'Earth' } ]},
-      'Rockogolem': { hp: 150, mp: 15, atk: 15, spd: 4, type: 'Earth', draw: (c) => { c.fillStyle = '#475569'; c.fillRect(-25, -25, 50, 25); c.fillRect(-15, -50, 30, 25); c.fillStyle = '#06b6d4'; c.beginPath(); c.arc(-8, -38, 3, 0, Math.PI*2); c.fill(); c.arc(8, -38, 3, 0, Math.PI*2); c.fill(); }, skills: [ { name: 'Rock Throw', lvl: 1, cost: 6, mult: 1.6, type: 'Earth' }, { name: 'Stone Smash', lvl: 14, cost: 22, mult: 3.2, type: 'Earth' } ]},
-      'Sparkat': { hp: 80, mp: 30, atk: 14, spd: 22, type: 'Electric', draw: (c) => { c.fillStyle = '#eab308'; c.beginPath(); c.arc(0, -20, 20, 0, Math.PI*2); c.fill(); c.strokeStyle = '#eab308'; c.lineWidth = 4; c.beginPath(); c.moveTo(0,0); c.lineTo(-10, 15); c.lineTo(5, 10); c.lineTo(0, 25); c.stroke(); }, skills: [ { name: 'Zapping Claw', lvl: 1, cost: 8, mult: 1.5, type: 'Electric' }, { name: 'Thunder Bolt', lvl: 15, cost: 25, mult: 3.5, type: 'Electric' } ]},
-      'Voltix': { hp: 70, mp: 45, atk: 10, spd: 18, type: 'Electric', draw: (c) => { c.fillStyle = '#60a5fa'; c.beginPath(); c.arc(0, -30, 20, 0, Math.PI*2); c.fill(); c.strokeStyle = 'white'; c.beginPath(); for(let i=0; i<8; i++) { let a = i*Math.PI/4; c.moveTo(0,-30); c.lineTo(Math.cos(a)*35, -30+Math.sin(a)*35); } c.stroke(); }, skills: [ { name: 'Static Shock', lvl: 1, cost: 5, mult: 1.3, type: 'Electric' }, { name: 'Overload', lvl: 16, cost: 30, mult: 4.2, type: 'Electric' } ]},
-      'Zephyros': { hp: 85, mp: 35, atk: 12, spd: 25, type: 'Air', draw: (c) => { c.fillStyle = 'white'; c.beginPath(); c.arc(-15, -20, 15, 0, Math.PI*2); c.arc(15, -20, 15, 0, Math.PI*2); c.arc(0, -35, 20, 0, Math.PI*2); c.fill(); }, skills: [ { name: 'Air Slash', lvl: 1, cost: 7, mult: 1.4, type: 'Air' }, { name: 'Tornado', lvl: 14, cost: 24, mult: 3.4, type: 'Air' } ]},
-      'Galehawk': { hp: 95, mp: 25, atk: 18, spd: 20, type: 'Air', draw: (c) => { c.fillStyle = '#713f12'; c.beginPath(); c.moveTo(0, -10); c.lineTo(-50, -40); c.lineTo(0, -60); c.lineTo(50, -40); c.closePath(); c.fill(); c.fillStyle = '#ca8a04'; c.beginPath(); c.arc(0,-35,12,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Gust', lvl: 1, cost: 6, mult: 1.6, type: 'Air' }, { name: 'Sky Dive', lvl: 15, cost: 28, mult: 3.8, type: 'Air' } ]},
-      'Mindbug': { growth: 'slow', hp: 110, mp: 80, atk: 15, spd: 15, type: 'Psionic', draw: (c) => { c.fillStyle = '#d946ef'; c.beginPath(); c.ellipse(0, -30, 25, 18, 0, 0, Math.PI*2); c.fill(); c.strokeStyle = '#701a75'; c.beginPath(); c.moveTo(-10,-45); c.lineTo(-20,-60); c.moveTo(10,-45); c.lineTo(20,-60); c.stroke(); }, skills: [ { name: 'Psy-Beam', lvl: 1, cost: 12, mult: 2.0, type: 'Psionic' }, { name: 'Mind Crush', lvl: 25, cost: 45, mult: 4.5, type: 'Psionic' } ]},
-      'Telecrane': { hp: 130, mp: 60, atk: 22, spd: 18, type: 'Psionic', draw: (c) => { c.fillStyle = '#fda4af'; c.beginPath(); c.ellipse(0, -40, 10, 30, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#f43f5e'; c.beginPath(); c.arc(0,-70,12,0,Math.PI*2); c.fill(); c.fillStyle = '#22d3ee'; c.beginPath(); c.arc(0,-75,4,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Kinesis', lvl: 1, cost: 10, mult: 1.8, type: 'Psionic' }, { name: 'Thought Wave', lvl: 22, cost: 35, mult: 3.8, type: 'Psionic' } ]},
-      'Droid-X': { hp: 140, mp: 50, atk: 25, spd: 16, type: 'Cyber', draw: (c) => { c.fillStyle = '#94a3b8'; c.fillRect(-20,-50,40,50); c.fillStyle = '#22d3ee'; c.fillRect(-15,-40,30,8); }, skills: [ { name: 'Laser Shot', lvl: 1, cost: 15, mult: 2.2, type: 'Cyber' }, { name: 'Sync Pulse', lvl: 24, cost: 40, mult: 4.0, type: 'Cyber' } ]},
-      'Glitcher': { growth: 'slow', hp: 100, mp: 100, atk: 20, spd: 28, type: 'Cyber', draw: (c) => { c.fillStyle = '#22c55e'; c.fillRect(-20,-40,40,40); c.fillStyle = 'black'; c.fillRect(-10,-30,5,5); c.fillRect(5,-30,5,5); c.fillRect(-10,-15,20,3); }, skills: [ { name: 'Bug Strike', lvl: 1, cost: 12, mult: 1.9, type: 'Cyber' }, { name: 'System Crash', lvl: 26, cost: 50, mult: 5.5, type: 'Cyber' } ]},
-      'Omnistar': { growth: 'slow', hp: 300, mp: 150, atk: 45, spd: 40, type: 'Aether', draw: (c) => { c.fillStyle = '#fde047'; c.beginPath(); for(let i=0;i<5;i++){ let a=(i*72-90)*Math.PI/180; c.lineTo(Math.cos(a)*40, -30+Math.sin(a)*40); a=((i*72+36)-90)*Math.PI/180; c.lineTo(Math.cos(a)*15, -30+Math.sin(a)*15); } c.closePath(); c.fill(); }, skills: [ { name: 'Aether Flash', lvl: 1, cost: 25, mult: 3.0, type: 'Aether' }, { name: 'Cosmic End', lvl: 35, cost: 80, mult: 7.0, type: 'Aether' } ]},
-      'Cosmogazer': { growth: 'slow', hp: 250, mp: 200, atk: 35, spd: 45, type: 'Aether', draw: (c) => { c.fillStyle = '#6366f1'; c.beginPath(); c.arc(0,-30,30,0,Math.PI*2); c.fill(); c.fillStyle = 'white'; for(let i=0;i<10;i++) c.fillRect(Math.random()*40-20, -50+Math.random()*40, 2, 2); }, skills: [ { name: 'Star Dust', lvl: 1, cost: 20, mult: 2.5, type: 'Aether' }, { name: 'Universe Warp', lvl: 38, cost: 90, mult: 8.5, type: 'Aether' } ]},
-      'Giga-Rex': { growth: 'slow', hp: 500, mp: 100, atk: 55, spd: 25, type: 'Kaiju', draw: (c) => { c.fillStyle = '#ef4444'; c.beginPath(); c.moveTo(-30,0); c.lineTo(-20,-60); c.lineTo(20,-60); c.lineTo(40,0); c.closePath(); c.fill(); c.fillStyle = 'white'; c.beginPath(); c.moveTo(0,-50); c.lineTo(10,-40); c.lineTo(20,-50); c.fill(); }, skills: [ { name: 'Primal Roar', lvl: 1, cost: 30, mult: 3.5, type: 'Kaiju' }, { name: 'Atomic Breath', lvl: 40, cost: 100, mult: 9.0, type: 'Kaiju' } ]},
-      'Abyssal-Terror': { growth: 'slow', hp: 400, mp: 120, atk: 65, spd: 30, type: 'Kaiju', draw: (c) => { c.fillStyle = 'black'; c.beginPath(); c.ellipse(0,-10,40,20,0,0,Math.PI*2); c.fill(); c.fillStyle = 'red'; for(let i=0;i<5;i++) { c.beginPath(); c.arc(-30+i*15, -20+Math.random()*10, 4, 0, Math.PI*2); c.fill(); } }, skills: [ { name: 'Void Grip', lvl: 1, cost: 35, mult: 4.0, type: 'Kaiju' }, { name: 'Calamity', lvl: 42, cost: 110, mult: 10.0, type: 'Kaiju' } ]},
-      'Sylvaris': { hp: 120, mp: 15, atk: 8, spd: 10, type: 'Nature', draw: (c) => { c.fillStyle = '#22c55e'; c.beginPath(); c.ellipse(0,-35,15,35,0,0,Math.PI*2); c.fill(); c.fillStyle = '#84cc16'; c.beginPath(); c.moveTo(-15,-40); c.lineTo(-40,-60); c.lineTo(-15,-50); c.fill(); c.beginPath(); c.moveTo(15,-40); c.lineTo(40,-60); c.lineTo(15,-50); c.fill(); }, skills: [ { name: 'Solar Bloom', lvl: 1, cost: 5, mult: 1.2, heal: 15, type: 'Nature' }, { name: 'Razor Leaf', lvl: 5, cost: 8, mult: 1.8, type: 'Nature' }, { name: 'Nature Embrace', lvl: 16, cost: 18, mult: 2.2, heal: 30, type: 'Nature' }, { name: 'Thorn Blast', lvl: 24, cost: 25, mult: 3.5, type: 'Nature' }, { name: 'Genesis Wave', lvl: 38, cost: 60, mult: 5.5, type: 'Nature' } ]},
-      'Ignifrit': { hp: 80, mp: 10, atk: 16, spd: 15, type: 'Fire', draw: (c) => { c.fillStyle = '#f97316'; c.beginPath(); c.moveTo(-20,0); c.lineTo(0,-70); c.lineTo(20,0); c.fill(); c.fillStyle = '#fde047'; c.beginPath(); c.moveTo(-10,0); c.lineTo(0,-40); c.lineTo(10,0); c.fill(); }, skills: [ { name: 'Ember', lvl: 1, cost: 4, mult: 1.5, type: 'Fire' }, { name: 'Fireball', lvl: 7, cost: 10, mult: 2.2, type: 'Fire' }, { name: 'Lava Burst', lvl: 14, cost: 20, mult: 3.2, type: 'Fire' }, { name: 'Phoenix Strike', lvl: 26, cost: 35, mult: 4.5, type: 'Fire' }, { name: 'Supernova', lvl: 41, cost: 70, mult: 6.5, type: 'Fire' } ]},
-      'Aquasaur': { hp: 100, mp: 25, atk: 11, spd: 8, type: 'Water', draw: (c) => { c.fillStyle = '#3b82f6'; c.beginPath(); c.roundRect(-25,-40,50,40,10); c.fill(); c.fillStyle = '#93c5fd'; c.beginPath(); c.moveTo(25,-30); c.lineTo(45,-50); c.lineTo(25,-10); c.fill(); }, skills: [ { name: 'Bubble', lvl: 1, cost: 4, mult: 1.4, type: 'Water' }, { name: 'Tsunami', lvl: 4, cost: 12, mult: 2.0, type: 'Water' }, { name: 'Hydro Cannon', lvl: 15, cost: 22, mult: 3.0, type: 'Water' }, { name: 'Ice Beam', lvl: 25, cost: 38, mult: 4.2, type: 'Water' }, { name: 'Oceanic Ruin', lvl: 39, cost: 65, mult: 5.8, type: 'Water' } ]},
-      'Gloop': { growth: 'fast', hp: 40, mp: 10, atk: 4, spd: 5, type: 'Nature', draw: (c) => { c.fillStyle = '#4ade80'; c.beginPath(); c.arc(0, 0, 30, Math.PI, 0); c.ellipse(0, 0, 30, 15, 0, 0, Math.PI); c.fill(); }, skills: [ { name: 'Bouncy Slam', lvl: 1, cost: 4, mult: 1.4, type: 'Normal' }, { name: 'Slime Trap', lvl: 10, cost: 12, mult: 2.5, type: 'Nature' } ]},
-      'Boneguard': { hp: 50, mp: 12, atk: 7, spd: 12, type: 'Dark', draw: (c) => { c.fillStyle = '#e2e8f0'; c.fillRect(-10,-40,20,40); c.beginPath(); c.arc(0,-50,15,0,Math.PI*2); c.fill(); c.fillStyle = '#475569'; c.fillRect(10,-35,5,30); }, skills: [ { name: 'Bone Shard', lvl: 1, cost: 5, mult: 1.8, type: 'Dark' }, { name: 'Grave Chill', lvl: 12, cost: 15, mult: 3.0, type: 'Dark' } ]},
-      'Medusoid': { hp: 60, mp: 20, atk: 6, spd: 7, type: 'Nature', draw: (c) => { c.fillStyle = '#166534'; c.beginPath(); c.arc(0, -30, 25, 0, Math.PI*2); c.fill(); c.strokeStyle = '#22c55e'; c.lineWidth = 3; for(let i=0;i<6;i++) { c.beginPath(); c.moveTo(0,-45); c.quadraticCurveTo(Math.sin(i)*40,-70, Math.sin(i)*30,-50); c.stroke(); } }, skills: [ { name: 'Gaze', lvl: 1, cost: 6, mult: 1.6, type: 'Dark' }, { name: 'Stone Curse', lvl: 15, cost: 20, mult: 3.5, type: 'Dark' } ]},
-      'Voidshade': { hp: 45, mp: 30, atk: 8, spd: 20, type: 'Dark', draw: (c) => { c.fillStyle = 'rgba(0,0,0,0.7)'; c.beginPath(); c.moveTo(-20,0); c.quadraticCurveTo(0,-80,20,0); c.fill(); c.fillStyle = 'red'; c.beginPath(); c.arc(-5,-45,2,0,Math.PI*2); c.fill(); c.beginPath(); c.arc(5,-45,2,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Abyssal Pulse', lvl: 1, cost: 7, mult: 1.9, type: 'Dark' }, { name: 'Event Horizon', lvl: 20, cost: 40, mult: 4.5, type: 'Dark' } ]},
-      'Aetherwing': { hp: 90, mp: 40, atk: 14, spd: 25, type: 'Fire', draw: (c) => { c.fillStyle = '#a855f7'; c.beginPath(); c.ellipse(0,-30,25,20,0,0,Math.PI*2); c.fill(); c.beginPath(); c.moveTo(-25,-35); c.lineTo(-50,-55); c.lineTo(-20,-45); c.fill(); c.beginPath(); c.moveTo(25,-35); c.lineTo(50,-55); c.lineTo(20,-45); c.fill(); }, skills: [ { name: 'Sky Dive', lvl: 1, cost: 10, mult: 2.5, type: 'Fire' }, { name: 'Star Fall', lvl: 22, cost: 50, mult: 5.0, type: 'Fire' } ]}
+      'Leafy': { morphology: 'Serpentine', growth: 'fast', hp: 45, mp: 10, atk: 7, spd: 10, type: 'Nature', draw: (c) => { c.fillStyle = '#84cc16'; c.beginPath(); c.ellipse(0, 0, 25, 15, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#4d7c0f'; c.beginPath(); c.moveTo(0, -15); c.quadraticCurveTo(15, -35, 0, -45); c.quadraticCurveTo(-15, -35, 0, -15); c.fill(); }, skills: [{ name: 'Leaf Blade', lvl: 1, cost: 0, mult: 1.3, type: 'Nature' }] },
+      'Sprout': { morphology: 'Amorphous', growth: 'fast', hp: 42, mp: 15, atk: 6, spd: 12, type: 'Nature', draw: (c) => { c.fillStyle = '#a3e635'; c.beginPath(); c.arc(0, 0, 15, 0, Math.PI*2); c.fill(); c.fillStyle = '#3f6212'; c.beginPath(); c.moveTo(0,-15); c.lineTo(8,-22); c.moveTo(0,-15); c.lineTo(-8,-22); c.stroke(); }, skills: [{ name: 'Vine Whip', lvl: 1, cost: 0, mult: 1.2, type: 'Nature' }] },
+      'Cliff-Ram': { morphology: 'Quadrupedal', hp: 100, mp: 20, atk: 18, spd: 15, type: 'Earth', draw: (c) => { c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(-25, -35, 50, 35, 8); c.fill(); c.strokeStyle = 'white'; c.lineWidth = 4; c.beginPath(); c.moveTo(-15,-35); c.quadraticCurveTo(-25,-55, -35, -35); c.moveTo(15,-35); c.quadraticCurveTo(25,-55, 35, -35); c.stroke(); }, skills: [{ name: 'Headbutt', lvl: 1, cost: 5, mult: 1.5, type: 'Earth' }] },
+      'Sky-Shredder': { morphology: 'Aerial', hp: 85, mp: 30, atk: 22, spd: 28, type: 'Air', draw: (c) => { c.fillStyle = '#38bdf8'; c.beginPath(); c.ellipse(0, -20, 25, 15, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#ef4444'; c.beginPath(); c.moveTo(-25,-20); c.lineTo(-45, -35); c.lineTo(-25, -10); c.fill(); c.beginPath(); c.moveTo(25,-20); c.lineTo(45, -35); c.lineTo(25, -10); c.fill(); }, skills: [{ name: 'Aerial Ace', lvl: 1, cost: 8, mult: 1.6, type: 'Air' }] },
+      'Sand-Stinger': { morphology: 'Arthropod', hp: 140, mp: 40, atk: 30, spd: 20, type: 'Dark', draw: (c) => { c.fillStyle = '#9333ea'; c.beginPath(); c.ellipse(0, 0, 20, 12, 0, 0, Math.PI*2); c.fill(); c.strokeStyle = '#9333ea'; c.lineWidth = 5; c.beginPath(); c.moveTo(0,-10); c.quadraticCurveTo(30, -50, 10, -60); c.stroke(); }, skills: [{ name: 'Poison Jab', lvl: 1, cost: 10, mult: 1.8, type: 'Dark' }] },
+      'Sun-Cactus': { morphology: 'Bipedal', hp: 160, mp: 50, atk: 26, spd: 12, type: 'Fire', draw: (c) => { c.fillStyle = '#166534'; c.beginPath(); c.roundRect(-15, -50, 30, 50, 10); c.fill(); c.fillStyle = '#fde047'; c.beginPath(); c.arc(0, -55, 8, 0, Math.PI*2); c.fill(); }, skills: [{ name: 'Needle Blast', lvl: 1, cost: 12, mult: 2.0, type: 'Fire' }] },
+      'Rabbite': { morphology: 'Quadrupedal', growth: 'fast', hp: 35, mp: 5, atk: 5, spd: 8, type: 'Normal', draw: (c) => { c.fillStyle = 'white'; c.beginPath(); c.arc(0, -15, 20, 0, Math.PI*2); c.fill(); c.beginPath(); c.ellipse(-8, -40, 6, 15, -0.1, 0, Math.PI*2); c.fill(); c.beginPath(); c.ellipse(8, -40, 6, 15, 0.1, 0, Math.PI*2); c.fill(); }, skills: [{ name: 'Bite', lvl: 1, cost: 0, mult: 1.2, type: 'Normal' }] },
+      'Birby': { morphology: 'Aerial', growth: 'fast', hp: 30, mp: 5, atk: 4, spd: 12, type: 'Normal', draw: (c) => { c.fillStyle = '#facc15'; c.beginPath(); c.arc(0, -15, 18, 0, Math.PI*2); c.fill(); c.fillStyle = '#f97316'; c.beginPath(); c.moveTo(10, -15); c.lineTo(22, -12); c.lineTo(10, -9); c.fill(); }, skills: [{ name: 'Peck', lvl: 1, cost: 0, mult: 1.1, type: 'Normal' }] },
+      'Cattus': { morphology: 'Quadrupedal', hp: 40, mp: 8, atk: 6, spd: 10, type: 'Normal', draw: (c) => { c.fillStyle = '#fb923c'; c.beginPath(); c.arc(0, -20, 22, 0, Math.PI*2); c.fill(); c.beginPath(); c.moveTo(-18,-35); c.lineTo(-10,-45); c.lineTo(-2,-35); c.fill(); c.beginPath(); c.moveTo(18,-35); c.lineTo(10,-45); c.lineTo(2,-35); c.fill(); }, skills: [{ name: 'Scratch', lvl: 1, cost: 0, mult: 1.3, type: 'Normal' }] },
+      'Terramole': { morphology: 'Quadrupedal', hp: 120, mp: 20, atk: 12, spd: 6, type: 'Earth', draw: (c) => { c.fillStyle = '#78350f'; c.beginPath(); c.ellipse(0, -15, 25, 20, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#451a03'; c.beginPath(); c.moveTo(-20, 0); c.lineTo(-30, -10); c.lineTo(-20, -5); c.fill(); c.beginPath(); c.moveTo(20, 0); c.lineTo(30, -10); c.lineTo(20, -5); c.fill(); }, skills: [ { name: 'Mud Slap', lvl: 1, cost: 5, mult: 1.4, type: 'Earth' }, { name: 'Earthquake', lvl: 12, cost: 18, mult: 2.8, type: 'Earth' } ]},
+      'Rockogolem': { morphology: 'Bipedal', hp: 150, mp: 15, atk: 15, spd: 4, type: 'Earth', draw: (c) => { c.fillStyle = '#475569'; c.fillRect(-25, -25, 50, 25); c.fillRect(-15, -50, 30, 25); c.fillStyle = '#06b6d4'; c.beginPath(); c.arc(-8, -38, 3, 0, Math.PI*2); c.fill(); c.arc(8, -38, 3, 0, Math.PI*2); c.fill(); }, skills: [ { name: 'Rock Throw', lvl: 1, cost: 6, mult: 1.6, type: 'Earth' }, { name: 'Stone Smash', lvl: 14, cost: 22, mult: 3.2, type: 'Earth' } ]},
+      'Sparkat': { morphology: 'Quadrupedal', hp: 80, mp: 30, atk: 14, spd: 22, type: 'Electric', draw: (c) => { c.fillStyle = '#eab308'; c.beginPath(); c.arc(0, -20, 20, 0, Math.PI*2); c.fill(); c.strokeStyle = '#eab308'; c.lineWidth = 4; c.beginPath(); c.moveTo(0,0); c.lineTo(-10, 15); c.lineTo(5, 10); c.lineTo(0, 25); c.stroke(); }, skills: [ { name: 'Zapping Claw', lvl: 1, cost: 8, mult: 1.5, type: 'Electric' }, { name: 'Thunder Bolt', lvl: 15, cost: 25, mult: 3.5, type: 'Electric' } ]},
+      'Voltix': { morphology: 'Amorphous', hp: 70, mp: 45, atk: 10, spd: 18, type: 'Electric', draw: (c) => { c.fillStyle = '#60a5fa'; c.beginPath(); c.arc(0, -30, 20, 0, Math.PI*2); c.fill(); c.strokeStyle = 'white'; c.beginPath(); for(let i=0; i<8; i++) { let a = i*Math.PI/4; c.moveTo(0,-30); c.lineTo(Math.cos(a)*35, -30+Math.sin(a)*35); } c.stroke(); }, skills: [ { name: 'Static Shock', lvl: 1, cost: 5, mult: 1.3, type: 'Electric' }, { name: 'Overload', lvl: 16, cost: 30, mult: 4.2, type: 'Electric' } ]},
+      'Zephyros': { morphology: 'Aerial', hp: 85, mp: 35, atk: 12, spd: 25, type: 'Air', draw: (c) => { c.fillStyle = 'white'; c.beginPath(); c.arc(-15, -20, 15, 0, Math.PI*2); c.arc(15, -20, 15, 0, Math.PI*2); c.arc(0, -35, 20, 0, Math.PI*2); c.fill(); }, skills: [ { name: 'Air Slash', lvl: 1, cost: 7, mult: 1.4, type: 'Air' }, { name: 'Tornado', lvl: 14, cost: 24, mult: 3.4, type: 'Air' } ]},
+      'Galehawk': { morphology: 'Aerial', hp: 95, mp: 25, atk: 18, spd: 20, type: 'Air', draw: (c) => { c.fillStyle = '#713f12'; c.beginPath(); c.moveTo(0, -10); c.lineTo(-50, -40); c.lineTo(0, -60); c.lineTo(50, -40); c.closePath(); c.fill(); c.fillStyle = '#ca8a04'; c.beginPath(); c.arc(0,-35,12,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Gust', lvl: 1, cost: 6, mult: 1.6, type: 'Air' }, { name: 'Sky Dive', lvl: 15, cost: 28, mult: 3.8, type: 'Air' } ]},
+      'Mindbug': { morphology: 'Arthropod', growth: 'slow', hp: 110, mp: 80, atk: 15, spd: 15, type: 'Psionic', draw: (c) => { c.fillStyle = '#d946ef'; c.beginPath(); c.ellipse(0, -30, 25, 18, 0, 0, Math.PI*2); c.fill(); c.strokeStyle = '#701a75'; c.beginPath(); c.moveTo(-10,-45); c.lineTo(-20,-60); c.moveTo(10,-45); c.lineTo(20,-60); c.stroke(); }, skills: [ { name: 'Psy-Beam', lvl: 1, cost: 12, mult: 2.0, type: 'Psionic' }, { name: 'Mind Crush', lvl: 25, cost: 45, mult: 4.5, type: 'Psionic' } ]},
+      'Telecrane': { morphology: 'Bipedal', hp: 130, mp: 60, atk: 22, spd: 18, type: 'Psionic', draw: (c) => { c.fillStyle = '#fda4af'; c.beginPath(); c.ellipse(0, -40, 10, 30, 0, 0, Math.PI*2); c.fill(); c.fillStyle = '#f43f5e'; c.beginPath(); c.arc(0,-70,12,0,Math.PI*2); c.fill(); c.fillStyle = '#22d3ee'; c.beginPath(); c.arc(0,-75,4,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Kinesis', lvl: 1, cost: 10, mult: 1.8, type: 'Psionic' }, { name: 'Thought Wave', lvl: 22, cost: 35, mult: 3.8, type: 'Psionic' } ]},
+      'Droid-X': { morphology: 'Robotic', hp: 140, mp: 50, atk: 25, spd: 16, type: 'Cyber', draw: (c) => { c.fillStyle = '#94a3b8'; c.fillRect(-20,-50,40,50); c.fillStyle = '#22d3ee'; c.fillRect(-15,-40,30,8); }, skills: [ { name: 'Laser Shot', lvl: 1, cost: 15, mult: 2.2, type: 'Cyber' }, { name: 'Sync Pulse', lvl: 24, cost: 40, mult: 4.0, type: 'Cyber' } ]},
+      'Glitcher': { morphology: 'Robotic', growth: 'slow', hp: 100, mp: 100, atk: 20, spd: 28, type: 'Cyber', draw: (c) => { c.fillStyle = '#22c55e'; c.fillRect(-20,-40,40,40); c.fillStyle = 'black'; c.fillRect(-10,-30,5,5); c.fillRect(5,-30,5,5); c.fillRect(-10,-15,20,3); }, skills: [ { name: 'Bug Strike', lvl: 1, cost: 12, mult: 1.9, type: 'Cyber' }, { name: 'System Crash', lvl: 26, cost: 50, mult: 5.5, type: 'Cyber' } ]},
+      'Omnistar': { morphology: 'Amorphous', growth: 'slow', hp: 300, mp: 150, atk: 45, spd: 40, type: 'Aether', draw: (c) => { c.fillStyle = '#fde047'; c.beginPath(); for(let i=0;i<5;i++){ let a=(i*72-90)*Math.PI/180; c.lineTo(Math.cos(a)*40, -30+Math.sin(a)*40); a=((i*72+36)-90)*Math.PI/180; c.lineTo(Math.cos(a)*15, -30+Math.sin(a)*15); } c.closePath(); c.fill(); }, skills: [ { name: 'Aether Flash', lvl: 1, cost: 25, mult: 3.0, type: 'Aether' }, { name: 'Cosmic End', lvl: 35, cost: 80, mult: 7.0, type: 'Aether' } ]},
+      'Cosmogazer': { morphology: 'Amorphous', growth: 'slow', hp: 250, mp: 200, atk: 35, spd: 45, type: 'Aether', draw: (c) => { c.fillStyle = '#6366f1'; c.beginPath(); c.arc(0,-30,30,0,Math.PI*2); c.fill(); c.fillStyle = 'white'; for(let i=0;i<10;i++) c.fillRect(Math.random()*40-20, -50+Math.random()*40, 2, 2); }, skills: [ { name: 'Star Dust', lvl: 1, cost: 20, mult: 2.5, type: 'Aether' }, { name: 'Universe Warp', lvl: 38, cost: 90, mult: 8.5, type: 'Aether' } ]},
+      'Giga-Rex': { morphology: 'Bipedal', growth: 'slow', hp: 500, mp: 100, atk: 55, spd: 25, type: 'Kaiju', draw: (c) => { c.fillStyle = '#ef4444'; c.beginPath(); c.moveTo(-30,0); c.lineTo(-20,-60); c.lineTo(20,-60); c.lineTo(40,0); c.closePath(); c.fill(); c.fillStyle = 'white'; c.beginPath(); c.moveTo(0,-50); c.lineTo(10,-40); c.lineTo(20,-50); c.fill(); }, skills: [ { name: 'Primal Roar', lvl: 1, cost: 30, mult: 3.5, type: 'Kaiju' }, { name: 'Atomic Breath', lvl: 40, cost: 100, mult: 9.0, type: 'Kaiju' } ]},
+      'Abyssal-Terror': { morphology: 'Amorphous', growth: 'slow', hp: 400, mp: 120, atk: 65, spd: 30, type: 'Kaiju', draw: (c) => { c.fillStyle = 'black'; c.beginPath(); c.ellipse(0,-10,40,20,0,0,Math.PI*2); c.fill(); c.fillStyle = 'red'; for(let i=0;i<5;i++) { c.beginPath(); c.arc(-30+i*15, -20+Math.random()*10, 4, 0, Math.PI*2); c.fill(); } }, skills: [ { name: 'Void Grip', lvl: 1, cost: 35, mult: 4.0, type: 'Kaiju' }, { name: 'Calamity', lvl: 42, cost: 110, mult: 10.0, type: 'Kaiju' } ]},
+      'Sylvaris': { morphology: 'Bipedal', hp: 120, mp: 15, atk: 8, spd: 10, type: 'Nature', draw: (c) => { c.fillStyle = '#22c55e'; c.beginPath(); c.ellipse(0,-35,15,35,0,0,Math.PI*2); c.fill(); c.fillStyle = '#84cc16'; c.beginPath(); c.moveTo(-15,-40); c.lineTo(-40,-60); c.lineTo(-15,-50); c.fill(); c.beginPath(); c.moveTo(15,-40); c.lineTo(40,-60); c.lineTo(15,-50); c.fill(); }, skills: [ { name: 'Solar Bloom', lvl: 1, cost: 5, mult: 1.2, heal: 15, type: 'Nature' }, { name: 'Razor Leaf', lvl: 5, cost: 8, mult: 1.8, type: 'Nature' }, { name: 'Nature Embrace', lvl: 16, cost: 18, mult: 2.2, heal: 30, type: 'Nature' }, { name: 'Thorn Blast', lvl: 24, cost: 25, mult: 3.5, type: 'Nature' }, { name: 'Genesis Wave', lvl: 38, cost: 60, mult: 5.5, type: 'Nature' } ]},
+      'Ignifrit': { morphology: 'Bipedal', hp: 80, mp: 10, atk: 16, spd: 15, type: 'Fire', draw: (c) => { c.fillStyle = '#f97316'; c.beginPath(); c.moveTo(-20,0); c.lineTo(0,-70); c.lineTo(20,0); c.fill(); c.fillStyle = '#fde047'; c.beginPath(); c.moveTo(-10,0); c.lineTo(0,-40); c.lineTo(10,0); c.fill(); }, skills: [ { name: 'Ember', lvl: 1, cost: 4, mult: 1.5, type: 'Fire' }, { name: 'Fireball', lvl: 7, cost: 10, mult: 2.2, type: 'Fire' }, { name: 'Lava Burst', lvl: 14, cost: 20, mult: 3.2, type: 'Fire' }, { name: 'Phoenix Strike', lvl: 26, cost: 35, mult: 4.5, type: 'Fire' }, { name: 'Supernova', lvl: 41, cost: 70, mult: 6.5, type: 'Fire' } ]},
+      'Aquasaur': { morphology: 'Quadrupedal', hp: 100, mp: 25, atk: 11, spd: 8, type: 'Water', draw: (c) => { c.fillStyle = '#3b82f6'; c.beginPath(); c.roundRect(-25,-40,50,40,10); c.fill(); c.fillStyle = '#93c5fd'; c.beginPath(); c.moveTo(25,-30); c.lineTo(45,-50); c.lineTo(25,-10); c.fill(); }, skills: [ { name: 'Bubble', lvl: 1, cost: 4, mult: 1.4, type: 'Water' }, { name: 'Tsunami', lvl: 4, cost: 12, mult: 2.0, type: 'Water' }, { name: 'Hydro Cannon', lvl: 15, cost: 22, mult: 3.0, type: 'Water' }, { name: 'Ice Beam', lvl: 25, cost: 38, mult: 4.2, type: 'Water' }, { name: 'Oceanic Ruin', lvl: 39, cost: 65, mult: 5.8, type: 'Water' } ]},
+      'Gloop': { morphology: 'Amorphous', growth: 'fast', hp: 40, mp: 10, atk: 4, spd: 5, type: 'Nature', draw: (c) => { c.fillStyle = '#4ade80'; c.beginPath(); c.arc(0, 0, 30, Math.PI, 0); c.ellipse(0, 0, 30, 15, 0, 0, Math.PI); c.fill(); }, skills: [ { name: 'Bouncy Slam', lvl: 1, cost: 4, mult: 1.4, type: 'Normal' }, { name: 'Slime Trap', lvl: 10, cost: 12, mult: 2.5, type: 'Nature' } ]},
+      'Boneguard': { morphology: 'Bipedal', hp: 50, mp: 12, atk: 7, spd: 12, type: 'Dark', draw: (c) => { c.fillStyle = '#e2e8f0'; c.fillRect(-10,-40,20,40); c.beginPath(); c.arc(0,-50,15,0,Math.PI*2); c.fill(); c.fillStyle = '#475569'; c.fillRect(10,-35,5,30); }, skills: [ { name: 'Bone Shard', lvl: 1, cost: 5, mult: 1.8, type: 'Dark' }, { name: 'Grave Chill', lvl: 12, cost: 15, mult: 3.0, type: 'Dark' } ]},
+      'Medusoid': { morphology: 'Serpentine', hp: 60, mp: 20, atk: 6, spd: 7, type: 'Nature', draw: (c) => { c.fillStyle = '#166534'; c.beginPath(); c.arc(0, -30, 25, 0, Math.PI*2); c.fill(); c.strokeStyle = '#22c55e'; c.lineWidth = 3; for(let i=0;i<6;i++) { c.beginPath(); c.moveTo(0,-45); c.quadraticCurveTo(Math.sin(i)*40,-70, Math.sin(i)*30,-50); c.stroke(); } }, skills: [ { name: 'Gaze', lvl: 1, cost: 6, mult: 1.6, type: 'Dark' }, { name: 'Stone Curse', lvl: 15, cost: 20, mult: 3.5, type: 'Dark' } ]},
+      'Voidshade': { morphology: 'Amorphous', hp: 45, mp: 30, atk: 8, spd: 20, type: 'Dark', draw: (c) => { c.fillStyle = 'rgba(0,0,0,0.7)'; c.beginPath(); c.moveTo(-20,0); c.quadraticCurveTo(0,-80,20,0); c.fill(); c.fillStyle = 'red'; c.beginPath(); c.arc(-5,-45,2,0,Math.PI*2); c.fill(); c.beginPath(); c.arc(5,-45,2,0,Math.PI*2); c.fill(); }, skills: [ { name: 'Abyssal Pulse', lvl: 1, cost: 7, mult: 1.9, type: 'Dark' }, { name: 'Event Horizon', lvl: 20, cost: 40, mult: 4.5, type: 'Dark' } ]},
+      'Aetherwing': { morphology: 'Aerial', hp: 90, mp: 40, atk: 14, spd: 25, type: 'Fire', draw: (c) => { c.fillStyle = '#a855f7'; c.beginPath(); c.ellipse(0,-30,25,20,0,0,Math.PI*2); c.fill(); c.beginPath(); c.moveTo(-25,-35); c.lineTo(-50,-55); c.lineTo(-20,-45); c.fill(); c.beginPath(); c.moveTo(25,-35); c.lineTo(50,-55); c.lineTo(20,-45); c.fill(); }, skills: [ { name: 'Sky Dive', lvl: 1, cost: 10, mult: 2.5, type: 'Fire' }, { name: 'Star Fall', lvl: 22, cost: 50, mult: 5.0, type: 'Fire' } ]}
     };
+    function getMonsterFinalStats(m) {
+      const stats = { atk: m.atk, def: m.def || 0, spd: m.spd, resists: [], boosts: {} };
+      for (let slot in m.equipment) {
+        const item = EQUIPMENT_DB[m.equipment[slot]];
+        if (!item) continue;
+        if (item.stats.atk) stats.atk += item.stats.atk;
+        if (item.stats.def) stats.def += item.stats.def;
+        if (item.stats.spd) stats.spd += item.stats.spd;
+        if (item.stats.resist) stats.resists.push(...item.stats.resist);
+        for (let key in item.stats) {
+          if (key.endsWith('Boost')) { stats.boosts[key.replace('Boost', '')] = (stats.boosts[key.replace('Boost', '')] || 0) + item.stats[key]; }
+        }
+      }
+      return stats;
+    }
     function calculateSkillDamage(attacker, defender, skill) {
-      let dmg = attacker.atk * (skill.mult || 1.5);
+      const a = getMonsterFinalStats(attacker), d = getMonsterFinalStats(defender);
+      let dmg = a.atk * (skill.mult || 1.5);
+      const boost = a.boosts[skill.type] || 0;
+      dmg *= (1 + boost);
       if (skill.type === attacker.type) dmg *= 1.5;
       const chart = TYPE_CHART[defender.type] || { weakTo: [], resist: [] };
+      const res = [...chart.resist, ...d.resists];
       if (chart.weakTo.includes(skill.type)) dmg *= 2;
-      if (chart.resist.includes(skill.type)) dmg *= 0.5;
-      return Math.floor(dmg);
+      if (res.includes(skill.type)) dmg *= 0.5;
+      return Math.max(1, Math.floor(dmg - d.def));
     }
     const ENCOUNTER_POOLS = {
       'forest': [ { key: 'Leafy', weight: 0.4 }, { key: 'Sprout', weight: 0.3 }, { key: 'Rabbite', weight: 0.2 }, { key: 'Birby', weight: 0.1 } ],
@@ -238,7 +279,7 @@
       const mult = growth === 'fast' ? 0.66 : (growth === 'slow' ? 2.0 : 1.0);
       return Math.floor(mult * 260 * (Math.pow(1.3, lvl) - 1));
     }
-    function createMonster(key, lvl) {
+    function createMonster(key, lvl, isWild = false) {
       const t = MONSTER_DB[key]; if (!t) return null;
       const m = JSON.parse(JSON.stringify(t));
       m.name = key; m.lvl = lvl; m.ap = 0; m.growth = t.growth || 'normal'; m.xp = lvl > 1 ? getExpRequired(lvl - 1, m.growth) : 0;
@@ -246,6 +287,25 @@
       m.maxMp = t.mp + (lvl - 1) * 5; m.mp = m.maxMp;
       m.atk = t.atk + (lvl - 1) * 3;
       m.spd = (t.spd || 10) + (lvl - 1) * 2;
+      m.def = 0; m.equipment = {}; m.morphology = t.morphology;
+      if (isWild) {
+        const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
+        slots.forEach(slot => {
+          if (Math.random() < 0.15) {
+            const targetType = SLOT_TO_TYPE[slot];
+            const choices = Object.keys(EQUIPMENT_DB).filter(k => EQUIPMENT_DB[k].type === targetType);
+            if (choices.length > 0) m.equipment[slot] = choices[Math.floor(Math.random() * choices.length)];
+          }
+        });
+      }
+      const t = MONSTER_DB[key]; if (!t) return null;
+      const m = JSON.parse(JSON.stringify(t));
+      m.name = key; m.lvl = lvl; m.ap = 0; m.growth = t.growth || 'normal'; m.xp = lvl > 1 ? getExpRequired(lvl - 1, m.growth) : 0;
+      m.maxHp = t.hp + (lvl - 1) * 15; m.hp = m.maxHp;
+      m.maxMp = t.mp + (lvl - 1) * 5; m.mp = m.maxMp;
+      m.atk = t.atk + (lvl - 1) * 3;
+      m.spd = (t.spd || 10) + (lvl - 1) * 2;
+      m.def = 0; m.equipment = {}; m.morphology = t.morphology;
       m.learnedSkills = (t.skills || []).filter(s => s.lvl <= lvl);
       if (m.learnedSkills.length > 0) m.skill = m.learnedSkills[m.learnedSkills.length - 1];
       return m;
@@ -274,7 +334,11 @@
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
-          { name: 'Monster Ball', price: 50, type: 'capture' }
+          { name: 'Monster Ball', price: 50, type: 'capture' },
+          { name: 'Iron Helmet', price: 80, type: 'equipment' },
+          { name: 'Swift Sandals', price: 120, type: 'equipment' },
+          { name: 'Power Bracers', price: 150, type: 'equipment' },
+          { name: 'Obsidian Scales', price: 200, type: 'equipment' }
         ],
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -476,25 +540,34 @@
       const p = playerStats.party[idx];
       const content = document.getElementById('menu-content');
       const req = getExpRequired(p.lvl, p.growth);
-      content.innerHTML = `
-        <h3 style="margin-top: 0;">${p.name} Details</h3>
-        <div style="font-size: 0.9em; line-height: 1.4; text-align: left; padding: 0 5px;">
-          <div style="margin-bottom: 5px;"><strong>Type:</strong> ${p.type}</div>
-          <div style="margin-bottom: 5px;"><strong>Level:</strong> ${p.lvl}</div>
-          <div style="margin-bottom: 5px;"><strong>HP:</strong> ${Math.ceil(p.hp)} / ${p.maxHp}</div>
-          <div style="margin-bottom: 5px;"><strong>MP:</strong> ${Math.ceil(p.mp)} / ${p.maxMp}</div>
-          <div style="margin-bottom: 5px;"><strong>Attack:</strong> ${p.atk}</div>
-          <div style="margin-bottom: 5px;"><strong>Speed:</strong> ${p.spd}</div>
-          <div style="margin-bottom: 5px;"><strong>XP:</strong> ${p.xp || 0} / ${req}</div>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-          <strong>Skills:</strong><br>
-          • Basic Attack (Normal)<br>
-          ${p.learnedSkills ? p.learnedSkills.map(s => `• ${s.name} (${s.type}, ${s.cost} MP)`).join('<br>') : 'No skills learned'}
-        </div>
-        <button class="menu-btn" style="margin-top: 15px; color: #e74c3c;" onclick="releaseMonster(${idx})">Release Monster</button>
-        <button class="menu-btn" onclick="showParty()">Back</button>
-      `;
+      const f = getMonsterFinalStats(p);
+      let html = `<h3 style="margin-top: 0;">${p.name} Details</h3>
+        <div style="font-size: 0.85em; line-height: 1.3; text-align: left; padding: 0 5px; max-height: 350px; overflow-y: auto;">
+          <div style="margin-bottom: 4px;"><strong>Type:</strong> ${p.type} | <strong>Morphology:</strong> ${p.morphology}</div>
+          <div style="margin-bottom: 4px;"><strong>Stats:</strong> HP:${Math.ceil(p.hp)} MP:${Math.ceil(p.mp)} ATK:${f.atk} DEF:${f.def} SPD:${f.spd}</div>
+          <div style="margin-bottom: 4px;"><strong>Level:</strong> ${p.lvl} | <strong>XP:</strong> ${p.xp||0}/${req}</div>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><strong>Equipment:</strong>`;
+      const slots = MORPHOLOGY_SLOTS[p.morphology] || [];
+      slots.forEach(slot => {
+        const equipped = p.equipment[slot];
+        const type = SLOT_TO_TYPE[slot];
+        html += `<div style="display:flex; justify-content:space-between; margin-top:4px; align-items:center;"><span>${slot} (${type}):</span><span style="font-weight:bold">${equipped||'Empty'}</span><div style="display:flex; gap:4px">${equipped ? `<button onclick="unequipItem(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Rem</button>` : `<button onclick="showEquipList(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Equip</button>`}</div></div>`;
+      });
+      html += `<hr style="border:0; border-top:1px solid #eee; margin:8px 0;"><strong>Skills:</strong><br>• Attack (Normal)<br>${p.learnedSkills ? p.learnedSkills.map(s => `• ${s.name} (${s.type})`).join('<br>') : ''}</div><button class="menu-btn" style="margin-top:10px; color:#e74c3c; padding:8px;" onclick="releaseMonster(${idx})">Release</button><button class="menu-btn" style="padding:8px;" onclick="showParty()">Back</button>`;
+      content.innerHTML = html;
     }
+    function showEquipList(mIdx, slot) {
+      const content = document.getElementById('menu-content');
+      const targetType = SLOT_TO_TYPE[slot];
+      const items = playerStats.inventory.filter(i => i.type === 'equipment' && EQUIPMENT_DB[i.name].type === targetType);
+      let html = `<h3 style="margin-top: 0;">Equip ${slot}</h3><div style="max-height: 200px; overflow-y: auto;">`;
+      if (items.length === 0) html += `<p>No ${targetType} in inventory.</p>`;
+      else items.forEach(item => { const e = EQUIPMENT_DB[item.name]; let s = ""; if(e.stats.atk) s+=" ATK+"+e.stats.atk; if(e.stats.def) s+=" DEF+"+e.stats.def; if(e.stats.spd) s+=" SPD+"+e.stats.spd; html += `<div class="shop-item"><div style="font-size:0.8em"><strong>${item.name}</strong><br>${s}</div><button onclick="equipItem(${mIdx}, '${slot}', '${item.name}')">Use</button></div>`; });
+      html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMemberDetail(${mIdx})">Back</button>`;
+      content.innerHTML = html;
+    }
+    function equipItem(mIdx, slot, itemName) { const m = playerStats.party[mIdx]; const invIdx = playerStats.inventory.findIndex(i => i.name === itemName); if (invIdx === -1) return; if (m.equipment[slot]) unequipItem(mIdx, slot, true); m.equipment[slot] = itemName; playerStats.inventory[invIdx].count--; if (playerStats.inventory[invIdx].count <= 0) playerStats.inventory.splice(invIdx, 1); showMemberDetail(mIdx); updateHud(); }
+    function unequipItem(mIdx, slot, replacing = false) { const m = playerStats.party[mIdx]; const item = m.equipment[slot]; if (!item) return; const existing = playerStats.inventory.find(i => i.name === item); if (existing) existing.count++; else playerStats.inventory.push({ name: item, type: 'equipment', count: 1 }); delete m.equipment[slot]; if (!replacing) showMemberDetail(mIdx); updateHud(); }
 
     function releaseMonster(idx) {
       if (playerStats.party.length <= 1) {
@@ -514,25 +587,18 @@
       dialogActive = true;
     }
     function openSkillMenu() {
-      const actor = activeActor;
-      if (!actor || enemies.includes(actor)) return;
+      const actor = activeActor; if (!actor || enemies.includes(actor)) return;
       const content = document.getElementById('menu-content');
       let html = `<h3 style="margin-top: 0;">Select Skill</h3><div style="max-height: 200px; overflow-y: auto;">`;
-      if (!actor.learnedSkills || actor.learnedSkills.length === 0) {
-        html += `<p>No skills learned</p>`;
-      } else {
-        actor.learnedSkills.forEach((skill, idx) => {
-          const disabled = actor.mp < skill.cost ? 'opacity: 0.5; pointer-events: none;' : '';
-          html += `<button class="menu-btn" style="${disabled} text-align: left;" onclick="useSkill(${idx})">
-            <div style="display: flex; justify-content: space-between;"><strong>${skill.name}</strong> <span>${skill.cost} MP</span></div>
-            <div style="font-size:0.75em; color: #666; margin-top: 4px;">${skill.type} | Power: x${skill.mult}${skill.heal ? ' | Heal: ' + skill.heal : ''}</div>
-          </button>`;
-        });
-      }
+      const equipSkills = []; for (let s in actor.equipment) { const itm = EQUIPMENT_DB[actor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+      const allSkills = [...(actor.learnedSkills || []), ...equipSkills];
+      if (allSkills.length === 0) html += `<p>No skills available</p>`;
+      else allSkills.forEach((skill, idx) => {
+        const disabled = actor.mp < skill.cost ? 'opacity: 0.5; pointer-events: none;' : '';
+        html += `<button class="menu-btn" style="${disabled} text-align: left;" onclick="useSkill(${idx})"><div style="display: flex; justify-content: space-between;"><strong>${skill.name}</strong> <span>${skill.cost} MP</span></div><div style="font-size:0.75em; color: #666; margin-top: 4px;">${skill.type} | Power: x${skill.mult}</div></button>`;
+      });
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="toggleMenu()">Back</button>`;
-      content.innerHTML = html;
-      document.getElementById('menu-modal').style.display = 'block';
-      dialogActive = true;
+      content.innerHTML = html; document.getElementById('menu-modal').style.display = 'block'; dialogActive = true;
     }
     function useSkill(idx) {
       toggleMenu();
@@ -813,7 +879,7 @@
         let rand = Math.random() * totalWeight;
         let selectedKey = pool[0].key;
         for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
-        let m = createMonster(selectedKey, monsterLvl);
+        let m = createMonster(selectedKey, monsterLvl, true);
         m.gold = 5 + monsterLvl * 4;
         m.rewardXp = Math.floor(15 * Math.pow(1.2, monsterLvl));
         m.ap = 0;
@@ -831,7 +897,7 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      let m = createMonster(npc.monsterKey, npc.level);
+      let m = createMonster(npc.monsterKey, npc.level, true);
       m.gold = 500;
       m.rewardXp = 2500;
       enemies = [m];
@@ -912,33 +978,17 @@
       if (gameState !== 'BATTLE' || activeActor.hp <= 0) return;
       const targets = playerStats.party.filter(p => p.hp > 0);
       if (targets.length === 0) return;
-      const usableSkills = (activeActor.learnedSkills || []).filter(s => activeActor.mp >= s.cost);
-      let target = null, skillToUse = null;
-      for (const s of usableSkills) {
-        const weakTarget = targets.find(t => (TYPE_CHART[t.type] || { weakTo: [] }).weakTo.includes(s.type));
-        if (weakTarget) { target = weakTarget; skillToUse = s; break; }
-      }
-      if (!target) {
-        target = targets[Math.floor(Math.random() * targets.length)];
-        if (usableSkills.length > 0) skillToUse = usableSkills[usableSkills.length - 1];
-      }
+      const equipSkills = []; for (let s in activeActor.equipment) { const itm = EQUIPMENT_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+      const allSkills = [...(activeActor.learnedSkills || []), ...equipSkills];
+      const usableSkills = allSkills.filter(s => activeActor.mp >= s.cost);
+      let target = targets[Math.floor(Math.random() * targets.length)];
+      let skillToUse = usableSkills.length > 0 ? usableSkills[Math.floor(Math.random() * usableSkills.length)] : null;
       let dmg = 0, txt = "";
-      if (skillToUse) {
-        activeActor.mp -= skillToUse.cost;
-        dmg = calculateSkillDamage(activeActor, target, skillToUse);
-        txt = `${activeActor.name} uses ${skillToUse.name} on ${target.name} for ${dmg}!`;
-      } else {
-        dmg = activeActor.atk + Math.floor(Math.random() * 5);
-        txt = `${activeActor.name} attacks ${target.name} for ${dmg}!`;
-      }
-      target.hp = Math.max(0, target.hp - dmg);
-      updateBattleUI(txt);
-      if (playerStats.party.every(p => p.hp <= 0)) {
-        setTimeout(handleDefeat, 800);
-        return;
-      }
-      activeActor.ap -= 100;
-      setTimeout(nextTurn, 800);
+      if (skillToUse) { activeActor.mp -= skillToUse.cost; dmg = calculateSkillDamage(activeActor, target, skillToUse); txt = `${activeActor.name} uses ${skillToUse.name}! ${dmg} dmg.`; }
+      else { const a = getMonsterFinalStats(activeActor), d = getMonsterFinalStats(target); dmg = Math.max(1, (a.atk + Math.floor(Math.random() * 5)) - d.def); txt = `${activeActor.name} attacks! ${dmg} dmg.`; }
+      target.hp = Math.max(0, target.hp - dmg); updateBattleUI(txt);
+      if (playerStats.party.every(p => p.hp <= 0)) { setTimeout(handleDefeat, 800); return; }
+      activeActor.ap -= 100; setTimeout(nextTurn, 800);
     }
 
     function selectTarget(idx) {
@@ -971,20 +1021,18 @@
     }
 
     function executeBattleAction(type, targetIdx, data) {
-      battleBusy = true; pendingAction = null;
-      let msg = "";
+      battleBusy = true; pendingAction = null; let msg = "";
       const target = targetIdx !== null ? enemies[targetIdx] : null;
       if (type === 'attack') {
-        const dmg = activeActor.atk + Math.floor(Math.random() * 5);
-        target.hp = Math.max(0, target.hp - dmg);
-        msg = `${activeActor.name} hit ${target.name} for ${dmg}! `;
+        const a = getMonsterFinalStats(activeActor), d = getMonsterFinalStats(target);
+        const dmg = Math.max(1, (a.atk + Math.floor(Math.random() * 5)) - d.def);
+        target.hp = Math.max(0, target.hp - dmg); msg = `${activeActor.name} hit for ${dmg}! `;
       } else if (type === 'useSkill') {
-        const skill = activeActor.learnedSkills[data];
-        activeActor.mp -= skill.cost;
-        const dmg = calculateSkillDamage(activeActor, target, skill);
-        target.hp = Math.max(0, target.hp - dmg);
-        if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
-        msg = `${activeActor.name} used ${skill.name} for ${dmg}! `;
+        const equipSkills = []; for (let s in activeActor.equipment) { const itm = EQUIPMENT_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+        const skill = [...(activeActor.learnedSkills || []), ...equipSkills][data];
+        activeActor.mp -= skill.cost; const dmg = calculateSkillDamage(activeActor, target, skill);
+        target.hp = Math.max(0, target.hp - dmg); if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
+        msg = `${activeActor.name} used ${skill.name}! `;
       } else if (type === 'item') {
         const item = playerStats.inventory[data];
         if (item.type === 'capture') {
