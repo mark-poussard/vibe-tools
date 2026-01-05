@@ -283,8 +283,8 @@
       'desert': ['Obsidian Scales', 'Fire Orb', 'Wind Feather', 'Power Bracers']
     };
     function getExpRequired(lvl, growth) {
-      const mult = growth === 'fast' ? 0.66 : (growth === 'slow' ? 2.0 : 1.0);
-      return Math.floor(mult * 260 * (Math.pow(1.3, lvl) - 1));
+      const mult = growth === 'fast' ? 0.8 : (growth === 'slow' ? 1.2 : 1.0);
+      return Math.floor(mult * Math.pow(lvl, 3));
     }
     function createMonster(key, lvl, isWild = false, zonePoolKey = null) {
       const t = MONSTER_DB[key]; if (!t) return null;
@@ -295,7 +295,7 @@
       m.atk = t.atk + (lvl - 1) * 3;
       m.spd = (t.spd || 10) + (lvl - 1) * 2;
       m.def = 0; m.equipment = {}; m.morphology = t.morphology;
-      m.rewardXp = Math.floor(getExpRequired(lvl, m.growth) * 0.2);
+      m.rewardXp = lvl;
       m.gold = lvl * 10;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
