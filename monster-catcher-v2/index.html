@@ -254,7 +254,14 @@
     const NPC_LOCATIONS = [
       { 
         x: 26, y: 17, type: 'dialog', color: '#4444ff', 
-        text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there."
+        text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#4444ff'; c.beginPath(); c.roundRect(x - 12, y - 35, 24, 35, 5); c.fill();
+          c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 40, 10, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#eab308'; c.beginPath(); c.ellipse(x, y - 45, 15, 5, 0, 0, Math.PI*2); c.fill();
+          c.beginPath(); c.arc(x, y - 48, 6, Math.PI, 0); c.fill();
+        }
       },
       { 
         x: 6, y: 13, type: 'merchant', color: '#f1c40f', 
@@ -262,11 +269,27 @@
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
           { name: 'Monster Ball', price: 50, type: 'capture' }
-        ]
+        ],
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#78350f'; c.fillRect(x - 18, y - 35, 10, 25);
+          c.fillStyle = '#f1c40f'; c.beginPath(); c.roundRect(x - 12, y - 35, 24, 35, 5); c.fill();
+          c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 40, 10, 0, Math.PI * 2); c.fill();
+          c.fillStyle = 'white'; c.beginPath(); c.ellipse(x, y - 48, 12, 6, 0, 0, Math.PI*2); c.fill();
+          c.fillStyle = '#f1c40f'; c.fillRect(x-2, y-55, 4, 4);
+        }
       },
       { 
         x: 7, y: 15, type: 'healer', color: '#10b981', 
-        text: "Welcome to the lake! I have healed your monsters to full health."
+        text: "Welcome to the lake! I have healed your monsters to full health.",
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#10b981'; c.beginPath(); c.roundRect(x - 12, y - 40, 24, 40, 8); c.fill();
+          c.fillStyle = 'white'; c.fillRect(x-8, y-30, 16, 20);
+          c.fillStyle = '#ef4444'; c.fillRect(x-1, y-25, 2, 10); c.fillRect(x-5, y-21, 10, 2);
+          c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
+          c.fillStyle = 'white'; c.beginPath(); c.moveTo(x-8, y-52); c.lineTo(x+8, y-52); c.lineTo(x, y-60); c.closePath(); c.fill();
+        }
       }
     ];
     let activeInteractionTarget = null;
@@ -695,17 +718,11 @@
       }
 
       // Draw NPCs
-      const drawNpc = (tx, ty, color) => {
-        const nx = tx * TILE_SIZE + TILE_SIZE / 2;
-        const ny = ty * TILE_SIZE + TILE_SIZE / 2;
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath(); ctx.ellipse(nx, ny + 15, 15, 8, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = color;
-        ctx.beginPath(); ctx.roundRect(nx - 15, ny - 45, 30, 45, 10); ctx.fill();
-        ctx.fillStyle = '#ffdbac';
-        ctx.beginPath(); ctx.arc(nx, ny - 50, 12, 0, Math.PI * 2); ctx.fill();
-      };
-      NPC_LOCATIONS.forEach(n => drawNpc(n.x, n.y, n.color));
+      NPC_LOCATIONS.forEach(n => {
+        const nx = n.x * TILE_SIZE + TILE_SIZE / 2;
+        const ny = n.y * TILE_SIZE + TILE_SIZE / 2;
+        if (n.draw) n.draw(ctx, nx, ny);
+      });
 
       // Draw Player Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
