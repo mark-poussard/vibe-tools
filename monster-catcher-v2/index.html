@@ -275,11 +275,17 @@
       'mountain': [ { key: 'Cliff-Ram', weight: 0.3 }, { key: 'Sky-Shredder', weight: 0.3 }, { key: 'Rockogolem', weight: 0.2 }, { key: 'Zephyros', weight: 0.2 } ],
       'desert': [ { key: 'Sand-Stinger', weight: 0.3 }, { key: 'Sun-Cactus', weight: 0.3 }, { key: 'Mindbug', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 } ]
     };
+    const ZONE_EQUIPMENT_POOLS = {
+      'forest': ['Iron Helmet', 'Leather Vest'],
+      'lake': ['Leather Vest', 'Swift Sandals'],
+      'mountain': ['Iron Helmet', 'Power Bracers', 'Steel Plate'],
+      'desert': ['Obsidian Scales', 'Fire Orb', 'Wind Feather', 'Power Bracers']
+    };
     function getExpRequired(lvl, growth) {
       const mult = growth === 'fast' ? 0.66 : (growth === 'slow' ? 2.0 : 1.0);
       return Math.floor(mult * 260 * (Math.pow(1.3, lvl) - 1));
     }
-    function createMonster(key, lvl, isWild = false) {
+    function createMonster(key, lvl, isWild = false, zonePoolKey = null) {
       const t = MONSTER_DB[key]; if (!t) return null;
       const m = JSON.parse(JSON.stringify(t));
       m.name = key; m.lvl = lvl; m.ap = 0; m.growth = t.growth || 'normal'; m.xp = lvl > 1 ? getExpRequired(lvl - 1, m.growth) : 0;
@@ -290,22 +296,15 @@
       m.def = 0; m.equipment = {}; m.morphology = t.morphology;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
+        const poolItems = zonePoolKey ? (ZONE_EQUIPMENT_POOLS[zonePoolKey] || []) : Object.keys(EQUIPMENT_DB);
         slots.forEach(slot => {
           if (Math.random() < 0.15) {
             const targetType = SLOT_TO_TYPE[slot];
-            const choices = Object.keys(EQUIPMENT_DB).filter(k => EQUIPMENT_DB[k].type === targetType);
+            const choices = poolItems.filter(k => EQUIPMENT_DB[k].type === targetType);
             if (choices.length > 0) m.equipment[slot] = choices[Math.floor(Math.random() * choices.length)];
           }
         });
       }
-      const t = MONSTER_DB[key]; if (!t) return null;
-      const m = JSON.parse(JSON.stringify(t));
-      m.name = key; m.lvl = lvl; m.ap = 0; m.growth = t.growth || 'normal'; m.xp = lvl > 1 ? getExpRequired(lvl - 1, m.growth) : 0;
-      m.maxHp = t.hp + (lvl - 1) * 15; m.hp = m.maxHp;
-      m.maxMp = t.mp + (lvl - 1) * 5; m.mp = m.maxMp;
-      m.atk = t.atk + (lvl - 1) * 3;
-      m.spd = (t.spd || 10) + (lvl - 1) * 2;
-      m.def = 0; m.equipment = {}; m.morphology = t.morphology;
       m.learnedSkills = (t.skills || []).filter(s => s.lvl <= lvl);
       if (m.learnedSkills.length > 0) m.skill = m.learnedSkills[m.learnedSkills.length - 1];
       return m;
@@ -879,7 +878,7 @@
         let rand = Math.random() * totalWeight;
         let selectedKey = pool[0].key;
         for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
-        let m = createMonster(selectedKey, monsterLvl, true);
+        let m = createMonster(selectedKey, monsterLvl, true, zone.pool);
         m.gold = 5 + monsterLvl * 4;
         m.rewardXp = Math.floor(15 * Math.pow(1.2, monsterLvl));
         m.ap = 0;
@@ -897,7 +896,7 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      let m = createMonster(npc.monsterKey, npc.level, true);
+      let m = createMonster(npc.monsterKey, npc.level, true, 'desert');
       m.gold = 500;
       m.rewardXp = 2500;
       enemies = [m];
