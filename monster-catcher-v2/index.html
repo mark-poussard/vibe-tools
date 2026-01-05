@@ -294,6 +294,8 @@
       m.atk = t.atk + (lvl - 1) * 3;
       m.spd = (t.spd || 10) + (lvl - 1) * 2;
       m.def = 0; m.equipment = {}; m.morphology = t.morphology;
+      m.rewardXp = Math.floor(getExpRequired(lvl, m.growth) * 0.2);
+      m.gold = lvl * 10;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
         const poolItems = zonePoolKey ? (ZONE_EQUIPMENT_POOLS[zonePoolKey] || []) : Object.keys(EQUIPMENT_DB);
@@ -326,6 +328,15 @@
           c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 40, 10, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#eab308'; c.beginPath(); c.ellipse(x, y - 45, 15, 5, 0, 0, Math.PI*2); c.fill();
           c.beginPath(); c.arc(x, y - 48, 6, Math.PI, 0); c.fill();
+        }
+      },
+      { 
+        x: 21, y: 15, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
+        equipment: { 'Head': 'Iron Helmet', 'Chest': 'Steel Plate' },
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(x - 15, y - 25, 30, 25, 5); c.fill();
+          c.strokeStyle = 'white'; c.lineWidth = 3; c.beginPath(); c.moveTo(x-10, y-25); c.quadraticCurveTo(x-15, y-35, x-20, y-25); c.moveTo(x+10, y-25); c.quadraticCurveTo(x+15, y-35, x+20, y-25); c.stroke();
         }
       },
       { 
@@ -362,6 +373,7 @@
       },
       { 
         x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
+        equipment: { 'Core': 'Fire Orb' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#fde047'; c.beginPath();
@@ -887,8 +899,6 @@
         let selectedKey = pool[0].key;
         for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
         let m = createMonster(selectedKey, monsterLvl, true, zone.pool);
-        m.gold = 5 + monsterLvl * 4;
-        m.rewardXp = Math.floor(15 * Math.pow(1.2, monsterLvl));
         m.ap = 0;
         enemies.push(m);
       }
@@ -904,9 +914,8 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      let m = createMonster(npc.monsterKey, npc.level, true, 'desert');
-      m.gold = 500;
-      m.rewardXp = 2500;
+      let m = createMonster(npc.monsterKey, npc.level, false);
+      if (npc.equipment) m.equipment = JSON.parse(JSON.stringify(npc.equipment));
       enemies = [m];
       playerStats.party.forEach(p => p.ap = 0);
       activeActor = null; pendingAction = null; pendingSkillIdx = null;
