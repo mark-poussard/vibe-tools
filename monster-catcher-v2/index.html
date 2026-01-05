@@ -917,11 +917,9 @@
       const offset = 3 * (count - 1);
       const adjMin = Math.max(1, range[0] - offset);
       const adjMax = Math.max(1, range[1] - offset);
-      let totalLvl = (Math.floor(Math.random() * (adjMax - adjMin + 1)) + adjMin) * count;
       enemies = [];
       for (let i = 0; i < count; i++) {
-        let monsterLvl = Math.max(1, Math.floor(totalLvl / (count - i)));
-        totalLvl -= monsterLvl;
+        let monsterLvl = Math.floor((Math.floor(Math.random() * (range[1] - range[0])) + range[0]) * (1 - (0.1*(count-1))));
         let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
         let rand = Math.random() * totalWeight;
         let selectedKey = pool[0].key;
