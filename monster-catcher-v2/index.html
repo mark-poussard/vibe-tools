@@ -21,20 +21,29 @@
       border: 4px solid #444;
       cursor: pointer;
     }
-    #ui {
-      position: absolute; top: 0; left: 0; right: 0; color: white; font-family: monospace;
-      pointer-events: none; background: rgba(0,0,0,0.6); padding: 8px 12px; font-size: 11px;
-      display: flex; justify-content: space-between; align-items: center; z-index: 150;
-    }
     #dialog {
       display: none; position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
       background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
       width: 90%; max-width: 400px; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 100;
     }
-    #shop, #menu-modal {
+    #shop {
       display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
       width: 90%; max-width: 320px; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 250;
+    }
+    #menu-modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 250;
+    }
+    .modal-inner {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; padding: 20px; border: 4px solid #444; font-family: monospace;
+      width: 90%; max-width: 320px; box-sizing: border-box; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    #menu-trigger {
+      position: absolute; bottom: 20px; right: 20px; z-index: 150;
+      padding: 10px 20px; cursor: pointer; background: #444; color: white;
+      border: 2px solid #888; font-family: monospace; pointer-events: auto;
     }
     .menu-btn { width: 100%; padding: 12px; margin: 5px 0; cursor: pointer; background: #eee; border: 1px solid #ccc; font-family: monospace; font-size: 14px; }
     .menu-btn:hover { background: #ddd; }
@@ -79,12 +88,7 @@
     <h1>Choose Your Starter Monster</h1>
     <div class="starter-cards"></div>
   </div>
-  <div id="ui">
-    <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; margin-right: 10px;">
-      <span class="dungeon-info">Green=Forest | Gray=Mtn | Yellow=Desert</span> | <span id="player-hud"></span>
-    </div>
-    <button onclick="toggleMenu()" style="pointer-events: auto; padding: 4px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #888; font-family: monospace;">Menu</button>
-  </div>
+  <button id="menu-trigger" onclick="toggleMenu()">Menu</button>
   <div id="flash-overlay"></div>
   <div id="battle-screen">
     <div class="battle-stats">
@@ -115,8 +119,10 @@
     <div id="shop-items"></div>
     <button onclick="closeShop()" style="margin-top: 15px; width: 100%; cursor: pointer;">Exit Shop</button>
   </div>
-  <div id="menu-modal">
-    <div id="menu-content"></div>
+  <div id="menu-modal" onclick="if(event.target === this) toggleMenu()">
+    <div class="modal-inner">
+      <div id="menu-content"></div>
+    </div>
   </div>
   <canvas id="gameCanvas"></canvas>
 
@@ -443,6 +449,7 @@
       const content = document.getElementById('menu-content');
       content.innerHTML = `
         <h3 style="margin-top: 0;">Menu</h3>
+        <div style="margin-bottom: 12px; font-weight: bold; font-size: 1.1em; color: #f1c40f; border-bottom: 1px solid #eee; padding-bottom: 8px;">Gold: ${playerStats.gold}G</div>
         <button class="menu-btn" onclick="showParty()">Party</button>
         <button class="menu-btn" onclick="showInventory()">Inventory</button>
         <button class="menu-btn" onclick="saveGame()">Save Game</button>
@@ -629,7 +636,8 @@
     function updateHud() {
       if (playerStats.party.length === 0) return;
       const hero = playerStats.party[0];
-      document.getElementById('player-hud').innerText = `L:${hero.lvl} HP:${Math.ceil(hero.hp)} G:${playerStats.gold} P:${playerStats.party.length}`;
+      const hud = document.getElementById('player-hud');
+      if (hud) hud.innerText = `L:${hero.lvl} HP:${Math.ceil(hero.hp)} G:${playerStats.gold} P:${playerStats.party.length}`;
     }
 
     function triggerNpc(npc) {
