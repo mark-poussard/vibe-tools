@@ -349,8 +349,8 @@
         }
       },
       { 
-        x: 7, y: 15, type: 'healer', color: '#10b981', 
-        text: "Welcome to the lake! I have healed your monsters to full health.",
+        x: 26, y: 13, type: 'healer', color: '#10b981', 
+        text: "Welcome to the adventure! I have healed your monsters to full health.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#10b981'; c.beginPath(); c.roundRect(x - 12, y - 40, 24, 40, 8); c.fill();
@@ -463,7 +463,7 @@
     function openShop(items) {
       if (items) currentShopItems = items;
       const container = document.getElementById('shop-items');
-      container.innerHTML = '';
+      container.innerHTML = `<div style="padding: 5px 0 10px; font-weight: bold; color: #f1c40f; border-bottom: 1px solid #eee; margin-bottom: 10px;">Your Gold: ${playerStats.gold}G</div>`;
       currentShopItems.forEach(item => {
         const div = document.createElement('div');
         div.className = 'shop-item';
@@ -525,14 +525,21 @@
       let html = `<h3 style="margin-top: 0;">Party</h3><div style="max-height: 260px; overflow-y: auto;">`;
       playerStats.party.forEach((p, i) => {
         html += `
-          <button class="menu-btn" onclick="showMemberDetail(${i})" style="text-align: left;">
-            <div style="font-weight: bold;">${p.name} (Lvl ${p.lvl})</div>
-            <div style="font-size: 0.8em; margin-top: 4px;">HP: ${Math.ceil(p.hp)}/${p.maxHp} | MP: ${Math.ceil(p.mp)}/${p.maxMp}</div>
+          <button class="menu-btn" onclick="showMemberDetail(${i})" style="text-align: left; display: flex; align-items: center; gap: 10px;">
+            <canvas id="party-icon-${i}" width="100" height="100" style="width: 40px; height: 40px; background: #333; border-radius: 4px; flex-shrink: 0;"></canvas>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: bold;">${p.name} (Lvl ${p.lvl})</div>
+              <div style="font-size: 0.8em; margin-top: 4px;">HP: ${Math.ceil(p.hp)}/${p.maxHp} | MP: ${Math.ceil(p.mp)}/${p.maxMp}</div>
+            </div>
           </button>
         `;
       });
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMainMenu()">Back</button>`;
       content.innerHTML = html;
+      playerStats.party.forEach((p, i) => {
+        const c = document.getElementById(`party-icon-${i}`);
+        if (c) drawMonsterIcon(c.getContext('2d'), p.name);
+      });
     }
 
     function showMemberDetail(idx) {
@@ -611,7 +618,8 @@
         html += `<p>Empty</p>`;
       } else {
         playerStats.inventory.forEach((item, idx) => {
-          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span><button onclick="useItem(${idx}, ${isBattle})">Use</button></div>`;
+          const canUse = isBattle ? ['hp', 'mp', 'capture'].includes(item.type) : ['hp', 'mp'].includes(item.type);
+          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span>${canUse ? `<button onclick="useItem(${idx}, ${isBattle})\">Use</button>` : ''}</div>`;
         });
       }
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="${isBattle ? 'toggleMenu()' : 'showMainMenu()'}">Back</button>`;
