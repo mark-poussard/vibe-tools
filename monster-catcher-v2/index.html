@@ -295,7 +295,7 @@
       m.atk = t.atk + (lvl - 1) * 3;
       m.spd = (t.spd || 10) + (lvl - 1) * 2;
       m.def = 0; m.equipment = {}; m.morphology = t.morphology;
-      m.rewardXp = lvl * 10;
+      m.rewardXp = lvl * 5;
       m.gold = lvl * 10;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
