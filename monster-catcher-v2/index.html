@@ -246,8 +246,10 @@
     }
     const STARTERS = [ createMonster('Sylvaris', 5), createMonster('Ignifrit', 5), createMonster('Aquasaur', 5) ];
     let activeActor = null;
-    let currentEnemy = null;
+    let enemies = [];
     let battleBusy = false;
+    let pendingAction = null;
+    let pendingSkillIdx = null;
 
     const NPC_LOCATIONS = [
       { 
@@ -463,7 +465,7 @@
     }
     function openSkillMenu() {
       const actor = activeActor;
-      if (!actor || actor === currentEnemy) return;
+      if (!actor || enemies.includes(actor)) return;
       const content = document.getElementById('menu-content');
       let html = `<h3 style="margin-top: 0;">Select Skill</h3><div style="max-height: 200px; overflow-y: auto;">`;
       if (!actor.learnedSkills || actor.learnedSkills.length === 0) {
@@ -751,18 +753,30 @@
       gameState = 'BATTLE';
       const pool = ENCOUNTER_POOLS[zone.pool] || ENCOUNTER_POOLS['forest'];
       const range = zone.levelRange || [1, 5];
-      const level = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
-      let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
-      let rand = Math.random() * totalWeight;
-      let selectedKey = pool[0].key;
-      for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
-      currentEnemy = createMonster(selectedKey, level);
-      currentEnemy.gold = 10 + level * 8; currentEnemy.rewardXp = Math.floor(20 * Math.pow(1.3, level));
+      const maxLvl = range[1];
+      const minLvl = range[0];
+      let count = 1;
+      const r = Math.random();
+      if (r < 0.15) count = 3; else if (r < 0.4) count = 2;
+      let totalLvl = Math.floor(Math.random() * (maxLvl - (count * minLvl) + 1)) + (count * minLvl);
+      enemies = [];
+      for (let i = 0; i < count; i++) {
+        let monsterLvl = Math.max(1, Math.floor(totalLvl / (count - i)));
+        totalLvl -= monsterLvl;
+        let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+        let rand = Math.random() * totalWeight;
+        let selectedKey = pool[0].key;
+        for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
+        let m = createMonster(selectedKey, monsterLvl);
+        m.gold = 5 + monsterLvl * 4;
+        m.rewardXp = Math.floor(15 * Math.pow(1.2, monsterLvl));
+        m.ap = 0;
+        enemies.push(m);
+      }
       playerStats.party.forEach(p => p.ap = 0);
-      currentEnemy.ap = 0;
-      activeActor = null;
+      activeActor = null; pendingAction = null; pendingSkillIdx = null;
       document.getElementById('battle-screen').style.display = 'flex';
-      nextTurn(`A wild Lvl ${currentEnemy.lvl} ${currentEnemy.name} appeared!`);
+      nextTurn(`A group of ${enemies.length} monsters appeared!`);
     }
 
     function updateBattleUI(msg) {
@@ -780,6 +794,11 @@
             card.innerHTML = `<canvas class="battle-card-canvas" width="100" height="100"></canvas><div style="flex:1; min-width:0;"><div class="card-name" style="font-weight:bold; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill hp-fill"></div><div class="bar-text hp-txt"></div></div><div class="bar-container" style="${isEnemy?'margin-left:auto':''}"><div class="bar-fill mp-fill"></div><div class="bar-text mp-txt"></div></div>${!isEnemy?'<div class="bar-container" style="height:1px; border:none; background:rgba(255,255,255,0.1); margin-top:2px;"><div class="bar-fill xp-fill"></div></div>':''}</div>`;
             container.appendChild(card);
           }
+          card.onclick = (isEnemy && pendingAction && m.hp > 0) ? () => selectTarget(i) : null;
+          card.style.cursor = (isEnemy && pendingAction && m.hp > 0) ? 'pointer' : 'default';
+          card.style.opacity = m.hp <= 0 ? '0.4' : '1';
+          if (isEnemy && pendingAction && m.hp > 0) card.style.boxShadow = 'inset 0 0 10px #ffeb3b';
+          else card.style.boxShadow = 'none';
           card.className = 'battle-card' + (m === activeActor ? ' active-actor' : '');
           card.querySelector('.card-name').innerHTML = `${m.name} <span style="font-size:0.7em">L${m.lvl}</span>`;
           card.querySelector('.hp-fill').style.width = (m.hp/m.maxHp*100) + '%';
@@ -794,7 +813,7 @@
         });
       };
       updateContainer(partyList, playerStats.party, false);
-      updateContainer(enemyList, currentEnemy ? [currentEnemy] : [], true);
+      updateContainer(enemyList, enemies, true);
       document.getElementById('acting-name').innerText = activeActor ? `Turn: ${activeActor.name}` : "";
       if (msg) document.getElementById('battle-msg').innerText = msg;
     }
@@ -811,13 +830,15 @@
 
     function nextTurn(msg) {
       if (gameState !== 'BATTLE') return;
-      const combatants = [...playerStats.party.filter(p => p.hp > 0), currentEnemy];
+      pendingAction = null; pendingSkillIdx = null;
+      const combatants = [...playerStats.party.filter(p => p.hp > 0), ...enemies.filter(e => e.hp > 0)];
       while (true) {
         combatants.sort((a, b) => b.ap - a.ap);
+        if (combatants.length === 0) return;
         if (combatants[0].ap >= 100) {
           activeActor = combatants[0];
           updateBattleUI(msg);
-          if (activeActor === currentEnemy) setTimeout(enemyTurn, 800);
+          if (enemies.includes(activeActor)) setTimeout(enemyTurn, 800);
           else battleBusy = false;
           return;
         }
@@ -826,10 +847,10 @@
     }
 
     function enemyTurn() {
-      if (gameState !== 'BATTLE' || currentEnemy.hp <= 0) return;
+      if (gameState !== 'BATTLE' || activeActor.hp <= 0) return;
       const targets = playerStats.party.filter(p => p.hp > 0);
       if (targets.length === 0) return;
-      const usableSkills = (currentEnemy.learnedSkills || []).filter(s => currentEnemy.mp >= s.cost);
+      const usableSkills = (activeActor.learnedSkills || []).filter(s => activeActor.mp >= s.cost);
       let target = null, skillToUse = null;
       for (const s of usableSkills) {
         const weakTarget = targets.find(t => (TYPE_CHART[t.type] || { weakTo: [] }).weakTo.includes(s.type));
@@ -841,12 +862,12 @@
       }
       let dmg = 0, txt = "";
       if (skillToUse) {
-        currentEnemy.mp -= skillToUse.cost;
-        dmg = calculateSkillDamage(currentEnemy, target, skillToUse);
-        txt = `${currentEnemy.name} uses ${skillToUse.name} on ${target.name} for ${dmg}!`;
+        activeActor.mp -= skillToUse.cost;
+        dmg = calculateSkillDamage(activeActor, target, skillToUse);
+        txt = `${activeActor.name} uses ${skillToUse.name} on ${target.name} for ${dmg}!`;
       } else {
-        dmg = currentEnemy.atk + Math.floor(Math.random() * 5);
-        txt = `${currentEnemy.name} attacks ${target.name} for ${dmg}!`;
+        dmg = activeActor.atk + Math.floor(Math.random() * 5);
+        txt = `${activeActor.name} attacks ${target.name} for ${dmg}!`;
       }
       target.hp = Math.max(0, target.hp - dmg);
       updateBattleUI(txt);
@@ -858,33 +879,57 @@
       setTimeout(nextTurn, 800);
     }
 
+    function selectTarget(idx) {
+      if (battleBusy || !pendingAction) return;
+      executeBattleAction(pendingAction, idx, pendingSkillIdx);
+    }
+
     function battleAction(type, data = null) {
-      if (battleBusy || !activeActor || activeActor === currentEnemy) return;
+      if (battleBusy || !activeActor || enemies.includes(activeActor)) return;
       if (type === 'skill') { openSkillMenu(); return; }
-      battleBusy = true;
+      if (type === 'flee') {
+        battleBusy = true;
+        if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
+        updateBattleUI("Flee failed! ");
+        activeActor.ap -= 100; setTimeout(nextTurn, 600);
+        return;
+      }
+      const aliveEnemies = enemies.filter(e => e.hp > 0);
+      if (type === 'attack' || type === 'useSkill' || (type === 'item' && playerStats.inventory[data].type === 'capture')) {
+        if (aliveEnemies.length > 1) {
+          pendingAction = type; pendingSkillIdx = data;
+          updateBattleUI("Select a target monster.");
+          return;
+        }
+        executeBattleAction(type, enemies.indexOf(aliveEnemies[0]), data);
+      } else if (type === 'item') {
+        executeBattleAction(type, null, data);
+      }
+    }
+
+    function executeBattleAction(type, targetIdx, data) {
+      battleBusy = true; pendingAction = null;
       let msg = "";
+      const target = targetIdx !== null ? enemies[targetIdx] : null;
       if (type === 'attack') {
         const dmg = activeActor.atk + Math.floor(Math.random() * 5);
-        currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
-        msg = `${activeActor.name} hit for ${dmg}! `;
+        target.hp = Math.max(0, target.hp - dmg);
+        msg = `${activeActor.name} hit ${target.name} for ${dmg}! `;
       } else if (type === 'useSkill') {
         const skill = activeActor.learnedSkills[data];
         activeActor.mp -= skill.cost;
-        const dmg = calculateSkillDamage(activeActor, currentEnemy, skill);
-        currentEnemy.hp = Math.max(0, currentEnemy.hp - dmg);
+        const dmg = calculateSkillDamage(activeActor, target, skill);
+        target.hp = Math.max(0, target.hp - dmg);
         if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
         msg = `${activeActor.name} used ${skill.name} for ${dmg}! `;
-      } else if (type === 'flee') {
-        if (Math.random() > 0.4) { endBattle("You escaped!"); return; }
-        msg = "Flee failed! ";
       } else if (type === 'item') {
         const item = playerStats.inventory[data];
         if (item.type === 'capture') {
           if (playerStats.party.length >= 4) { alert("Party full!"); toggleMenu(); battleBusy = false; return; }
-          const chance = 0.2 + (0.5 * (1 - (currentEnemy.hp / currentEnemy.maxHp)));
+          const chance = 0.2 + (0.5 * (1 - (target.hp / target.maxHp)));
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
           toggleMenu();
-          if (Math.random() < chance) { playerStats.party.push(JSON.parse(JSON.stringify(currentEnemy))); endBattle("Captured!"); return; }
+          if (Math.random() < chance) { playerStats.party.push(JSON.parse(JSON.stringify(target))); target.hp = 0; msg = `Captured ${target.name}! `; }
           else msg = "Capture failed! ";
         } else {
           if (item.type === 'hp') activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + item.val);
@@ -894,9 +939,11 @@
         }
       }
       updateBattleUI(msg);
-      if (currentEnemy.hp <= 0) {
-        playerStats.gold += currentEnemy.gold; gainXp(currentEnemy.rewardXp);
-        endBattle(`Victorious! +${currentEnemy.rewardXp}XP`);
+      if (enemies.every(e => e.hp <= 0)) {
+        let totalGold = 0, totalXp = 0;
+        enemies.forEach(e => { totalGold += e.gold; totalXp += e.rewardXp; });
+        playerStats.gold += totalGold; gainXp(totalXp);
+        endBattle(`Victorious! +${totalXp}XP +${totalGold}G`);
       } else {
         activeActor.ap -= 100;
         setTimeout(nextTurn, 600);
@@ -936,6 +983,7 @@
         document.getElementById('battle-screen').style.display = 'none';
         gameState = 'EXPLORE';
         battleBusy = false;
+        enemies = [];
       }, 1500);
     }
 
