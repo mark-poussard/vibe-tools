@@ -372,7 +372,7 @@
           c.fillStyle = 'white'; c.beginPath(); c.moveTo(x-8, y-52); c.lineTo(x+8, y-52); c.lineTo(x, y-60); c.closePath(); c.fill();
         }
       },
-      { 
+      {
         id: 'boss_omnistar', x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
         equipment: { 'Core': 'Fire Orb' },
         draw: (c, x, y) => {
@@ -386,7 +386,17 @@
           }
           c.closePath(); c.fill();
           c.strokeStyle = '#facc15'; c.lineWidth = 2; c.stroke();
-          c.fillStyle = 'white'; c.beginPath(); c.arc(x-5, y-22, 3, 0, Math.PI*2); c.arc(x+5, y-22, 3, 0, Math.PI*2); c.fill();
+          c.fillStyle = 'white'; c.beginPath(); c.arc(x-5, y-22, 3, 0, Math.PI * 2); c.arc(x+5, y-22, 3, 0, Math.PI * 2); c.fill();
+        }
+      },
+      {
+        id: 'forest_chest_1', x: 12, y: 12, type: 'item',
+        items: [{ name: 'Monster Ball', type: 'capture', count: 5 }],
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#78350f'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 18, 3); c.fill();
+          c.fillStyle = '#a16207'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 6, 3); c.fill();
+          c.fillStyle = '#facc15'; c.fillRect(x - 2, y - 6, 4, 8);
         }
       }
     ];
@@ -758,6 +768,22 @@
         playerStats.lastHealLocation = { x: player.x, y: player.y };
         updateHud();
         showDialog(npc.text);
+      } else if (npc.type === 'item') {
+        let msg = "You found: ";
+        npc.items.forEach(item => {
+          const existing = playerStats.inventory.find(i => i.name === item.name);
+          if (existing) { existing.count += item.count; }
+          else { playerStats.inventory.push({ ...item }); }
+          msg += `${item.name} (x${item.count}) `;
+        });
+        showDialog(msg);
+        if (npc.id) playerStats.defeatedNpcIds.push(npc.id);
+        const idx = NPC_LOCATIONS.indexOf(npc);
+        if (idx > -1) {
+          if (map[npc.y] && map[npc.y][npc.x]) map[npc.y][npc.x].traversable = true;
+          NPC_LOCATIONS.splice(idx, 1);
+        }
+        updateHud();
       }
     }
 
