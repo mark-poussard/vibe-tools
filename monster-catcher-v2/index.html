@@ -899,6 +899,7 @@
         if (aliveEnemies.length > 1) {
           pendingAction = type; pendingSkillIdx = data;
           updateBattleUI("Select a target monster.");
+          if (type === 'item') toggleMenu();
           return;
         }
         executeBattleAction(type, enemies.indexOf(aliveEnemies[0]), data);
