@@ -144,7 +144,8 @@
       path: [],
       size: 40,
       isWalking: false,
-      animFrame: 0
+      animFrame: 0,
+      stepsToEncounter: Math.floor(Math.random() * 16) + 15
     };
 
     function findPath(startTX, startTY, endTX, endTY) {
@@ -866,16 +867,20 @@
           player.x += (dx / dist) * PLAYER_SPEED;
           player.y += (dy / dist) * PLAYER_SPEED;
           player.animFrame += 0.15;
-          const tx = Math.floor(player.x / TILE_SIZE);
-          const ty = Math.floor(player.y / TILE_SIZE);
-          if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon' && Math.random() < 0.012) {
-            player.path = [];
-            startBattle(map[ty][tx]);
-          }
         } else {
           player.x = target.x;
           player.y = target.y;
           player.path.shift();
+          const tx = Math.floor(player.x / TILE_SIZE);
+          const ty = Math.floor(player.y / TILE_SIZE);
+          if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
+            player.stepsToEncounter--;
+            if (player.stepsToEncounter <= 0) {
+              player.stepsToEncounter = Math.floor(Math.random() * 16) + 15;
+              player.path = [];
+              startBattle(map[ty][tx]);
+            }
+          }
           if (player.path.length === 0) {
             player.isWalking = false;
             if (activeInteractionTarget) {
