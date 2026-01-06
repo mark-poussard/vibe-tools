@@ -24,7 +24,12 @@
     <div class="tool-section">
       <span class="label">Mode</span>
       <button id="tool-pan">Pan</button>
-      <button id="tool-pen">Pen</button>
+      <button id="tool-pen">Tiles</button>
+      <button id="tool-zone">Zones</button>
+    </div>
+    <div class="tool-section">
+      <span class="label">Zone ID</span>
+      <input type="number" id="zone-id" value="1" min="0" max="99" style="width: 45px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; padding: 4px; outline: none;">
     </div>
     <div class="palette" id="palette">
       <span class="label">Tiles</span>
@@ -52,9 +57,11 @@
       'b': { type: 'boulder', color: '#475569' }
     };
     let mapData = Array.from({ length: MAP_SIZE }, () => ' '.repeat(MAP_SIZE));
+    let zoneData = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(0));
     let cam = { x: 50, y: 50 };
     let mode = 'pen';
     let brush = ' ';
+    let activeZone = 1;
     let isDown = false;
     let lastPos = { x: 0, y: 0 };
 
@@ -68,12 +75,14 @@
       });
       document.getElementById('tool-pan').onclick = () => setMode('pan');
       document.getElementById('tool-pen').onclick = () => setMode('pen');
+      document.getElementById('tool-zone').onclick = () => setMode('zone');
+      document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
       window.addEventListener('resize', resize);
       const handleStart = (e) => {
         isDown = true;
         const p = e.touches ? e.touches[0] : e;
         lastPos = { x: p.clientX, y: p.clientY };
-        if (mode === 'pen') paint(p.clientX, p.clientY);
+        if (mode !== 'pan') paint(p.clientX, p.clientY);
       };
       const handleMove = (e) => {
         const p = e.touches ? e.touches[0] : e;
@@ -105,10 +114,11 @@
       mode = m;
       document.getElementById('tool-pan').classList.toggle('active', mode === 'pan');
       document.getElementById('tool-pen').classList.toggle('active', mode === 'pen');
+      document.getElementById('tool-zone').classList.toggle('active', mode === 'zone');
       Array.from(palette.getElementsByTagName('button')).forEach(b => {
         b.classList.toggle('active', mode === 'pen' && b.dataset.char === brush);
       });
-      canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+      canvas.style.cursor = mode === 'pan' ? 'grab' : (mode === 'zone' ? 'cell' : 'crosshair');
     }
 
     function resize() {
@@ -121,8 +131,12 @@
       const tx = Math.floor((ex - rect.left - cam.x) / TILE_SIZE);
       const ty = Math.floor((ey - rect.top - cam.y) / TILE_SIZE);
       if (tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE) {
-        const row = mapData[ty];
-        if (row[tx] !== brush) mapData[ty] = row.substring(0, tx) + brush + row.substring(tx + 1);
+        if (mode === 'pen') {
+          const row = mapData[ty];
+          if (row[tx] !== brush) mapData[ty] = row.substring(0, tx) + brush + row.substring(tx + 1);
+        } else if (mode === 'zone') {
+          zoneData[ty][tx] = activeZone;
+        }
       }
     }
 
@@ -141,6 +155,15 @@
         for (let x = vX0; x < vX1; x++) {
           ctx.fillStyle = TILES[mapData[y][x]].color;
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          const zid = zoneData[y][x];
+          if (zid > 0) {
+            ctx.fillStyle = `hsla(${(zid * 137) % 360}, 70%, 50%, 0.4)`;
+            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            ctx.fillStyle = 'white';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(zid, x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2 + 4);
+          }
           ctx.strokeStyle = 'rgba(0,0,0,0.1)';
           ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
