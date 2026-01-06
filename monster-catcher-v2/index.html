@@ -132,15 +132,15 @@
 
     // Config
     const TILE_SIZE = 64;
-    const MAP_SIZE_TILES = 30;
+    const MAP_SIZE_TILES = 60;
     const MAP_PIXEL_SIZE = MAP_SIZE_TILES * TILE_SIZE;
     const PLAYER_SPEED = 4;
     
     // State
     let gameState = 'EXPLORE'; // EXPLORE, BATTLE
     const player = {
-      x: 26 * TILE_SIZE + 32,
-      y: 15 * TILE_SIZE + 32,
+      x: 52 * TILE_SIZE + 32,
+      y: 30 * TILE_SIZE + 32,
       path: [],
       size: 40,
       isWalking: false,
@@ -321,7 +321,7 @@
 
     let NPC_LOCATIONS = [
       { 
-        id: 'guide', x: 26, y: 17, type: 'dialog', color: '#4444ff', 
+        id: 'guide', x: 52, y: 34, type: 'dialog', color: '#4444ff', 
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -332,7 +332,7 @@
         }
       },
       { 
-        id: 'boss_cliffram', x: 9, y: 15, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
+        id: 'boss_cliffram', x: 18, y: 30, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
         equipment: { 'Head': 'Iron Helmet', 'Chest': 'Steel Plate' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
@@ -341,7 +341,7 @@
         }
       },
       { 
-        id: 'merchant', x: 6, y: 13, type: 'merchant', color: '#f1c40f', 
+        id: 'merchant', x: 12, y: 26, type: 'merchant', color: '#f1c40f', 
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -361,7 +361,7 @@
         }
       },
       { 
-        id: 'healer', x: 26, y: 13, type: 'healer', color: '#10b981', 
+        id: 'healer', x: 52, y: 26, type: 'healer', color: '#10b981', 
         text: "Welcome to the adventure! I have healed your monsters to full health.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -373,7 +373,7 @@
         }
       },
       {
-        id: 'boss_omnistar', x: 8, y: 28, type: 'boss', monsterKey: 'Omnistar', level: 40,
+        id: 'boss_omnistar', x: 16, y: 56, type: 'boss', monsterKey: 'Omnistar', level: 40,
         equipment: { 'Core': 'Fire Orb' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
@@ -389,8 +389,8 @@
           c.fillStyle = 'white'; c.beginPath(); c.arc(x-5, y-22, 3, 0, Math.PI * 2); c.arc(x+5, y-22, 3, 0, Math.PI * 2); c.fill();
         }
       },
-      {
-        id: 'forest_chest_1', x: 12, y: 12, type: 'item',
+      { 
+        id: 'forest_chest_1', x: 24, y: 24, type: 'item',
         items: [{ name: 'Monster Ball', type: 'capture', count: 5 }],
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2); c.fill();
@@ -406,36 +406,66 @@
 
     const map = [];
     const MAP_LAYOUT = [
-"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-"bmmmmmmbmmmmmmmmmmmmmmbmmmmmmb",
-"bmmbmmmmmmmmmmmmmmmmmmmmmmmmmb",
-"bmmbmmmmmmmmmmmbmmmmmmmmmmmmmb",
-"bbmbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-"bmmmmmmmmbmmmmmmmmmmmmmmmmmmmb",
-"bmmmmmmmmmmmmmmmmbmmmmmmmbmmmb",
-"bbbbbbbbbbbbbbbbbbbbbmbbbbbbbb",
-"bmmmmbmmmmmmmmmmmmmmmmbbbbbbbb",
-"bmmmmmmmmmmmmmmbmmmmmmbbbbbbbb",
-"bbbbbbDbbbbbbbbbbbbbbbbbbbbbbb",
-"TTTTTTDTTTTTTTTTTTTTTTTTTTTTTT",
-"TTT      TTTffffffTffTTT     T",
-"TTTWWW   TTTfTfTfffffTTT     T",
-"TTTWWW   TTTTTfTfffTTTTT     T",
-"TTTWWW   DfffTfTffTffD       T",
-"TTTWWW   TTTfTfTffTffTTT     T",
-"TTTWWW   TTTfTfTfffffTTT     T",
-"TTT      TTTfffTfffffTTT     T",
-"TTTTTTDTTTTTTTTTTTTTTTTTTTTTTT",
-"bbbbbbDbbbbbbbbbbbbbbbbbbbbbbb",
-"bssssssssssssssssssssssssssssb",
-"bsssssssssbssssssssssssssssssb",
-"bssssssssssssssssssssssssbsssb",
-"bsssssssssssssssbssssssssssssb",
-"bssssssssssssssssssssssssssssb",
-"bssssbssssssssssssssssssbssssb",
-"bssssssssssssbsssssssssssssssb",
-"bssssssssssssssssssssssssssssb",
-"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmbb",
+"bbmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbbbmmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbmmbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbb",
+"bbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmmmbbmmmmmmmmmmbb",
+"bbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmmmbbmmmmmmmmmmbb",
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbmmbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbmmbbbbbbbbbbbbbbbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbbbbbbbbbbbbbbb",
+"bbmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbbbbbbbbbbbbbbb",
+"bbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmbbbbbbbbbbbbbbbb",
+"bbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbDDbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbDDbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"TTTTTTTTTTTTDDTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+"TTTTTTTTTTTTDDTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+"TTTTTT            TTTTTTffffffffffffTTffffTTTT            TT",
+"TTTTTT            TTTTTTffffffffffffTTffffTTTT            TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffffffffffTT            TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffffffffffTT            TT",
+"TTTTTTWWWWWW      TTTTTTTTTTffTTffffffTTTTTTTT            TT",
+"TTTTTTWWWWWW      TTTTTTTTTTffTTffffffTTTTTTTT            TT",
+"TTTTTTWWWWWW      DDffffffTTffTTffffTTffffDD              TT",
+"TTTTTTWWWWWW      DDffffffTTffTTffffTTffffDD              TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffTTffffTTTT            TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffTTffffTTTT            TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffffffffffTT            TT",
+"TTTTTTWWWWWW      TTTTTTffTTffTTffffffffffffTT            TT",
+"TTTTTT            TTTTTTffffffTTffffffffffffTT            TT",
+"TTTTTT            TTTTTTffffffTTffffffffffffTT            TT",
+"TTTTTTTTTTTTDDTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+"TTTTTTTTTTTTDDTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+"bbbbbbbbbbbbDDbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbDDbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssbbssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssbbssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssbbssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssbbssssssssssbb",
+"bbssssssssssssssssssssssssssssssbbssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssbbssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssbbssssssssssssssssssssssssssssssssssbbssssssssssbb",
+"bbssssssssbbssssssssssssssssssssssssssssssssssbbssssssssssbb",
+"bbssssssssssssssssssssssssbbssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssbbssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 ];
     function initMap() {
       const charMap = {
@@ -1203,7 +1233,7 @@
       playerStats.gold = Math.floor(playerStats.gold * 0.9);
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
       activeBossNpc = null;
-      const respawn = playerStats.lastHealLocation || { x: 26 * TILE_SIZE + 32, y: 15 * TILE_SIZE + 32 };
+      const respawn = playerStats.lastHealLocation || { x: 52 * TILE_SIZE + 32, y: 30 * TILE_SIZE + 32 };
       player.x = respawn.x;
       player.y = respawn.y;
       player.path = [];
