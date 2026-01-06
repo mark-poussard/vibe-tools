@@ -132,8 +132,9 @@
 
     // Config
     const TILE_SIZE = 64;
-    const MAP_SIZE_TILES = 60;
-    const MAP_PIXEL_SIZE = MAP_SIZE_TILES * TILE_SIZE;
+    let currentMapId = 'world';
+    let mapWidth = 60;
+    let mapHeight = 60;
     const PLAYER_SPEED = 4;
     
     // State
@@ -157,7 +158,7 @@
         const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
         for (const [dx, dy] of neighbors) {
           const nx = cx + dx, ny = cy + dy;
-          if (nx >= 0 && nx < MAP_SIZE_TILES && ny >= 0 && ny < MAP_SIZE_TILES && map[ny][nx].traversable && !visited.has(`${nx},${ny}`)) {
+          if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight && map[ny][nx].traversable && !visited.has(`${nx},${ny}`)) {
             const newPath = [...path, { x: nx * TILE_SIZE + TILE_SIZE / 2, y: ny * TILE_SIZE + TILE_SIZE / 2 }];
             if (nx === endTX && ny === endTY) return newPath;
             visited.add(`${nx},${ny}`);
@@ -328,7 +329,7 @@
 
     let NPC_LOCATIONS = [
       { 
-        id: 'guide', x: 52, y: 34, type: 'dialog', color: '#4444ff', 
+        id: 'guide', x: 52, y: 34, mapId: 'world', type: 'dialog', color: '#4444ff', 
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -339,7 +340,7 @@
         }
       },
       { 
-        id: 'boss_cliffram', x: 18, y: 30, type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
+        id: 'boss_cliffram', x: 18, y: 30, mapId: 'world', type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
         equipment: { 'Head': 'Iron Helmet', 'Chest': 'Steel Plate' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
@@ -348,7 +349,7 @@
         }
       },
       { 
-        id: 'merchant', x: 12, y: 26, type: 'merchant', color: '#f1c40f', 
+        id: 'merchant', x: 12, y: 26, mapId: 'world', type: 'merchant', color: '#f1c40f', 
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -368,7 +369,7 @@
         }
       },
       { 
-        id: 'healer', x: 52, y: 26, type: 'healer', color: '#10b981', 
+        id: 'healer', x: 52, y: 26, mapId: 'world', type: 'healer', color: '#10b981', 
         text: "Welcome to the adventure! I have healed your monsters to full health.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -380,7 +381,7 @@
         }
       },
       {
-        id: 'boss_omnistar', x: 16, y: 56, type: 'boss', monsterKey: 'Omnistar', level: 40,
+        id: 'boss_omnistar', x: 16, y: 56, mapId: 'world', type: 'boss', monsterKey: 'Omnistar', level: 40,
         equipment: { 'Core': 'Fire Orb' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
@@ -397,13 +398,22 @@
         }
       },
       { 
-        id: 'forest_chest_1', x: 24, y: 24, type: 'item',
+        id: 'forest_chest_1', x: 24, y: 24, mapId: 'world', type: 'item',
         items: [{ name: 'Monster Ball', type: 'capture', count: 5 }],
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#78350f'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 18, 3); c.fill();
           c.fillStyle = '#a16207'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 6, 3); c.fill();
           c.fillStyle = '#facc15'; c.fillRect(x - 2, y - 6, 4, 8);
+        }
+      },
+      {
+        id: 'shrine_sage', x: 5, y: 3, mapId: 'secret_shrine', type: 'dialog', color: '#ff44ff',
+        text: "You have discovered the Secret Shrine! Use the portal south to return.",
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#ff44ff'; c.beginPath(); c.roundRect(x - 12, y - 40, 24, 40, 8); c.fill();
+          c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
         }
       }
     ];
@@ -413,7 +423,10 @@
 
     const map = [];
     const encounterMap = [];
-    const ENCOUNTER_LAYOUT = [
+    const MAP_DATA = {
+      'world': {
+        warps: [{ x: 50, y: 30, destMap: 'secret_shrine', destX: 5, destY: 8 }],
+        encounters: [
       "000000000000000000000000000000000000000000000000000000000000",
       "000000000000000000000000000000000000000000000000000000000000",
       "002222222222220022222222222222222222222222220022222222222200",
@@ -474,8 +487,8 @@
       "003333333333333333333333333333333333333333333333333333333300",
       "000000000000000000000000000000000000000000000000000000000000",
       "000000000000000000000000000000000000000000000000000000000000"
-    ];
-    const MAP_LAYOUT = [
+        ],
+        layout: [
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 "bbmmmmmmmmmmmmbbmmmmmmmmmmmmmmmmmmmmmmmmmmmmbbmmmmmmmmmmmmbb",
@@ -506,7 +519,7 @@
 "TTTTTTWWWWWW      TTTTTTffTTffTTffffffffffffTT            TT",
 "TTTTTTWWWWWW      TTTTTTTTTTffTTffffffTTTTTTTT            TT",
 "TTTTTTWWWWWW      TTTTTTTTTTffTTffffffTTTTTTTT            TT",
-"TTTTTTWWWWWW      DDffffffTTffTTffffTTffffDD              TT",
+"TTTTTTWWWWWW      DDffffffTTffTTffffTTffffDD      D       TT",
 "TTTTTTWWWWWW      TTTTffffTTffTTffffTTffffDD              TT",
 "TTTTTTWWWWWW      TTTTTTffTTffTTffffTTffffTTTT            TT",
 "TTTTTTWWWWWW      TTTTTTffTTffTTffffTTffffTTTT            TT",
@@ -535,9 +548,35 @@
 "bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
 "bbssssssssssssssssssssssssssssssssssssssssssssssssssssssssbb",
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-];
-    function initMap() {
+      "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        ]
+      },
+      'secret_shrine': {
+        warps: [{ x: 4, y: 9, destMap: 'world', destX: 50, destY: 31 }],
+        encounters: ["0000000000", "0000000000", "0000000000", "0000000000", "0000000000", "0000000000", "0000000000", "0000000000", "0000000000", "0000000000"],
+        layout: [
+          "bbbbbbbbbb",
+          "b        b",
+          "b  TTTT  b",
+          "b  T  T  b",
+          "b  T  T  b",
+          "b  TTTT  b",
+          "b        b",
+          "b        b",
+          "b        b",
+          "bbbbDbbbbb"
+        ]
+      }
+    };
+    function switchMap(id, tx, ty) {
+      currentMapId = id;
+      initMap(id);
+      player.x = tx * TILE_SIZE + TILE_SIZE / 2;
+      player.y = ty * TILE_SIZE + TILE_SIZE / 2;
+      player.path = [];
+      player.isWalking = false;
+    }
+    function initMap(id) {
       const charMap = {
         'T': { type: 'tree', color: '#064e3b', traversable: false },
         ' ': { type: 'grass', color: '#2ecc71', traversable: true },
@@ -548,18 +587,23 @@
         'W': { type: 'water', color: '#3498db', traversable: false },
         'b': { type: 'boulder', color: '#475569', traversable: false }
       };
-      for (let y = 0; y < MAP_SIZE_TILES; y++) {
+      const data = MAP_DATA[id];
+      mapHeight = data.layout.length;
+      mapWidth = data.layout[0].length;
+      map.length = 0;
+      encounterMap.length = 0;
+      for (let y = 0; y < mapHeight; y++) {
         map[y] = [];
         encounterMap[y] = [];
-        const row = MAP_LAYOUT[y];
-        const encRow = ENCOUNTER_LAYOUT[y];
-        for (let x = 0; x < MAP_SIZE_TILES; x++) {
+        const row = data.layout[y];
+        const encRow = data.encounters[y];
+        for (let x = 0; x < mapWidth; x++) {
           const char = row[x] || 'T';
           map[y][x] = { ...charMap[char] };
           encounterMap[y][x] = parseInt(encRow.substring(x, x+1)) || 0;
         }
       }
-      NPC_LOCATIONS.forEach(npc => {
+      NPC_LOCATIONS.filter(n => n.mapId === id).forEach(npc => {
         if (map[npc.y] && map[npc.y][npc.x]) map[npc.y][npc.x].traversable = false;
       });
     }
@@ -571,7 +615,7 @@
 
     window.addEventListener('resize', resize);
     resize();
-    initMap();
+    initMap(currentMapId);
 
     function showDialog(text) {
       document.getElementById('dialogText').innerText = text;
@@ -807,14 +851,14 @@
       const targetTileY = Math.floor(worldY / TILE_SIZE);
       const startTX = Math.floor(player.x / TILE_SIZE);
       const startTY = Math.floor(player.y / TILE_SIZE);
-      let clickedNpc = NPC_LOCATIONS.find(n => n.x === targetTileX && n.y === targetTileY);
+      let clickedNpc = NPC_LOCATIONS.find(n => n.mapId === currentMapId && n.x === targetTileX && n.y === targetTileY);
 
       if (clickedNpc) {
         const neighbors = [[0, 1], [0, -1], [1, 0], [-1, 0]];
         let bestPath = null;
         for (const [dx, dy] of neighbors) {
           const nx = clickedNpc.x + dx, ny = clickedNpc.y + dy;
-          if (nx >= 0 && nx < MAP_SIZE_TILES && ny >= 0 && ny < MAP_SIZE_TILES && map[ny][nx].traversable) {
+          if (nx >= 0 && nx < mapWidth && ny >= 0 && ny < mapHeight && map[ny][nx].traversable) {
             const p = findPath(startTX, startTY, nx, ny);
             if (p && (!bestPath || p.length < bestPath.length)) bestPath = p;
           }
@@ -838,20 +882,16 @@
     });
 
     function getCameraOffset() {
+      const pixelWidth = mapWidth * TILE_SIZE;
+      const pixelHeight = mapHeight * TILE_SIZE;
       let camX = player.x - canvas.width / 2;
       let camY = player.y - canvas.height / 2;
-      
-      // Clamping to map borders
-      const maxCamX = MAP_PIXEL_SIZE - canvas.width;
-      const maxCamY = MAP_PIXEL_SIZE - canvas.height;
-      
-      // If map is smaller than screen, center it
-      if (MAP_PIXEL_SIZE < canvas.width) camX = (MAP_PIXEL_SIZE - canvas.width) / 2;
+      const maxCamX = pixelWidth - canvas.width;
+      const maxCamY = pixelHeight - canvas.height;
+      if (pixelWidth < canvas.width) camX = (pixelWidth - canvas.width) / 2;
       else camX = Math.max(0, Math.min(camX, maxCamX));
-
-      if (MAP_PIXEL_SIZE < canvas.height) camY = (MAP_PIXEL_SIZE - canvas.height) / 2;
+      if (pixelHeight < canvas.height) camY = (pixelHeight - canvas.height) / 2;
       else camY = Math.max(0, Math.min(camY, maxCamY));
-
       return { x: camX, y: camY };
     }
 
@@ -893,7 +933,7 @@
     function saveGame() {
       const saveData = {
         playerStats: playerStats,
-        player: { x: player.x, y: player.y }
+        player: { x: player.x, y: player.y, mapId: currentMapId }
       };
       localStorage.setItem('monsterCatcherV2_Save', JSON.stringify(saveData));
       alert("Game Saved!");
@@ -919,9 +959,10 @@
         }
       });
 
+      player.path = [];
+      switchMap(data.player.mapId || 'world', Math.floor(data.player.x/TILE_SIZE), Math.floor(data.player.y/TILE_SIZE));
       player.x = data.player.x;
       player.y = data.player.y;
-      player.path = [];
       document.getElementById('starter-screen').style.display = 'none';
       updateHud();
     }
@@ -945,6 +986,9 @@
           player.path.shift();
           const tx = Math.floor(player.x / TILE_SIZE);
           const ty = Math.floor(player.y / TILE_SIZE);
+          const mData = MAP_DATA[currentMapId];
+          const warp = mData.warps ? mData.warps.find(w => w.x === tx && w.y === ty) : null;
+          if (warp) { switchMap(warp.destMap, warp.destX, warp.destY); return; }
           const zoneId = (encounterMap[ty] && encounterMap[ty][tx]) ? encounterMap[ty][tx] : 0;
           if (zoneId > 0) {
             player.stepsToEncounter--;
@@ -980,8 +1024,8 @@
       const startTileY = Math.floor(cam.y / TILE_SIZE);
       const endTileY = Math.floor((cam.y + canvas.height) / TILE_SIZE) + 1;
 
-      for (let y = Math.max(0, startTileY); y < Math.min(MAP_SIZE_TILES, endTileY); y++) {
-        for (let x = Math.max(0, startTileX); x < Math.min(MAP_SIZE_TILES, endTileX); x++) {
+      for (let y = Math.max(0, startTileY); y < Math.min(mapHeight, endTileY); y++) {
+        for (let x = Math.max(0, startTileX); x < Math.min(mapWidth, endTileX); x++) {
           const tile = map[y][x];
           ctx.fillStyle = tile.color;
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
@@ -1001,7 +1045,7 @@
       }
 
       // Draw NPCs
-      NPC_LOCATIONS.forEach(n => {
+      NPC_LOCATIONS.filter(n => n.mapId === currentMapId).forEach(n => {
         const nx = n.x * TILE_SIZE + TILE_SIZE / 2;
         const ny = n.y * TILE_SIZE + TILE_SIZE / 2;
         if (n.draw) n.draw(ctx, nx, ny);
