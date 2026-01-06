@@ -271,17 +271,23 @@
       if (res.includes(skill.type)) dmg *= 0.5;
       return Math.max(1, Math.floor(dmg - d.def));
     }
-    const ENCOUNTER_POOLS = {
-      'forest': [ { key: 'Leafy', weight: 0.4 }, { key: 'Sprout', weight: 0.3 }, { key: 'Rabbite', weight: 0.2 }, { key: 'Birby', weight: 0.1 } ],
-      'lake': [ { key: 'Aquasaur', weight: 0.4 }, { key: 'Gloop', weight: 0.3 }, { key: 'Medusoid', weight: 0.3 } ],
-      'mountain': [ { key: 'Cliff-Ram', weight: 0.3 }, { key: 'Sky-Shredder', weight: 0.3 }, { key: 'Rockogolem', weight: 0.2 }, { key: 'Zephyros', weight: 0.2 } ],
-      'desert': [ { key: 'Sand-Stinger', weight: 0.3 }, { key: 'Sun-Cactus', weight: 0.3 }, { key: 'Mindbug', weight: 0.2 }, { key: 'Droid-X', weight: 0.2 } ]
-    };
-    const ZONE_EQUIPMENT_POOLS = {
-      'forest': ['Iron Helmet', 'Leather Vest'],
-      'lake': ['Leather Vest', 'Swift Sandals'],
-      'mountain': ['Iron Helmet', 'Power Bracers', 'Steel Plate'],
-      'desert': ['Obsidian Scales', 'Fire Orb', 'Wind Feather', 'Power Bracers']
+    const ENCOUNTER_ZONES = {
+      1: { name: 'Forest', encounters: [
+        { weight: 0.4, enemies: [{ key: 'Leafy', lvl: [2, 5], equipment: {} }] },
+        { weight: 0.3, enemies: [{ key: 'Sprout', lvl: [1, 4] }, { key: 'Sprout', lvl: [1, 4] }] },
+        { weight: 0.3, enemies: [{ key: 'Rabbite', lvl: [3, 6] }] }
+      ]},
+      2: { name: 'Mountain', encounters: [
+        { weight: 0.4, enemies: [{ key: 'Cliff-Ram', lvl: [10, 14], equipment: { 'Head': 'Iron Helmet' } }] },
+        { weight: 0.3, enemies: [{ key: 'Sky-Shredder', lvl: [12, 15] }, { key: 'Zephyros', lvl: [11, 13] }] },
+        { weight: 0.3, enemies: [{ key: 'Rockogolem', lvl: [13, 16] }] }
+      ]},
+      3: { name: 'Desert', encounters: [
+        { weight: 0.3, enemies: [{ key: 'Sand-Stinger', lvl: [22, 28], equipment: { 'Hands': 'Power Bracers' } }] },
+        { weight: 0.3, enemies: [{ key: 'Sun-Cactus', lvl: [20, 25] }, { key: 'Sun-Cactus', lvl: [20, 25] }] },
+        { weight: 0.2, enemies: [{ key: 'Droid-X', lvl: [24, 30] }] },
+        { weight: 0.2, enemies: [{ key: 'Mindbug', lvl: [25, 32] }] }
+      ]}
     };
     function getExpRequired(lvl, growth) {
       const mult = growth === 'fast' ? 0.8 : (growth === 'slow' ? 1.2 : 1.0);
@@ -406,6 +412,69 @@
     let dialogActive = false;
 
     const map = [];
+    const encounterMap = [];
+    const ENCOUNTER_LAYOUT = [
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "002222222222220022222222222222222222222222220022222222222200",
+      "002222222222220022222222222222222222222222220022222222222200",
+      "002222002222222222222222222222222222222222222222222222222200",
+      "002222002222222222222222222222222222222222222222222222222200",
+      "002222002222222222222222222200222222222222222222222222222200",
+      "002222002222222222222222222200222222222222222222222222222200",
+      "000022000000000000000000000000000000000000000000000000000000",
+      "000022000000000000000000000000000000000000000000000000000000",
+      "002222222222220022222222222222222222222222222222222222222200",
+      "002222222222220022222222222222222222222222222222222222222200",
+      "002222222222222222222222222200222222222222220022222222222200",
+      "002222222222222222222222222200222222222222220022222222222200",
+      "000000000000000000000000000000000000000000220000000000000000",
+      "000000000000000000000000000000000000000000220000000000000000",
+      "002222002222222222222222222222222222222222220000000000000000",
+      "002222002222222222222222222222222222222222220000000000000000",
+      "002222222222222222222222222200222222222222220000000000000000",
+      "002222222222222222222222222200222222222222220000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000            0000001111111111110011110000            00",
+      "000000            0000001111111111110011110000            00",
+      "000000000000      0000001100110011111111111100            00",
+      "000000000000      0000001100110011111111111100            00",
+      "000000000000      0000000000110011111100000000            00",
+      "000000000000      0000000000110011111100000000            00",
+      "000000000000      00111111001100111100111100              00",
+      "000000000000      00001111001100111100111100              00",
+      "000000000000      0000001100110011110011110000            00",
+      "000000000000      0000001100110011110011110000            00",
+      "000000000000      0000001100110011111111111100            00",
+      "000000000000      0000001100110011111111111100            00",
+      "000000            0000001111110011111111111100            00",
+      "000000            0000001111110011111111111100            00",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "003333333333333333003333333333333333333333333333333333333300",
+      "003333333333333333003333333333333333333333333333333333333300",
+      "003333333333333333333333333333333333333333330033333333333300",
+      "003333333333333333333333333333333333333333330033333333333300",
+      "003333333333333333333333333333003333333333333333333333333300",
+      "003333333333333333333333333333003333333333333333333333333300",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "003333333300333333333333333333333333333333330033333333333300",
+      "003333333300333333333333333333333333333333330033333333333300",
+      "003333333333333333333333003333333333333333333333333333333300",
+      "003333333333333333333333003333333333333333333333333333333300",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "003333333333333333333333333333333333333333333333333333333300",
+      "000000000000000000000000000000000000000000000000000000000000",
+      "000000000000000000000000000000000000000000000000000000000000"
+    ];
     const MAP_LAYOUT = [
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -473,18 +542,21 @@
         'T': { type: 'tree', color: '#064e3b', traversable: false },
         ' ': { type: 'grass', color: '#2ecc71', traversable: true },
         'D': { type: 'dirt', color: '#d35400', traversable: true },
-        'f': { type: 'dungeon', color: '#1b5e20', traversable: true, pool: 'forest', levelRange: [1, 8] },
-        'm': { type: 'dungeon', color: '#7f8c8d', traversable: true, pool: 'mountain', levelRange: [10, 15] },
-        's': { type: 'dungeon', color: '#f1c40f', traversable: true, pool: 'desert', levelRange: [20, 30] },
+        'f': { type: 'dungeon', color: '#1b5e20', traversable: true },
+        'm': { type: 'dungeon', color: '#7f8c8d', traversable: true },
+        's': { type: 'dungeon', color: '#f1c40f', traversable: true },
         'W': { type: 'water', color: '#3498db', traversable: false },
         'b': { type: 'boulder', color: '#475569', traversable: false }
       };
       for (let y = 0; y < MAP_SIZE_TILES; y++) {
         map[y] = [];
+        encounterMap[y] = [];
         const row = MAP_LAYOUT[y];
+        const encRow = ENCOUNTER_LAYOUT[y];
         for (let x = 0; x < MAP_SIZE_TILES; x++) {
           const char = row[x] || 'T';
           map[y][x] = { ...charMap[char] };
+          encounterMap[y][x] = parseInt(encRow.substring(x, x+1)) || 0;
         }
       }
       NPC_LOCATIONS.forEach(npc => {
@@ -873,12 +945,13 @@
           player.path.shift();
           const tx = Math.floor(player.x / TILE_SIZE);
           const ty = Math.floor(player.y / TILE_SIZE);
-          if (map[ty] && map[ty][tx] && map[ty][tx].type === 'dungeon') {
+          const zoneId = (encounterMap[ty] && encounterMap[ty][tx]) ? encounterMap[ty][tx] : 0;
+          if (zoneId > 0) {
             player.stepsToEncounter--;
             if (player.stepsToEncounter <= 0) {
               player.stepsToEncounter = Math.floor(Math.random() * 16) + 15;
               player.path = [];
-              startBattle(map[ty][tx]);
+              startBattle(zoneId);
             }
           }
           if (player.path.length === 0) {
@@ -973,34 +1046,30 @@
       });
     }
 
-    function startBattle(zone) {
+    function startBattle(zoneId) {
+      const zone = ENCOUNTER_ZONES[zoneId];
+      if (!zone) return;
       player.isWalking = false; player.path = [];
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      const pool = ENCOUNTER_POOLS[zone.pool] || ENCOUNTER_POOLS['forest'];
-      const range = zone.levelRange || [1, 5];
-      let count = 1;
-      const r = Math.random();
-      if (r < 0.15) count = 3; else if (r < 0.4) count = 2;
-      const offset = 3 * (count - 1);
-      const adjMin = Math.max(1, range[0] - offset);
-      const adjMax = Math.max(1, range[1] - offset);
-      enemies = [];
-      for (let i = 0; i < count; i++) {
-        let monsterLvl = Math.max(1, Math.floor((Math.floor(Math.random() * (range[1] - range[0])) + range[0]) * (1 - (0.1*(count-1)))));
-        let totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
-        let rand = Math.random() * totalWeight;
-        let selectedKey = pool[0].key;
-        for (const item of pool) { if (rand < item.weight) { selectedKey = item.key; break; } rand -= item.weight; }
-        let m = createMonster(selectedKey, monsterLvl, true, zone.pool);
-        m.ap = 0;
-        enemies.push(m);
+      const totalWeight = zone.encounters.reduce((s, e) => s + e.weight, 0);
+      let rand = Math.random() * totalWeight;
+      let encounter = zone.encounters[0];
+      for (const e of zone.encounters) {
+        if (rand < e.weight) { encounter = e; break; }
+        rand -= e.weight;
       }
+      enemies = encounter.enemies.map(inst => {
+        const lvl = Array.isArray(inst.lvl) ? Math.floor(Math.random()*(inst.lvl[1]-inst.lvl[0]+1)) + inst.lvl[0] : inst.lvl;
+        const m = createMonster(inst.key, lvl, true);
+        if (inst.equipment) m.equipment = { ...m.equipment, ...inst.equipment };
+        m.ap = 0; return m;
+      });
       playerStats.party.forEach(p => p.ap = 0);
       activeActor = null; pendingAction = null; pendingSkillIdx = null;
       document.getElementById('battle-screen').style.display = 'flex';
-      nextTurn(`A group of ${enemies.length} monsters appeared!`);
+      nextTurn(`Wild monsters appeared in the ${zone.name}!`);
     }
 
     function startBossBattle(npc) {
