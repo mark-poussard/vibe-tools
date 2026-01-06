@@ -27,6 +27,7 @@
       <button id="tool-pan">Pan</button>
       <button id="tool-pen">Tiles</button>
       <button id="tool-zone">Zones</button>
+      <button id="tool-toggle-zones">View Zones</button>
     </div>
     <div class="tool-section">
       <span class="label">Zone ID</span>
@@ -65,8 +66,25 @@
     let activeZone = 1;
     let isDown = false;
     let lastPos = { x: 0, y: 0 };
+    let showZones = false;
+
+    function saveToStorage() {
+      localStorage.setItem('map_editor_save', JSON.stringify({ mapData, zoneData }));
+    }
+
+    function loadFromStorage() {
+      const saved = localStorage.getItem('map_editor_save');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.mapData) mapData = data.mapData;
+          if (data.zoneData) zoneData = data.zoneData;
+        } catch (e) { console.error("Failed to load map", e); }
+      }
+    }
 
     function init() {
+      loadFromStorage();
       Object.entries(TILES).forEach(([char, cfg]) => {
         const b = document.createElement('button');
         b.innerHTML = `<div class="swatch" style="background:${cfg.color}"></div>${cfg.type}`;
@@ -77,6 +95,10 @@
       document.getElementById('tool-pan').onclick = () => setMode('pan');
       document.getElementById('tool-pen').onclick = () => setMode('pen');
       document.getElementById('tool-zone').onclick = () => setMode('zone');
+      document.getElementById('tool-toggle-zones').onclick = () => {
+        showZones = !showZones;
+        document.getElementById('tool-toggle-zones').classList.toggle('active', showZones);
+      };
       document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
       window.addEventListener('resize', resize);
       const handleStart = (e) => {
@@ -132,12 +154,20 @@
       const tx = Math.floor((ex - rect.left - cam.x) / TILE_SIZE);
       const ty = Math.floor((ey - rect.top - cam.y) / TILE_SIZE);
       if (tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE) {
+        let changed = false;
         if (mode === 'pen') {
           const row = mapData[ty];
-          if (row[tx] !== brush) mapData[ty] = row.substring(0, tx) + brush + row.substring(tx + 1);
+          if (row[tx] !== brush) {
+            mapData[ty] = row.substring(0, tx) + brush + row.substring(tx + 1);
+            changed = true;
+          }
         } else if (mode === 'zone') {
-          zoneData[ty][tx] = activeZone;
+          if (zoneData[ty][tx] !== activeZone) {
+            zoneData[ty][tx] = activeZone;
+            changed = true;
+          }
         }
+        if (changed) saveToStorage();
       }
     }
 
@@ -157,13 +187,14 @@
           ctx.fillStyle = TILES[mapData[y][x]].color;
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
           const zid = zoneData[y][x];
-          if (zid > 0) {
-            ctx.fillStyle = `hsla(${(zid * 137) % 360}, 70%, 50%, 0.4)`;
-            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          if (zid > 0 && (showZones || mode === 'zone')) {
             ctx.fillStyle = 'white';
-            ctx.font = '10px sans-serif';
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = 'black';
+            ctx.font = 'bold 11px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText(zid, x * TILE_SIZE + TILE_SIZE/2, y * TILE_SIZE + TILE_SIZE/2 + 4);
+            ctx.shadowBlur = 0;
           }
           ctx.strokeStyle = 'rgba(0,0,0,0.1)';
           ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
