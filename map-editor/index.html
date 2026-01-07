@@ -86,7 +86,7 @@
     const palette = document.getElementById('palette');
     const status = document.getElementById('status');
     const TILE_SIZE = 32;
-    const MAP_SIZE = 60;
+    const DEFAULT_SIZE = 60;
     const TILES = {
       'T': { type: 'tree', color: '#064e3b' },
       ' ': { type: 'grass', color: '#2ecc71' },
@@ -97,7 +97,7 @@
       'W': { type: 'water', color: '#3498db' },
       'b': { type: 'boulder', color: '#475569' }
     };
-    let allMaps = { 'default': { layout: Array.from({ length: MAP_SIZE }, () => ' '.repeat(MAP_SIZE)), encounters: Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(0)) } };
+    let allMaps = { 'default': { layout: Array.from({ length: DEFAULT_SIZE }, () => ' '.repeat(DEFAULT_SIZE)), encounters: Array.from({ length: DEFAULT_SIZE }, () => Array(DEFAULT_SIZE).fill(0)) } };
     let currentMapName = 'default';
     let mapData = allMaps['default'].layout;
     let zoneData = allMaps['default'].encounters;
@@ -167,7 +167,9 @@ function saveToStorage() {
         const rect = canvas.getBoundingClientRect();
         const mx = Math.floor((p.clientX - rect.left - cam.x) / TILE_SIZE);
         const my = Math.floor((p.clientY - rect.top - cam.y) / TILE_SIZE);
-        if (mx >= 0 && mx < MAP_SIZE && my >= 0 && my < MAP_SIZE) status.innerText = `X: ${mx}, Y: ${my}`;
+        const curW = mapData[0]?.length || 0;
+        const curH = mapData.length;
+        if (mx >= 0 && mx < curW && my >= 0 && my < curH) status.innerText = `X: ${mx}, Y: ${my}`;
         if (!isDown) return;
         if (mode === 'pan') {
           cam.x += p.clientX - lastPos.x;
@@ -263,7 +265,9 @@ function saveToStorage() {
       const rect = canvas.getBoundingClientRect();
       const tx = Math.floor((ex - rect.left - cam.x) / TILE_SIZE);
       const ty = Math.floor((ey - rect.top - cam.y) / TILE_SIZE);
-      if (tx >= 0 && tx < MAP_SIZE && ty >= 0 && ty < MAP_SIZE) {
+      const curW = mapData[0]?.length || 0;
+      const curH = mapData.length;
+      if (tx >= 0 && tx < curW && ty >= 0 && ty < curH) {
         let changed = false;
         if (mode === 'pen') {
           const row = mapData[ty];
@@ -286,12 +290,14 @@ function saveToStorage() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(cam.x, cam.y);
+      const curW = mapData[0]?.length || 0;
+      const curH = mapData.length;
       const vX0 = Math.max(0, Math.floor(-cam.x / TILE_SIZE));
-      const vX1 = Math.min(MAP_SIZE, Math.ceil((canvas.width - cam.x) / TILE_SIZE));
+      const vX1 = Math.min(curW, Math.ceil((canvas.width - cam.x) / TILE_SIZE));
       const vY0 = Math.max(0, Math.floor(-cam.y / TILE_SIZE));
-      const vY1 = Math.min(MAP_SIZE, Math.ceil((canvas.height - cam.y) / TILE_SIZE));
+      const vY1 = Math.min(curH, Math.ceil((canvas.height - cam.y) / TILE_SIZE));
       ctx.fillStyle = '#1e293b';
-      ctx.fillRect(0, 0, MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE);
+      ctx.fillRect(0, 0, curW * TILE_SIZE, curH * TILE_SIZE);
       for (let y = vY0; y < vY1; y++) {
         for (let x = vX0; x < vX1; x++) {
           ctx.fillStyle = TILES[mapData[y][x]].color;
