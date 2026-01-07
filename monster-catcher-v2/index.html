@@ -5186,10 +5186,9 @@
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
           toggleMenu();
           if (Math.random() < chance) {
-            const captured = JSON.parse(JSON.stringify(itmTarget)); itmTarget.hp = 0;
+            const captured = JSON.parse(JSON.stringify(itmTarget));
             if (playerStats.party.length < 4) { playerStats.party.push(captured); msg = `Captured ${itmTarget.name}! `; }
             else { playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `; }
-            gainXp(itmTarget.rewardXp);
           } else msg = "Capture failed! ";
         } else {
           if (item.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + item.val);
