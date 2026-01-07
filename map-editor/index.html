@@ -13,10 +13,6 @@
     .label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
     button { background: #334155; border: 1px solid #475569; color: #e2e8f0; padding: 8px 12px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; touch-action: manipulation; min-height: 38px; }
     button:hover { background: #475569; }
-    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; }
-    .modal-content { background:#1e293b; padding:20px; border-radius:8px; width:320px; display:flex; flex-direction:column; gap:12px; border: 1px solid #334155; }
-    .modal-content h3 { margin: 0 0 8px 0; font-size: 16px; }
-    .modal-content input { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 8px; outline: none; }
     button.active { background: #2563eb; border-color: #3b82f6; color: white; }
     #viewport { flex-grow: 1; position: relative; overflow: hidden; }
     canvas { display: block; touch-action: none; }
@@ -31,22 +27,11 @@
       <button id="tool-pan">Pan</button>
       <button id="tool-pen">Tiles</button>
       <button id="tool-zone">Zones</button>
-      <button id="tool-toggle-zones">View</button>
-    </div>
-    <div class="tool-section">
-      <span class="label">Maps</span>
-      <select id="map-select" style="background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; padding: 4px; width: 80px;"></select>
-      <button id="btn-new">+</button>
-      <button id="btn-export">Exp</button>
+      <button id="tool-toggle-zones">View Zones</button>
     </div>
     <div class="tool-section">
       <span class="label">Zone ID</span>
-      <input type="number" id="zone-id" value="1" min="0" max="99" style="width: 40px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; padding: 4px; outline: none;">
-    </div>
-    <div class="tool-section">
-      <span class="label">Sync</span>
-      <button id="btn-settings">Cfg</button>
-      <button id="btn-import">Imp</button>
+      <input type="number" id="zone-id" value="1" min="0" max="99" style="width: 45px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; padding: 4px; outline: none;">
     </div>
     <div class="palette" id="palette">
       <span class="label">Tiles</span>
@@ -56,37 +41,13 @@
     <canvas id="editorCanvas"></canvas>
   </div>
   <div id="status">X: 0, Y: 0</div>
-  <div id="modal-export" class="modal">
-    <div class="modal-content" style="width: 80%; max-width: 600px;">
-      <h3>Export Data</h3>
-      <textarea id="export-output" style="height: 300px; background: #0f172a; color: #10b981; border: 1px solid #475569; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 11px;"></textarea>
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button id="export-copy" style="flex:1; justify-content:center;">Copy to Clipboard</button>
-        <button id="export-close" style="flex:1; justify-content:center; background:#475569;">Close</button>
-      </div>
-    </div>
-  </div>
-  <div id="modal-settings" class="modal">
-    <div class="modal-content">
-      <h3>GitHub Settings</h3>
-      <label class="label">API Key</label>
-      <input type="password" id="gh-token" placeholder="Optional token">
-      <label class="label">Repo (owner/repo)</label>
-      <input type="text" id="gh-repo" placeholder="e.g. user/repo">
-      <label class="label">File Path</label>
-      <input type="text" id="gh-path" placeholder="e.g. index.html">
-      <div style="display:flex; gap:8px; margin-top:8px;">
-        <button id="gh-save" style="flex:1; justify-content:center;">Save</button>
-        <button id="gh-close" style="flex:1; justify-content:center; background:#475569;">Close</button>
-      </div>
-    </div>
-  </div>
   <script>
     const canvas = document.getElementById('editorCanvas');
     const ctx = canvas.getContext('2d');
     const palette = document.getElementById('palette');
     const status = document.getElementById('status');
     const TILE_SIZE = 32;
+    const MAP_SIZE = 60;
     const TILES = {
       'T': { type: 'tree', color: '#064e3b' },
       ' ': { type: 'grass', color: '#2ecc71' },
@@ -97,11 +58,8 @@
       'W': { type: 'water', color: '#3498db' },
       'b': { type: 'boulder', color: '#475569' }
     };
-    let allMaps = { "map1": { layout: Array.from({ length: 60 }, () => ' '.repeat(60)), encounters: Array.from({ length: 60 }, () => Array(60).fill(0)) } };
-    let currentKey = "map1";
-    let MAP_SIZE = 60;
-    let mapData = allMaps[currentKey].layout;
-    let zoneData = allMaps[currentKey].encounters;
+    let mapData = Array.from({ length: MAP_SIZE }, () => ' '.repeat(MAP_SIZE));
+    let zoneData = Array.from({ length: MAP_SIZE }, () => Array(MAP_SIZE).fill(0));
     let cam = { x: 50, y: 50 };
     let mode = 'pen';
     let brush = ' ';
@@ -109,111 +67,20 @@
     let isDown = false;
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
-    let ghConfig = JSON.parse(localStorage.getItem('map_editor_gh') || '{"token":"","repo":"","path":""}');
-
-    function openSettings() {
-      document.getElementById('gh-token').value = ghConfig.token || '';
-      document.getElementById('gh-repo').value = ghConfig.repo || '';
-      document.getElementById('gh-path').value = ghConfig.path || '';
-      document.getElementById('modal-settings').style.display = 'flex';
-    }
-
-    function saveSettings() {
-      ghConfig.token = document.getElementById('gh-token').value;
-      ghConfig.repo = document.getElementById('gh-repo').value;
-      ghConfig.path = document.getElementById('gh-path').value;
-      localStorage.setItem('map_editor_gh', JSON.stringify(ghConfig));
-      document.getElementById('modal-settings').style.display = 'none';
-    }
-
-    async function importFromGithub() {
-      if (!ghConfig.repo || !ghConfig.path) return alert("Please configure GitHub settings.");
-      const url = `https://api.github.com/repos/${ghConfig.repo}/contents/${ghConfig.path}`;
-      const headers = { 'Accept': 'application/vnd.github.v3.raw' };
-      if (ghConfig.token) headers['Authorization'] = `token ${ghConfig.token}`;
-      try {
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-        const content = await res.text();
-        const match = content.match(/MAP_DATA\\s*=\\s*([\\s\\S]+?)(?=;|\\n\\s*<\\/script>)/);
-        if (!match) throw new Error("MAP_DATA variable not found in file.");
-        const maps = new Function(`return ${match[1].trim()}`)();
-        const names = Object.keys(maps);
-        if (names.length === 0) throw new Error("No maps found in MAP_DATA.");
-        const selected = names.length === 1 ? names[0] : prompt("Select map to import (or all):\\n" + names.join(", "), names[0]);
-        if (selected && maps[selected]) {
-          Object.assign(allMaps, maps);
-          selectMap(selected);
-          saveToStorage();
-          alert(`Imported ${names.length} maps.`);
-        }
-      } catch (e) { alert("Import failed: " + e.message); } 
-    }
-
-    function exportMaps() {
-      const output = "const MAP_DATA = " + JSON.stringify(allMaps, null, 2) + ";";
-      document.getElementById('export-output').value = output;
-      document.getElementById('modal-export').style.display = 'flex';
-    }
 
     function saveToStorage() {
-      localStorage.setItem('map_editor_all_maps', JSON.stringify({ allMaps, currentKey }));
+      localStorage.setItem('map_editor_save', JSON.stringify({ mapData, zoneData }));
     }
 
     function loadFromStorage() {
-      const saved = localStorage.getItem('map_editor_all_maps');
+      const saved = localStorage.getItem('map_editor_save');
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          if (data.allMaps) {
-            allMaps = data.allMaps;
-            selectMap(data.currentKey || Object.keys(allMaps)[0]);
-          }
-        } catch (e) { console.error("Load error", e); }
-      } else {
-        const old = localStorage.getItem('map_editor_save');
-        if (old) {
-          try {
-            const data = JSON.parse(old);
-            if (data.mapData) {
-               allMaps = { "imported": { layout: data.mapData, encounters: data.zoneData || data.mapData.map(r => Array(r.length).fill(0)) } };
-               selectMap("imported");
-            }
-          } catch(e) {}
-        }
+          if (data.mapData) mapData = data.mapData;
+          if (data.zoneData) zoneData = data.zoneData;
+        } catch (e) { console.error("Failed to load map", e); }
       }
-      updateMapSelector();
-    }
-
-    function updateMapSelector() {
-      const sel = document.getElementById('map-select');
-      sel.innerHTML = '';
-      Object.keys(allMaps).forEach(k => {
-        const opt = document.createElement('option');
-        opt.value = k; opt.innerText = k; opt.selected = (k === currentKey);
-        sel.appendChild(opt);
-      });
-    }
-
-    function selectMap(key) {
-      if (!allMaps[key]) return;
-      currentKey = key;
-      mapData = allMaps[key].layout;
-      zoneData = allMaps[key].encounters;
-      MAP_SIZE = mapData.length;
-      updateMapSelector();
-    }
-
-    function newMap() {
-      const name = prompt("Map name?", "map" + (Object.keys(allMaps).length + 1));
-      if (!name || allMaps[name]) return;
-      const size = parseInt(prompt("Size (10-200)?", "60")) || 60;
-      allMaps[name] = {
-        layout: Array.from({ length: size }, () => ' '.repeat(size)),
-        encounters: Array.from({ length: size }, () => Array(size).fill(0))
-      };
-      selectMap(name);
-      saveToStorage();
     }
 
     function init() {
@@ -232,20 +99,7 @@
         showZones = !showZones;
         document.getElementById('tool-toggle-zones').classList.toggle('active', showZones);
       };
-      document.getElementById('map-select').onchange = (e) => selectMap(e.target.value);
-      document.getElementById('btn-new').onclick = newMap;
-      document.getElementById('btn-export').onclick = exportMaps;
       document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
-      document.getElementById('btn-settings').onclick = openSettings;
-      document.getElementById('btn-import').onclick = importFromGithub;
-      document.getElementById('gh-save').onclick = saveSettings;
-      document.getElementById('gh-close').onclick = () => document.getElementById('modal-settings').style.display = 'none';
-      document.getElementById('export-close').onclick = () => document.getElementById('modal-export').style.display = 'none';
-      document.getElementById('export-copy').onclick = () => {
-        document.getElementById('export-output').select();
-        document.execCommand('copy');
-        alert('Copied to clipboard');
-      };
       window.addEventListener('resize', resize);
       const handleStart = (e) => {
         isDown = true;
@@ -258,7 +112,7 @@
         const rect = canvas.getBoundingClientRect();
         const mx = Math.floor((p.clientX - rect.left - cam.x) / TILE_SIZE);
         const my = Math.floor((p.clientY - rect.top - cam.y) / TILE_SIZE);
-        if (mx >= 0 && mx < MAP_SIZE && my >= 0 && my < MAP_SIZE) status.innerText = `X: ${mx}, Y: ${my} [${currentKey}]`;
+        if (mx >= 0 && mx < MAP_SIZE && my >= 0 && my < MAP_SIZE) status.innerText = `X: ${mx}, Y: ${my}`;
         if (!isDown) return;
         if (mode === 'pan') {
           cam.x += p.clientX - lastPos.x;
@@ -330,11 +184,9 @@
       ctx.fillRect(0, 0, MAP_SIZE * TILE_SIZE, MAP_SIZE * TILE_SIZE);
       for (let y = vY0; y < vY1; y++) {
         for (let x = vX0; x < vX1; x++) {
-          const char = mapData[y] ? (mapData[y][x] || ' ') : ' ';
-          const cfg = TILES[char] || TILES[' '];
-          ctx.fillStyle = cfg.color;
+          ctx.fillStyle = TILES[mapData[y][x]].color;
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-          const zid = zoneData[y] ? zoneData[y][x] : 0;
+          const zid = zoneData[y][x];
           if (zid > 0 && (showZones || mode === 'zone')) {
             ctx.fillStyle = 'white';
             ctx.shadowBlur = 3;
