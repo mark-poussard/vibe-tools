@@ -13,6 +13,10 @@
     .label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
     button { background: #334155; border: 1px solid #475569; color: #e2e8f0; padding: 8px 12px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; touch-action: manipulation; min-height: 38px; }
     button:hover { background: #475569; }
+    .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; }
+    .modal-content { background:#1e293b; padding:20px; border-radius:8px; width:320px; display:flex; flex-direction:column; gap:12px; border: 1px solid #334155; }
+    .modal-content h3 { margin: 0 0 8px 0; font-size: 16px; }
+    .modal-content input { background: #0f172a; color: white; border: 1px solid #475569; border-radius: 4px; padding: 8px; outline: none; }
     button.active { background: #2563eb; border-color: #3b82f6; color: white; }
     #viewport { flex-grow: 1; position: relative; overflow: hidden; }
     canvas { display: block; touch-action: none; }
@@ -33,6 +37,11 @@
       <span class="label">Zone ID</span>
       <input type="number" id="zone-id" value="1" min="0" max="99" style="width: 45px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; padding: 4px; outline: none;">
     </div>
+    <div class="tool-section">
+      <span class="label">Sync</span>
+      <button id="btn-settings">Config</button>
+      <button id="btn-import">Import</button>
+    </div>
     <div class="palette" id="palette">
       <span class="label">Tiles</span>
     </div>
@@ -41,13 +50,28 @@
     <canvas id="editorCanvas"></canvas>
   </div>
   <div id="status">X: 0, Y: 0</div>
+  <div id="modal-settings" class="modal">
+    <div class="modal-content">
+      <h3>GitHub Settings</h3>
+      <label class="label">API Key</label>
+      <input type="password" id="gh-token" placeholder="Optional token">
+      <label class="label">Repo (owner/repo)</label>
+      <input type="text" id="gh-repo" placeholder="e.g. user/repo">
+      <label class="label">File Path</label>
+      <input type="text" id="gh-path" placeholder="e.g. index.html">
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="gh-save" style="flex:1; justify-content:center;">Save</button>
+        <button id="gh-close" style="flex:1; justify-content:center; background:#475569;">Close</button>
+      </div>
+    </div>
+  </div>
   <script>
     const canvas = document.getElementById('editorCanvas');
     const ctx = canvas.getContext('2d');
     const palette = document.getElementById('palette');
     const status = document.getElementById('status');
     const TILE_SIZE = 32;
-    const MAP_SIZE = 60;
+    let MAP_SIZE = 60;
     const TILES = {
       'T': { type: 'tree', color: '#064e3b' },
       ' ': { type: 'grass', color: '#2ecc71' },
@@ -67,6 +91,47 @@
     let isDown = false;
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
+    let ghConfig = JSON.parse(localStorage.getItem('map_editor_gh') || '{"token":"","repo":"","path":""}');
+
+    function openSettings() {
+      document.getElementById('gh-token').value = ghConfig.token || '';
+      document.getElementById('gh-repo').value = ghConfig.repo || '';
+      document.getElementById('gh-path').value = ghConfig.path || '';
+      document.getElementById('modal-settings').style.display = 'flex';
+    }
+
+    function saveSettings() {
+      ghConfig.token = document.getElementById('gh-token').value;
+      ghConfig.repo = document.getElementById('gh-repo').value;
+      ghConfig.path = document.getElementById('gh-path').value;
+      localStorage.setItem('map_editor_gh', JSON.stringify(ghConfig));
+      document.getElementById('modal-settings').style.display = 'none';
+    }
+
+    async function importFromGithub() {
+      if (!ghConfig.repo || !ghConfig.path) return alert("Please configure GitHub settings.");
+      const url = `https://api.github.com/repos/${ghConfig.repo}/contents/${ghConfig.path}`;
+      const headers = { 'Accept': 'application/vnd.github.v3.raw' };
+      if (ghConfig.token) headers['Authorization'] = `token ${ghConfig.token}`;
+      try {
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+        const content = await res.text();
+        const match = content.match(/MAP_DATA\\s*=\\s*([\\s\\S]+?)(?=;|\\n\\s*<\\/script>)/);
+        if (!match) throw new Error("MAP_DATA variable not found in file.");
+        const maps = new Function(`return ${match[1].trim()}`)();
+        const names = Object.keys(maps);
+        if (names.length === 0) throw new Error("No maps found in MAP_DATA.");
+        const selected = names.length === 1 ? names[0] : prompt("Select map:\\n" + names.join(", "), names[0]);
+        if (selected && maps[selected]) {
+          mapData = maps[selected].layout;
+          zoneData = maps[selected].encounters;
+          MAP_SIZE = mapData.length;
+          saveToStorage();
+          alert(`Imported "${selected}"`);
+        }
+      } catch (e) { alert("Import failed: " + e.message); } 
+    }
 
     function saveToStorage() {
       localStorage.setItem('map_editor_save', JSON.stringify({ mapData, zoneData }));
@@ -100,6 +165,10 @@
         document.getElementById('tool-toggle-zones').classList.toggle('active', showZones);
       };
       document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
+      document.getElementById('btn-settings').onclick = openSettings;
+      document.getElementById('btn-import').onclick = importFromGithub;
+      document.getElementById('gh-save').onclick = saveSettings;
+      document.getElementById('gh-close').onclick = () => document.getElementById('modal-settings').style.display = 'none';
       window.addEventListener('resize', resize);
       const handleStart = (e) => {
         isDown = true;
