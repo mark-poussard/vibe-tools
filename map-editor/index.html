@@ -268,7 +268,15 @@ function saveToStorage() {
         if (match) {
           try { remoteMaps = new Function(`return ${match[2]}`)(); } catch(e) {}
         }
-        const mergedMaps = { ...remoteMaps, ...allMaps };
+        const mergedMaps = {};
+        Object.keys(allMaps).forEach(key => {
+          const remoteEntry = remoteMaps[key] || {};
+          mergedMaps[key] = {
+            ...remoteEntry,
+            layout: allMaps[key].layout,
+            encounters: allMaps[key].encounters
+          };
+        });
         const jsonStr = JSON.stringify(mergedMaps, null, 2);
         const newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
         const updateRes = await fetch(url, {
