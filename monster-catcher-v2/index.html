@@ -5189,6 +5189,8 @@
             const captured = JSON.parse(JSON.stringify(itmTarget));
             if (playerStats.party.length < 4) { playerStats.party.push(captured); msg = `Captured ${itmTarget.name}! `; }
             else { playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `; }
+            
+            enemies.splice(targetIdx, 1);
           } else msg = "Capture failed! ";
         } else {
           if (item.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + item.val);
