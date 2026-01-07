@@ -4483,6 +4483,23 @@
       dialogActive = false;
     }
     let pcSelectedIndex = null; let pcSelectedSection = null;
+    function openPCMenu() {
+      const content = document.getElementById('menu-content');
+      content.innerHTML = `
+        <h3 style="margin-top: 0;">PC System</h3>
+        <button class="menu-btn" onclick="pcHealAction()">Heal Monsters</button>
+        <button class="menu-btn" onclick="toggleMenu(); openPC();">Manage Monsters</button>
+        <button class="menu-btn" onclick="toggleMenu()">Done</button>
+      `;
+      document.getElementById('menu-modal').style.display = 'block';
+      dialogActive = true;
+    }
+    function pcHealAction() {
+      playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
+      updateHud();
+      alert("All monsters in your party have been healed!");
+      openPCMenu();
+    }
     function openPC() {
       document.getElementById('pc-interface').style.display = 'block';
       dialogActive = true; pcSelectedIndex = null; pcSelectedSection = null; renderPC();
@@ -4808,7 +4825,7 @@
     function triggerNpc(npc) {
       if (npc.type === 'dialog') showDialog(npc.text);
       else if (npc.type === 'merchant') openShop(npc.items);
-      else if (npc.type === 'pc') openPC();
+      else if (npc.type === 'pc') openPCMenu();
       else if (npc.type === 'boss') startBossBattle(npc);
       else if (npc.type === 'healer') {
         playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
