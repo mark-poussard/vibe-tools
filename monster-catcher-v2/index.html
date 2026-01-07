@@ -81,6 +81,11 @@
     .starter-card:hover { transform: scale(1.05); border-color: #ffeb3b; }
     .starter-card h3 { margin: 8px 0; color: #ffeb3b; font-size: 1em; }
     .starter-card .stats { font-size: 0.75em; text-align: left; margin: 8px 0; line-height: 1.3; }
+    #pc-interface { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 4px solid #444; font-family: monospace; width: 95%; max-width: 450px; max-height: 85%; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 400; }
+    .pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+    .pc-card { background: #eee; border: 2px solid #ccc; padding: 8px; text-align: center; cursor: pointer; border-radius: 4px; }
+    .pc-card:hover { border-color: #2196f3; background: #e3f2fd; }
+    .pc-card.active { border-color: #4caf50; background: #e8f5e9; box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); }
   </style>
 </head>
 <body>
@@ -118,6 +123,10 @@
     <h3 style="margin: 0 0 10px 0;">Village Shop</h3>
     <div id="shop-items"></div>
     <button onclick="closeShop()" style="margin-top: 15px; width: 100%; cursor: pointer;">Exit Shop</button>
+  </div>
+  <div id="pc-interface">
+    <div id="pc-content"></div>
+    <button onclick="closePC()" style="margin-top: 15px; width: 100%; cursor: pointer; padding: 12px; background: #444; color: white; border: none; font-family: monospace;">Exit System</button>
   </div>
   <div id="menu-modal" onclick="if(event.target === this) toggleMenu()">
     <div class="modal-inner">
@@ -171,6 +180,7 @@
 
     const playerStats = {
       party: [],
+      storage: [],
       gold: 150, inventory: [],
       lastHealLocation: null,
       defeatedNpcIds: []
@@ -378,6 +388,16 @@
           c.fillStyle = '#ef4444'; c.fillRect(x-1, y-25, 2, 10); c.fillRect(x-5, y-21, 10, 2);
           c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
           c.fillStyle = 'white'; c.beginPath(); c.moveTo(x-8, y-52); c.lineTo(x+8, y-52); c.lineTo(x, y-60); c.closePath(); c.fill();
+        }
+      },
+      {
+        id: 'pc_storage', x: 54, y: 26, mapId: 'world', type: 'pc',
+        draw: (c, x, y) => {
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#444'; c.fillRect(x - 15, y - 5, 30, 15);
+          c.fillStyle = '#666'; c.fillRect(x - 12, y - 30, 24, 25);
+          c.fillStyle = '#22d3ee'; c.fillRect(x - 10, y - 28, 20, 20);
+          c.fillStyle = '#333'; c.fillRect(x - 2, y - 5, 4, 10);
         }
       },
       {
@@ -4463,6 +4483,60 @@
       document.getElementById('shop').style.display = 'none';
       dialogActive = false;
     }
+    let pcSelectedIndex = null; let pcSelectedSection = null;
+    function openPC() {
+      document.getElementById('pc-interface').style.display = 'block';
+      dialogActive = true; pcSelectedIndex = null; pcSelectedSection = null; renderPC();
+    }
+    function renderPC() {
+      const container = document.getElementById('pc-content');
+      container.innerHTML = '<h3 style="margin-top:0">Monster Storage System</h3><div style="margin-bottom:8px;"><strong>Active Party (Max 4)</strong></div>';
+      const pGrid = document.createElement('div'); pGrid.className = 'pc-grid';
+      for (let i = 0; i < 4; i++) {
+        const m = playerStats.party[i];
+        if (m) pGrid.appendChild(createPCCard(m, 'party', i));
+        else {
+          const empty = document.createElement('div'); empty.className = 'pc-card'; empty.style.opacity = '0.5';
+          empty.innerHTML = '<div style="height:50px; line-height:50px; font-size:1.5em; color:#888;">+</div><div style="font-size:0.6em;">Empty</div>';
+          if (pcSelectedSection === 'party' && pcSelectedIndex === i) empty.classList.add('active');
+          empty.onclick = () => selectPCMonster('party', i); pGrid.appendChild(empty);
+        }
+      }
+      container.appendChild(pGrid);
+      const sTitle = document.createElement('div'); sTitle.style.marginTop = '20px'; sTitle.innerHTML = '<strong>PC Storage</strong>';
+      container.appendChild(sTitle);
+      const sGrid = document.createElement('div'); sGrid.className = 'pc-grid';
+      if (playerStats.storage.length === 0) sGrid.innerHTML = '<p style="font-size:0.8em; color: #999; grid-column: 1/-1;">No monsters in storage.</p>';
+      else playerStats.storage.forEach((m, i) => sGrid.appendChild(createPCCard(m, 'storage', i)));
+      container.appendChild(sGrid);
+    }
+    function createPCCard(m, section, idx) {
+      const card = document.createElement('div'); card.className = 'pc-card';
+      if (pcSelectedSection === section && pcSelectedIndex === idx) card.classList.add('active');
+      card.innerHTML = `<canvas id="pc-canvas-${section}-${idx}" width="100" height="100" style="width:50px; height:50px; display:block; margin: 0 auto;"></canvas><div style="font-size:0.75em; font-weight:bold; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name}</div><div style="font-size:0.6em;">Lvl ${m.lvl}</div>`;
+      card.onclick = () => selectPCMonster(section, idx);
+      setTimeout(() => { const c = document.getElementById(`pc-canvas-${section}-${idx}`); if(c) drawMonsterIcon(c.getContext('2d'), m.name); }, 0);
+      return card;
+    }
+    function selectPCMonster(section, idx) {
+      if (pcSelectedSection === null) {
+        if (section === 'storage' || (section === 'party' && playerStats.party[idx])) { pcSelectedSection = section; pcSelectedIndex = idx; }
+      } else {
+        if (pcSelectedSection === section && pcSelectedIndex === idx) { pcSelectedSection = null; pcSelectedIndex = null; }
+        else {
+          const listA = pcSelectedSection === 'party' ? playerStats.party : playerStats.storage; const listB = section === 'party' ? playerStats.party : playerStats.storage;
+          const mA = listA[pcSelectedIndex]; const mB = listB[idx];
+          listA[pcSelectedIndex] = mB; listB[idx] = mA;
+          playerStats.party = playerStats.party.filter(m => m !== undefined && m !== null);
+          playerStats.storage = playerStats.storage.filter(m => m !== undefined && m !== null);
+          if (playerStats.party.length === 0 && playerStats.storage.length > 0) playerStats.party.push(playerStats.storage.shift());
+          if (playerStats.party.length > 4) playerStats.storage.push(playerStats.party.pop());
+          pcSelectedSection = null; pcSelectedIndex = null;
+        }
+      }
+      renderPC(); updateHud();
+    }
+    function closePC() { document.getElementById('pc-interface').style.display = 'none'; dialogActive = false; }
 
     function toggleMenu() {
       const m = document.getElementById('menu-modal');
@@ -4704,6 +4778,7 @@
     function triggerNpc(npc) {
       if (npc.type === 'dialog') showDialog(npc.text);
       else if (npc.type === 'merchant') openShop(npc.items);
+      else if (npc.type === 'pc') openPC();
       else if (npc.type === 'boss') startBossBattle(npc);
       else if (npc.type === 'healer') {
         playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
@@ -4744,6 +4819,7 @@
       if (!saved) return;
       const data = JSON.parse(saved);
       playerStats.party = data.playerStats.party;
+      playerStats.storage = data.playerStats.storage || [];
       playerStats.gold = data.playerStats.gold;
       playerStats.inventory = data.playerStats.inventory;
       playerStats.lastHealLocation = data.playerStats.lastHealLocation || null;
@@ -5075,14 +5151,15 @@
         const item = playerStats.inventory[data];
         const itmTarget = type === 'itemEnemy' ? enemies[targetIdx] : playerStats.party[targetIdx];
         if (item.type === 'capture') {
-          if (playerStats.party.length >= 4) { alert("Party full!"); toggleMenu(); battleBusy = false; return; }
           const capRate = itmTarget.captureRate || 0.5;
           const chance = ((3 * itmTarget.maxHp - 2 * itmTarget.hp) / (3 * itmTarget.maxHp)) * capRate;
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
           toggleMenu();
           if (Math.random() < chance) {
-            playerStats.party.push(JSON.parse(JSON.stringify(itmTarget))); itmTarget.hp = 0;
-            msg = `Captured ${itmTarget.name}! `; gainXp(itmTarget.rewardXp);
+            const captured = JSON.parse(JSON.stringify(itmTarget)); itmTarget.hp = 0;
+            if (playerStats.party.length < 4) { playerStats.party.push(captured); msg = `Captured ${itmTarget.name}! `; }
+            else { playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `; }
+            gainXp(itmTarget.rewardXp);
           } else msg = "Capture failed! ";
         } else {
           if (item.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + item.val);
