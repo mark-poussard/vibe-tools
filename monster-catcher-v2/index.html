@@ -4569,6 +4569,7 @@
           playerStats.storage = playerStats.storage.filter(m => m !== undefined && m !== null);
           if (playerStats.party.length === 0 && playerStats.storage.length > 0) playerStats.party.push(playerStats.storage.shift());
           if (playerStats.party.length > 4) playerStats.storage.push(playerStats.party.pop());
+          playerStats.storage.forEach(sm => { if(sm) { sm.hp = sm.maxHp; sm.mp = sm.maxMp; } });
           pcSelectedSection = null; pcSelectedIndex = null;
         }
       }
@@ -4835,11 +4836,14 @@
     function triggerNpc(npc) {
       if (npc.type === 'dialog') showDialog(npc.text);
       else if (npc.type === 'merchant') openShop(npc.items);
-      else if (npc.type === 'pc') openPCMenu();
+      else if (npc.type === 'pc') {
+        playerStats.lastHealLocation = { x: player.x, y: player.y, mapId: currentMapId };
+        openPCMenu();
+      }
       else if (npc.type === 'boss') startBossBattle(npc);
       else if (npc.type === 'healer') {
         playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
-        playerStats.lastHealLocation = { x: player.x, y: player.y };
+        playerStats.lastHealLocation = { x: player.x, y: player.y, mapId: currentMapId };
         updateHud();
         showDialog(npc.text);
       } else if (npc.type === 'item') {
@@ -5215,7 +5219,10 @@
           if (Math.random() < chance) {
             const captured = JSON.parse(JSON.stringify(itmTarget));
             if (playerStats.party.length < 4) { playerStats.party.push(captured); msg = `Captured ${itmTarget.name}! `; }
-            else { playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `; }
+            else {
+              captured.hp = captured.maxHp; captured.mp = captured.maxMp;
+              playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `;
+            }
             
             enemies.splice(targetIdx, 1);
           } else msg = "Capture failed! ";
@@ -5285,7 +5292,10 @@
       playerStats.gold = Math.floor(playerStats.gold * 0.9);
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
       activeBossNpc = null;
-      const respawn = playerStats.lastHealLocation || { x: 52 * TILE_SIZE + 32, y: 30 * TILE_SIZE + 32 };
+      const respawn = playerStats.lastHealLocation || { x: 52 * TILE_SIZE + 32, y: 30 * TILE_SIZE + 32, mapId: 'world' };
+      if (respawn.mapId && respawn.mapId !== currentMapId) {
+        switchMap(respawn.mapId, Math.floor(respawn.x / TILE_SIZE), Math.floor(respawn.y / TILE_SIZE));
+      }
       player.x = respawn.x;
       player.y = respawn.y;
       player.path = [];
