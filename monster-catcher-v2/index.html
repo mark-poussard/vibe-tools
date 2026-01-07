@@ -314,7 +314,6 @@
       m.spd = (t.spd || 10) + (lvl - 1) * 2;
       m.def = 0; m.equipment = {}; m.morphology = t.morphology;
       m.rewardXp = lvl * 5;
-      m.gold = lvl * 10;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
         const poolItems = zonePoolKey ? (ZONE_EQUIPMENT_POOLS[zonePoolKey] || []) : Object.keys(EQUIPMENT_DB);
@@ -4509,6 +4508,18 @@
       if (playerStats.storage.length === 0) sGrid.innerHTML = '<p style="font-size:0.8em; color: #999; grid-column: 1/-1;">No monsters in storage.</p>';
       else playerStats.storage.forEach((m, i) => sGrid.appendChild(createPCCard(m, 'storage', i)));
       container.appendChild(sGrid);
+      if (pcSelectedSection !== null) {
+        const list = pcSelectedSection === 'party' ? playerStats.party : playerStats.storage;
+        const m = list[pcSelectedIndex];
+        if (m) {
+          const price = Math.floor(m.lvl * (1 / (m.captureRate || 1)) * 2);
+          const sellBtn = document.createElement('button');
+          sellBtn.style.cssText = "margin-top: 20px; width: 100%; cursor: pointer; padding: 12px; background: #e74c3c; color: white; border: none; font-family: monospace;";
+          sellBtn.innerText = `Sell ${m.name} for ${price}G`;
+          sellBtn.onclick = () => sellMonsterFromPC(pcSelectedSection, pcSelectedIndex);
+          container.appendChild(sellBtn);
+        }
+      }
     }
     function createPCCard(m, section, idx) {
       const card = document.createElement('div'); card.className = 'pc-card';
@@ -4537,6 +4548,25 @@
       renderPC(); updateHud();
     }
     function closePC() { document.getElementById('pc-interface').style.display = 'none'; dialogActive = false; }
+    function sellMonsterFromPC(section, idx) {
+      const list = section === 'party' ? playerStats.party : playerStats.storage;
+      const m = list[idx];
+      if (!m) return;
+      if (playerStats.party.length + playerStats.storage.length <= 1) {
+        alert("You cannot sell your last monster!");
+        return;
+      }
+      const price = Math.floor(m.lvl * (1 / (m.captureRate || 1)) * 2);
+      if (confirm(`Sell ${m.name} for ${price}G?`)) {
+        playerStats.gold += price;
+        list.splice(idx, 1);
+        pcSelectedSection = null;
+        pcSelectedIndex = null;
+        if (playerStats.party.length === 0 && playerStats.storage.length > 0) playerStats.party.push(playerStats.storage.shift());
+        renderPC();
+        updateHud();
+      }
+    }
 
     function toggleMenu() {
       const m = document.getElementById('menu-modal');
@@ -5170,8 +5200,7 @@
       }
       updateBattleUI(msg);
       if (enemies.every(e => e.hp <= 0)) {
-        let totalGold = 0; enemies.forEach(e => { totalGold += e.gold; });
-        playerStats.gold += totalGold; endBattle(`Victorious! +${totalGold}G`);
+        endBattle("Victorious!");
       } else {
         activeActor.ap -= 100; setTimeout(nextTurn, 600);
       }
