@@ -178,11 +178,11 @@
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
     let showWarps = false;
-    let editingWarp = null; let encounterZones = {};
+    let editingWarp = null; let encounterZones = {}; let monsterDb = {};
 
 function saveToStorage() {
       allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
-      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones }));
+      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones, monsterDb }));
     }
 
     function loadFromStorage() {
@@ -196,7 +196,7 @@ function saveToStorage() {
             mapData = allMaps[currentMapName].layout;
             zoneData = allMaps[currentMapName].encounters;
             warpData = allMaps[currentMapName].warps || [];
-            encounterZones = data.encounterZones || {};
+            encounterZones = data.encounterZones || {}; monsterDb = data.monsterDb || {};
             updateMapSelector();
           }
         } catch (e) { console.error("Failed to load map", e); }
@@ -359,7 +359,7 @@ function saveToStorage() {
         if (!match) throw new Error("MAP_DATA not found in file");
         const parsed = new Function(`return ${match[1]}`)();
         const matchZones = content.match(/(?:const|let|var)\s+ENCOUNTER_ZONES\s*=\s*({[\s\S]*?});/);
-        if (matchZones) encounterZones = new Function(`return ${matchZones[1]}`)();
+        if (matchZones) encounterZones = new Function(`return ${matchZones[1]}`)(); const matchMonsters = content.match(/(?:const|let|var)\s+MONSTER_DB\s*=\s*({[\s\S]*?});/); if (matchMonsters) monsterDb = new Function("return " + matchMonsters[1])();
         allMaps = parsed;
         currentMapName = Object.keys(allMaps)[0];
         mapData = allMaps[currentMapName].layout;
@@ -598,10 +598,13 @@ function saveToStorage() {
       const container = document.getElementById('enemies-list-container');
       container.innerHTML = '';
       const enemies = encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies;
+      const monsterKeys = Object.keys(monsterDb).sort();
       enemies.forEach((en, enIdx) => {
         const div = document.createElement('div');
         div.style = "display: flex; gap: 4px; align-items: center;";
-        div.innerHTML = `<input type="text" value="${en.key}" placeholder="Key" style="flex:2; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'key', this.value)"><input type="number" value="${en.lvl[0]}" placeholder="Min" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'min', this.value)"><input type="number" value="${en.lvl[1]}" placeholder="Max" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'max', this.value)"><button onclick="window.deleteEnemy(${enIdx})" style="background:#ef4444; border-color:#ef4444; padding: 4px 8px;">×</button>`;
+        const keysToShow = monsterKeys.includes(en.key) ? monsterKeys : [en.key, ...monsterKeys];
+        const options = keysToShow.map(k => `<option value="${k}" ${k === en.key ? 'selected' : ''}>${k}</option>`).join('');
+        div.innerHTML = `<select style="flex:2; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'key', this.value)">${options}</select><input type="number" value="${en.lvl[0]}" placeholder="Min" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'min', this.value)"><input type="number" value="${en.lvl[1]}" placeholder="Max" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'max', this.value)"><button onclick="window.deleteEnemy(${enIdx})" style="background:#ef4444; border-color:#ef4444; padding: 4px 8px;">×</button>`;
         container.appendChild(div);
       });
     };
@@ -613,7 +616,9 @@ function saveToStorage() {
       saveToStorage();
     };
     window.addNewEnemy = () => {
-      encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies.push({ key: 'slime', lvl: [1, 5] });
+      const keys = Object.keys(monsterDb);
+      const defaultKey = keys.length > 0 ? keys[0] : 'slime';
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies.push({ key: defaultKey, lvl: [1, 5] });
       saveToStorage();
       window.refreshEnemiesList();
     };
