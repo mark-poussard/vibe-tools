@@ -293,14 +293,15 @@ function saveToStorage() {
     }
 
     async function importFromGitHub() {
-      const token = document.getElementById('gh-token').value;
-      const owner = document.getElementById('gh-owner').value;
-      const repo = document.getElementById('gh-repo').value;
-      const path = document.getElementById('gh-path').value;
-      localStorage.setItem('gh_token', token);
+      const tokenInput = document.getElementById('gh-token').value.trim();
+      const owner = document.getElementById('gh-owner').value.trim();
+      const repo = document.getElementById('gh-repo').value.trim();
+      const path = document.getElementById('gh-path').value.trim();
+      if (tokenInput) localStorage.setItem('gh_token', tokenInput);
       localStorage.setItem('gh_owner', owner);
       localStorage.setItem('gh_repo', repo);
       localStorage.setItem('gh_path', path);
+      const token = tokenInput || localStorage.getItem('gh_token') || '';
       if (!owner || !repo || !path) return alert('Fill owner, repo and path');
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const headers = token ? { 'Authorization': `token ${token}` } : {};
@@ -326,10 +327,15 @@ function saveToStorage() {
 
     async function exportToGitHub() {
       saveToStorage();
-      const token = document.getElementById('gh-token').value;
-      const owner = document.getElementById('gh-owner').value;
-      const repo = document.getElementById('gh-repo').value;
-      const path = document.getElementById('gh-path').value;
+      const tokenInput = document.getElementById('gh-token').value.trim();
+      const owner = document.getElementById('gh-owner').value.trim();
+      const repo = document.getElementById('gh-repo').value.trim();
+      const path = document.getElementById('gh-path').value.trim();
+      if (tokenInput) localStorage.setItem('gh_token', tokenInput);
+      localStorage.setItem('gh_owner', owner);
+      localStorage.setItem('gh_repo', repo);
+      localStorage.setItem('gh_path', path);
+      const token = tokenInput || localStorage.getItem('gh_token') || '';
       if (!token || !owner || !repo || !path) return alert('Fill token, owner, repo and path');
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const headers = { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' };
