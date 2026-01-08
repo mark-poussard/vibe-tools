@@ -197,15 +197,18 @@
     const SLOT_TO_TYPE = {
       'Head': 'Helmet', 'Chest': 'Armor', 'Hands': 'Gloves', 'Feet': 'Boots', 'Wings': 'Wing-Guard', 'Body': 'Scale-Mail', 'Core': 'Gem', 'Thorax': 'Carapace', 'Legs': 'Greaves', 'Chassis': 'Plate', 'Module': 'Chip'
     };
-    const EQUIPMENT_DB = {
-      'Iron Helmet': { type: 'Helmet', stats: { def: 5 } },
-      'Leather Vest': { type: 'Armor', stats: { def: 3 } },
-      'Swift Sandals': { type: 'Boots', stats: { spd: 10 } },
-      'Power Bracers': { type: 'Gloves', stats: { atk: 8 } },
-      'Steel Plate': { type: 'Plate', stats: { def: 18 } },
-      'Obsidian Scales': { type: 'Scale-Mail', stats: { def: 12, resist: ['Fire'] } },
-      'Fire Orb': { type: 'Gem', stats: { FireBoost: 0.3, skill: { name: 'Ember Blast', cost: 10, mult: 2.2, type: 'Fire' } } },
-      'Wind Feather': { type: 'Wing-Guard', stats: { spd: 15, resist: ['Air'] } }
+    const ITEM_DB = {
+      'hp_potion': { name: 'Health Potion', type: 'hp', val: 50 },
+      'mp_potion': { name: 'Mana Potion', type: 'mp', val: 10 },
+      'monster_ball': { name: 'Monster Ball', type: 'capture' },
+      'iron_helmet': { name: 'Iron Helmet', type: 'equipment', equipType: 'Helmet', stats: { def: 5 } },
+      'leather_vest': { name: 'Leather Vest', type: 'equipment', equipType: 'Armor', stats: { def: 3 } },
+      'swift_sandals': { name: 'Swift Sandals', type: 'equipment', equipType: 'Boots', stats: { spd: 10 } },
+      'power_bracers': { name: 'Power Bracers', type: 'equipment', equipType: 'Gloves', stats: { atk: 8 } },
+      'steel_plate': { name: 'Steel Plate', type: 'equipment', equipType: 'Plate', stats: { def: 18 } },
+      'obsidian_scales': { name: 'Obsidian Scales', type: 'equipment', equipType: 'Scale-Mail', stats: { def: 12, resist: ['Fire'] } },
+      'fire_orb': { name: 'Fire Orb', type: 'equipment', equipType: 'Gem', stats: { FireBoost: 0.3, skill: { name: 'Ember Blast', cost: 10, mult: 2.2, type: 'Fire' } } },
+      'wind_feather': { name: 'Wind Feather', type: 'equipment', equipType: 'Wing-Guard', stats: { spd: 15, resist: ['Air'] } }
     };
     const TYPE_CHART = {
       'Fire': { weakTo: ['Water', 'Earth'], resist: ['Nature', 'Fire'] },
@@ -258,7 +261,7 @@
     function getMonsterFinalStats(m) {
       const stats = { atk: m.atk, def: m.def || 0, spd: m.spd, resists: [], boosts: {} };
       for (let slot in m.equipment) {
-        const item = EQUIPMENT_DB[m.equipment[slot]];
+        const item = ITEM_DB[m.equipment[slot]];
         if (!item) continue;
         if (item.stats.atk) stats.atk += item.stats.atk;
         if (item.stats.def) stats.def += item.stats.def;
@@ -289,12 +292,12 @@
         { weight: 0.3, enemies: [{ key: 'Rabbite', lvl: [3, 6] }] }
       ],
       2: [
-        { weight: 0.4, enemies: [{ key: 'Cliff-Ram', lvl: [10, 14], equipment: { 'Head': 'Iron Helmet' } }] },
+        { weight: 0.4, enemies: [{ key: 'Cliff-Ram', lvl: [10, 14], equipment: { 'Head': 'iron_helmet' } }] },
         { weight: 0.3, enemies: [{ key: 'Sky-Shredder', lvl: [12, 15] }, { key: 'Zephyros', lvl: [11, 13] }] },
         { weight: 0.3, enemies: [{ key: 'Rockogolem', lvl: [13, 16] }] }
       ],
       3: [
-        { weight: 0.3, enemies: [{ key: 'Sand-Stinger', lvl: [22, 28], equipment: { 'Hands': 'Power Bracers' } }] },
+        { weight: 0.3, enemies: [{ key: 'Sand-Stinger', lvl: [22, 28], equipment: { 'Hands': 'power_bracers' } }] },
         { weight: 0.3, enemies: [{ key: 'Sun-Cactus', lvl: [20, 25] }, { key: 'Sun-Cactus', lvl: [20, 25] }] },
         { weight: 0.2, enemies: [{ key: 'Droid-X', lvl: [24, 30] }] },
         { weight: 0.2, enemies: [{ key: 'Mindbug', lvl: [25, 32] }] }
@@ -316,11 +319,11 @@
       m.rewardXp = lvl * 5;
       if (isWild) {
         const slots = MORPHOLOGY_SLOTS[m.morphology] || [];
-        const poolItems = zonePoolKey ? (ZONE_EQUIPMENT_POOLS[zonePoolKey] || []) : Object.keys(EQUIPMENT_DB);
+        const poolItems = Object.keys(ITEM_DB).filter(k => ITEM_DB[k].type === 'equipment');
         slots.forEach(slot => {
           if (Math.random() < 0.15) {
             const targetType = SLOT_TO_TYPE[slot];
-            const choices = poolItems.filter(k => EQUIPMENT_DB[k].type === targetType);
+            const choices = poolItems.filter(k => ITEM_DB[k].equipType === targetType);
             if (choices.length > 0) m.equipment[slot] = choices[Math.floor(Math.random() * choices.length)];
           }
         });
@@ -350,7 +353,7 @@
       },
       { 
         id: 'boss_cliffram', x: 18, y: 30, mapId: 'world', type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
-        equipment: { 'Head': 'Iron Helmet', 'Chest': 'Steel Plate' },
+        equipment: { 'Head': 'iron_helmet', 'Chest': 'steel_plate' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(x - 15, y - 25, 30, 25, 5); c.fill();
@@ -360,13 +363,13 @@
       { 
         id: 'merchant', x: 12, y: 26, mapId: 'world', type: 'merchant',
         items: [
-          { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
-          { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
-          { name: 'Monster Ball', price: 50, type: 'capture' },
-          { name: 'Iron Helmet', price: 80, type: 'equipment' },
-          { name: 'Swift Sandals', price: 120, type: 'equipment' },
-          { name: 'Power Bracers', price: 150, type: 'equipment' },
-          { name: 'Obsidian Scales', price: 200, type: 'equipment' }
+          { key: 'hp_potion', price: 15 },
+          { key: 'mp_potion', price: 15 },
+          { key: 'monster_ball', price: 50 },
+          { key: 'iron_helmet', price: 80 },
+          { key: 'swift_sandals', price: 120 },
+          { key: 'power_bracers', price: 150 },
+          { key: 'obsidian_scales', price: 200 }
         ],
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -409,7 +412,7 @@
       },
       {
         id: 'boss_omnistar', x: 16, y: 56, mapId: 'world', type: 'boss', monsterKey: 'Omnistar', level: 40,
-        equipment: { 'Core': 'Fire Orb' },
+        equipment: { 'Core': 'fire_orb' },
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#fde047'; c.beginPath();
@@ -426,7 +429,7 @@
       },
       { 
         id: 'forest_chest_1', x: 24, y: 24, mapId: 'world', type: 'item',
-        items: [{ name: 'Monster Ball', type: 'capture', count: 5 }],
+        items: [{ key: 'monster_ball', count: 5 }],
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#78350f'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 18, 3); c.fill();
@@ -518,23 +521,24 @@
       const container = document.getElementById('shop-items');
       container.innerHTML = `<div style="padding: 5px 0 10px; font-weight: bold; color: #f1c40f; border-bottom: 1px solid #eee; margin-bottom: 10px;">Your Gold: ${playerStats.gold}G</div>`;
       currentShopItems.forEach(item => {
+        const data = ITEM_DB[item.key];
         const div = document.createElement('div');
         div.className = 'shop-item';
-        div.innerHTML = `<span>${item.name} (${item.price}G)</span><button onclick="buyItem('${item.name}', '${item.type}', ${item.price}, ${item.value})">Buy</button>`;
+        div.innerHTML = `<span>${data.name} (${item.price}G)</span><button onclick="buyItem('${item.key}', ${item.price})">Buy</button>`;
         container.appendChild(div);
       });
       document.getElementById('shop').style.display = 'block';
       dialogActive = true;
     }
 
-    function buyItem(name, type, price, val) {
+    function buyItem(key, price) {
       if (playerStats.gold >= price) {
         playerStats.gold -= price;
-        const existing = playerStats.inventory.find(i => i.name === name);
+        const existing = playerStats.inventory.find(i => i.key === key);
         if (existing) {
           existing.count++;
         } else {
-          playerStats.inventory.push({ name, type, val, count: 1 });
+          playerStats.inventory.push({ key: key, count: 1 });
         }
         updateHud();
         openShop();
@@ -709,11 +713,13 @@
           <div style="margin-bottom: 4px;"><strong>Stats:</strong> HP:${Math.ceil(p.hp)} MP:${Math.ceil(p.mp)} ATK:${f.atk} DEF:${f.def} SPD:${f.spd}</div>
           <div style="margin-bottom: 4px;"><strong>Level:</strong> ${p.lvl} | <strong>XP:</strong> ${p.xp||0}/${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><strong>Equipment:</strong>`;
+      html += `<hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><strong>Equipment:</strong>`;
       const slots = MORPHOLOGY_SLOTS[p.morphology] || [];
       slots.forEach(slot => {
-        const equipped = p.equipment[slot];
+        const itemKey = p.equipment[slot];
+        const equippedData = itemKey ? ITEM_DB[itemKey] : null;
         const type = SLOT_TO_TYPE[slot];
-        html += `<div style="display:flex; justify-content:space-between; margin-top:4px; align-items:center;"><span>${slot} (${type}):</span><span style="font-weight:bold">${equipped||'Empty'}</span><div style="display:flex; gap:4px">${equipped ? `<button onclick="unequipItem(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Rem</button>` : `<button onclick="showEquipList(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Equip</button>`}</div></div>`;
+        html += `<div style="display:flex; justify-content:space-between; margin-top:4px; align-items:center;"><span>${slot} (${type}):</span><span style="font-weight:bold">${equippedData ? equippedData.name : 'Empty'}</span><div style="display:flex; gap:4px">${itemKey ? `<button onclick="unequipItem(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Rem</button>` : `<button onclick="showEquipList(${idx}, '${slot}')" style="font-size:10px; cursor:pointer;">Equip</button>`}</div></div>`;
       });
       html += `<hr style="border:0; border-top:1px solid #eee; margin:8px 0;"><strong>Skills:</strong><br>• Attack (Normal)<br>${p.learnedSkills ? p.learnedSkills.map(s => `• ${s.name} (${s.type})`).join('<br>') : ''}</div><button class="menu-btn" style="margin-top:10px; color:#e74c3c; padding:8px;" onclick="releaseMonster(${idx})">Release</button><button class="menu-btn" style="padding:8px;" onclick="showParty()">Back</button>`;
       content.innerHTML = html;
@@ -721,15 +727,22 @@
     function showEquipList(mIdx, slot) {
       const content = document.getElementById('menu-content');
       const targetType = SLOT_TO_TYPE[slot];
-      const items = playerStats.inventory.filter(i => i.type === 'equipment' && EQUIPMENT_DB[i.name].type === targetType);
+      const items = playerStats.inventory.filter(i => {
+        const d = ITEM_DB[i.key];
+        return d.type === 'equipment' && d.equipType === targetType;
+      });
       let html = `<h3 style="margin-top: 0;">Equip ${slot}</h3><div style="max-height: 200px; overflow-y: auto;">`;
       if (items.length === 0) html += `<p>No ${targetType} in inventory.</p>`;
-      else items.forEach(item => { const e = EQUIPMENT_DB[item.name]; let s = ""; if(e.stats.atk) s+=" ATK+"+e.stats.atk; if(e.stats.def) s+=" DEF+"+e.stats.def; if(e.stats.spd) s+=" SPD+"+e.stats.spd; html += `<div class="shop-item"><div style="font-size:0.8em"><strong>${item.name}</strong><br>${s}</div><button onclick="equipItem(${mIdx}, '${slot}', '${item.name}')">Use</button></div>`; });
+      else items.forEach(item => {
+        const e = ITEM_DB[item.key];
+        let s = ""; if(e.stats.atk) s+=" ATK+"+e.stats.atk; if(e.stats.def) s+=" DEF+"+e.stats.def; if(e.stats.spd) s+=" SPD+"+e.stats.spd;
+        html += `<div class="shop-item"><div style="font-size:0.8em"><strong>${e.name}</strong><br>${s}</div><button onclick="equipItem(${mIdx}, '${slot}', '${item.key}')">Use</button></div>`;
+      });
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="showMemberDetail(${mIdx})">Back</button>`;
       content.innerHTML = html;
     }
-    function equipItem(mIdx, slot, itemName) { const m = playerStats.party[mIdx]; const invIdx = playerStats.inventory.findIndex(i => i.name === itemName); if (invIdx === -1) return; if (m.equipment[slot]) unequipItem(mIdx, slot, true); m.equipment[slot] = itemName; playerStats.inventory[invIdx].count--; if (playerStats.inventory[invIdx].count <= 0) playerStats.inventory.splice(invIdx, 1); showMemberDetail(mIdx); updateHud(); }
-    function unequipItem(mIdx, slot, replacing = false) { const m = playerStats.party[mIdx]; const item = m.equipment[slot]; if (!item) return; const existing = playerStats.inventory.find(i => i.name === item); if (existing) existing.count++; else playerStats.inventory.push({ name: item, type: 'equipment', count: 1 }); delete m.equipment[slot]; if (!replacing) showMemberDetail(mIdx); updateHud(); }
+    function equipItem(mIdx, slot, itemKey) { const m = playerStats.party[mIdx]; const invIdx = playerStats.inventory.findIndex(i => i.key === itemKey); if (invIdx === -1) return; if (m.equipment[slot]) unequipItem(mIdx, slot, true); m.equipment[slot] = itemKey; playerStats.inventory[invIdx].count--; if (playerStats.inventory[invIdx].count <= 0) playerStats.inventory.splice(invIdx, 1); showMemberDetail(mIdx); updateHud(); }
+    function unequipItem(mIdx, slot, replacing = false) { const m = playerStats.party[mIdx]; const itemKey = m.equipment[slot]; if (!itemKey) return; const existing = playerStats.inventory.find(i => i.key === itemKey); if (existing) existing.count++; else playerStats.inventory.push({ key: itemKey, count: 1 }); delete m.equipment[slot]; if (!replacing) showMemberDetail(mIdx); updateHud(); }
 
     function releaseMonster(idx) {
       if (playerStats.party.length <= 1) {
@@ -752,7 +765,7 @@
       const actor = activeActor; if (!actor || enemies.includes(actor)) return;
       const content = document.getElementById('menu-content');
       let html = `<h3 style="margin-top: 0;">Select Skill</h3><div style="max-height: 200px; overflow-y: auto;">`;
-      const equipSkills = []; for (let s in actor.equipment) { const itm = EQUIPMENT_DB[actor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+      const equipSkills = []; for (let s in actor.equipment) { const itm = ITEM_DB[actor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
       const allSkills = [...(actor.learnedSkills || []), ...equipSkills];
       if (allSkills.length === 0) html += `<p>No skills available</p>`;
       else allSkills.forEach((skill, idx) => {
@@ -774,8 +787,9 @@
         html += `<p>Empty</p>`;
       } else {
         playerStats.inventory.forEach((item, idx) => {
-          const canUse = isBattle ? ['hp', 'mp', 'capture'].includes(item.type) : ['hp', 'mp'].includes(item.type);
-          html += `<div class="shop-item"><span>${item.name} (x${item.count})</span>${canUse ? `<button onclick="inventoryAction(${idx}, ${isBattle})">Use</button>` : ''}</div>`;
+          const data = ITEM_DB[item.key];
+          const canUse = isBattle ? ['hp', 'mp', 'capture'].includes(data.type) : ['hp', 'mp'].includes(data.type);
+          html += `<div class="shop-item"><span>${data.name} (x${item.count})</span>${canUse ? `<button onclick="inventoryAction(${idx}, ${isBattle})">Use</button>` : ''}</div>`;
         });
       }
       html += `</div><button class="menu-btn" style="margin-top: 10px;" onclick="${isBattle ? 'toggleMenu()' : 'showMainMenu()'}">Back</button>`;
@@ -785,18 +799,20 @@
     function inventoryAction(idx, isBattle) {
       if (isBattle) { battleAction('item', idx); return; }
       const item = playerStats.inventory[idx];
-      if (item.type === 'hp' || item.type === 'mp') showMemberSelectForItem(idx);
+      const data = ITEM_DB[item.key];
+      if (data.type === 'hp' || data.type === 'mp') showMemberSelectForItem(idx);
     }
 
     function showMemberSelectForItem(itemIdx) {
       const item = playerStats.inventory[itemIdx];
+      const data = ITEM_DB[item.key];
       const content = document.getElementById('menu-content');
-      let html = `<h3 style="margin-top: 0;">Use ${item.name}</h3><div style="max-height: 260px; overflow-y: auto;">`;
+      let html = `<h3 style="margin-top: 0;">Use ${data.name}</h3><div style="max-height: 260px; overflow-y: auto;">`;
       playerStats.party.forEach((p, i) => {
         const isFainted = p.hp <= 0;
-        const statLabel = item.type === 'mp' ? 'MP' : 'HP';
-        const statVal = item.type === 'mp' ? Math.ceil(p.mp) : Math.ceil(p.hp);
-        const statMax = item.type === 'mp' ? p.maxMp : p.maxHp;
+        const statLabel = data.type === 'mp' ? 'MP' : 'HP';
+        const statVal = data.type === 'mp' ? Math.ceil(p.mp) : Math.ceil(p.hp);
+        const statMax = data.type === 'mp' ? p.maxMp : p.maxHp;
         const style = isFainted ? 'opacity: 0.5; cursor: not-allowed;' : '';
         const click = isFainted ? '' : `applyItemToMember(${i}, ${itemIdx})`;
         html += `<button class="menu-btn" style="${style}" onclick="${click}">${p.name} (${statLabel}: ${statVal}/${statMax})${isFainted ? ' [Fainted]' : ''}</button>`;
@@ -807,14 +823,15 @@
 
     function applyItemToMember(mIdx, itemIdx) {
       const item = playerStats.inventory[itemIdx];
+      const data = ITEM_DB[item.key];
       const p = playerStats.party[mIdx];
       if (p.hp <= 0) { alert("Cannot use items on fainted monsters!"); return; }
-      if (item.type === 'hp') {
+      if (data.type === 'hp') {
         if (p.hp >= p.maxHp) { alert("HP full!"); return; }
-        p.hp = Math.min(p.maxHp, p.hp + item.val);
-      } else if (item.type === 'mp') {
+        p.hp = Math.min(p.maxHp, p.hp + data.val);
+      } else if (data.type === 'mp') {
         if (p.mp >= p.maxMp) { alert("MP full!"); return; }
-        p.mp = Math.min(p.maxMp, p.mp + item.val);
+        p.mp = Math.min(p.maxMp, p.mp + data.val);
       }
       item.count--;
       if (item.count <= 0) playerStats.inventory.splice(itemIdx, 1);
@@ -899,10 +916,11 @@
       else if (npc.type === 'item') {
         let msg = "You found: ";
         npc.items.forEach(item => {
-          const existing = playerStats.inventory.find(i => i.name === item.name);
+          const data = ITEM_DB[item.key];
+          const existing = playerStats.inventory.find(i => i.key === item.key);
           if (existing) { existing.count += item.count; }
-          else { playerStats.inventory.push({ ...item }); }
-          msg += `${item.name} (x${item.count}) `;
+          else { playerStats.inventory.push({ key: item.key, count: item.count }); }
+          msg += `${data.name} (x${item.count}) `;
         });
         showDialog(msg);
         if (npc.id) playerStats.defeatedNpcIds.push(npc.id);
@@ -1227,7 +1245,8 @@
         executeBattleAction(type, enemies.indexOf(aliveEnemies[0]), data);
       } else if (type === 'item') {
         const item = playerStats.inventory[data];
-        if (item.type === 'capture') {
+        const itemData = ITEM_DB[item.key];
+        if (itemData.type === 'capture') {
           if (aliveEnemies.length > 1) {
             pendingAction = 'itemEnemy'; pendingSkillIdx = data;
             updateBattleUI("Select target to capture.");
@@ -1260,8 +1279,9 @@
         if (target.hp <= 0) { gainXp(target.rewardXp); msg += `${target.name} defeated! `; }
       } else if (type === 'itemEnemy' || type === 'itemParty') {
         const item = playerStats.inventory[data];
+        const itemData = ITEM_DB[item.key];
         const itmTarget = type === 'itemEnemy' ? enemies[targetIdx] : playerStats.party[targetIdx];
-        if (item.type === 'capture') {
+        if (itemData.type === 'capture') {
           const capRate = itmTarget.captureRate || 0.5;
           const chance = ((3 * itmTarget.maxHp - 2 * itmTarget.hp) / (3 * itmTarget.maxHp)) * capRate;
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
@@ -1277,10 +1297,10 @@
             enemies.splice(targetIdx, 1);
           } else msg = "Capture failed! ";
         } else {
-          if (item.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + item.val);
-          if (item.type === 'mp') itmTarget.mp = Math.min(itmTarget.maxMp, itmTarget.mp + item.val);
+          if (itemData.type === 'hp') itmTarget.hp = Math.min(itmTarget.maxHp, itmTarget.hp + itemData.val);
+          if (itemData.type === 'mp') itmTarget.mp = Math.min(itmTarget.maxMp, itmTarget.mp + itemData.val);
           item.count--; if (item.count <= 0) playerStats.inventory.splice(data, 1);
-          toggleMenu(); msg = `${item.name} used on ${itmTarget.name}! `;
+          toggleMenu(); msg = `${itemData.name} used on ${itmTarget.name}! `;
         }
       }
       updateBattleUI(msg);
