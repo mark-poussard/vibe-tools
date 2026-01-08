@@ -713,7 +713,6 @@
           <div style="margin-bottom: 4px;"><strong>Stats:</strong> HP:${Math.ceil(p.hp)} MP:${Math.ceil(p.mp)} ATK:${f.atk} DEF:${f.def} SPD:${f.spd}</div>
           <div style="margin-bottom: 4px;"><strong>Level:</strong> ${p.lvl} | <strong>XP:</strong> ${p.xp||0}/${req}</div>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><strong>Equipment:</strong>`;
-      html += `<hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><strong>Equipment:</strong>`;
       const slots = MORPHOLOGY_SLOTS[p.morphology] || [];
       slots.forEach(slot => {
         const itemKey = p.equipment[slot];
