@@ -578,7 +578,7 @@ function saveToStorage() {
       }
     };
     window.addNewEncounter = () => {
-      encounterZones[window.currentZoneId].push({ weight: 0.1, ennemies: [] });
+      encounterZones[window.currentZoneId].push({ weight: 0.1, enemies: [] });
       saveToStorage();
       window.openModal2(window.currentZoneId);
     };
@@ -597,7 +597,7 @@ function saveToStorage() {
     window.refreshEnemiesList = () => {
       const container = document.getElementById('enemies-list-container');
       container.innerHTML = '';
-      const enemies = encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies;
+      const enemies = encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies;
       enemies.forEach((en, enIdx) => {
         const div = document.createElement('div');
         div.style = "display: flex; gap: 4px; align-items: center;";
@@ -606,19 +606,19 @@ function saveToStorage() {
       });
     };
     window.updateEnemy = (idx, field, val) => {
-      const en = encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies[idx];
+      const en = encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies[idx];
       if (field === 'key') en.key = val;
       if (field === 'min') en.lvl[0] = parseInt(val) || 0;
       if (field === 'max') en.lvl[1] = parseInt(val) || 0;
       saveToStorage();
     };
     window.addNewEnemy = () => {
-      encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies.push({ key: 'slime', lvl: [1, 5] });
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies.push({ key: 'slime', lvl: [1, 5] });
       saveToStorage();
       window.refreshEnemiesList();
     };
     window.deleteEnemy = (idx) => {
-      encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies.splice(idx, 1);
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].enemies.splice(idx, 1);
       saveToStorage();
       window.refreshEnemiesList();
     };
