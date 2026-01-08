@@ -338,7 +338,7 @@
 
     let NPC_LOCATIONS = [
       { 
-        id: 'guide', x: 52, y: 34, mapId: 'world', type: 'dialog', color: '#4444ff', 
+        id: 'guide', x: 52, y: 34, mapId: 'world', type: 'dialog',
         text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
@@ -358,7 +358,7 @@
         }
       },
       { 
-        id: 'merchant', x: 12, y: 26, mapId: 'world', type: 'merchant', color: '#f1c40f', 
+        id: 'merchant', x: 12, y: 26, mapId: 'world', type: 'merchant',
         items: [
           { name: 'Health Potion', price: 15, type: 'hp', value: 50 },
           { name: 'Mana Potion', price: 15, type: 'mp', value: 10 },
@@ -435,7 +435,7 @@
         }
       },
       {
-        id: 'shrine_sage', x: 5, y: 3, mapId: 'secret_shrine', type: 'dialog', color: '#ff44ff',
+        id: 'shrine_sage', x: 5, y: 3, mapId: 'secret_shrine', type: 'dialog',
         text: "You have discovered the Secret Shrine! Use the portal south to return.",
         draw: (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
