@@ -277,7 +277,7 @@ function saveToStorage() {
             encounters: allMaps[key].encounters
           };
         });
-        const jsonStr = JSON.stringify(mergedMaps, null, 2);
+        const jsonStr = JSON.stringify(mergedMaps);
         const newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
         const updateRes = await fetch(url, {
           method: 'PUT',
