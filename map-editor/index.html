@@ -79,7 +79,50 @@
       </div>
     </div>
   </div>
-  <div id="zones-modal" class="modal"><div class="modal-content" style="max-width: 500px; max-height: 85vh; overflow-y: auto;"><h2>Encounter Zones</h2><div class="form-group"><label>Zone ID</label><input type="number" id="edit-zone-id" value="1" min="1"></div><div id="encounters-list"></div><div class="modal-actions"><button id="btn-add-encounter" style="background: #10b981; border-color: #10b981;">Add Encounter</button><button id="btn-zones-close">Close</button></div></div></div><div id="settings-modal" class="modal">
+  <!-- Modal 1: Zones List -->
+  <div id="modal-zones-1" class="modal">
+    <div class="modal-content">
+      <h2>Encounter Zones</h2>
+      <div id="zones-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; margin-bottom: 20px;"></div>
+      <div class="modal-actions">
+        <button onclick="window.addNewZone()" style="background: #10b981; border-color: #10b981;">Add Zone</button>
+        <button onclick="window.closeModal('modal-zones-1')">Close</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal 2: Zone Detail -->
+  <div id="modal-zones-2" class="modal">
+    <div class="modal-content">
+      <h2 id="m2-title">Zone Details</h2>
+      <div class="form-group">
+        <label>Zone ID</label>
+        <input type="number" id="m2-zone-id" onchange="window.renameZone(this.value)">
+      </div>
+      <div id="encounters-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; margin-bottom: 20px;"></div>
+      <div class="modal-actions">
+        <button onclick="window.addNewEncounter()" style="background: #10b981; border-color: #10b981;">Add Encounter</button>
+        <button onclick="window.deleteCurrentZone()" style="background: #ef4444; border-color: #ef4444;">Delete Zone</button>
+        <button onclick="window.openModal1()">Back</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal 3: Encounter Detail -->
+  <div id="modal-zones-3" class="modal">
+    <div class="modal-content">
+      <h2>Encounter Details</h2>
+      <div class="form-group">
+        <label>Weight (0.0 - 1.0)</label>
+        <input type="number" step="0.1" id="m3-weight" onchange="window.updateWeight(this.value)">
+      </div>
+      <label class="label">Enemies</label>
+      <div id="enemies-list-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; max-height: 40vh; overflow-y: auto; margin-bottom: 20px;"></div>
+      <div class="modal-actions">
+        <button onclick="window.addNewEnemy()" style="background: #10b981; border-color: #10b981;">Add Enemy</button>
+        <button onclick="window.deleteCurrentEncounter()" style="background: #ef4444; border-color: #ef4444;">Delete Encounter</button>
+        <button onclick="window.openModal2(window.currentZoneId)">Back</button>
+      </div>
+    </div>
+  </div><div id="settings-modal" class="modal">
     <div class="modal-content">
       <h2>GitHub Settings</h2>
       <div class="form-group">
@@ -187,10 +230,7 @@ function saveToStorage() {
       };
       document.getElementById('btn-settings').onclick = () => document.getElementById('settings-modal').classList.add('active');
       document.getElementById('btn-settings-close').onclick = () => document.getElementById('settings-modal').classList.remove('active');
-      document.getElementById('btn-manage-encounters').onclick = () => { document.getElementById('zones-modal').classList.add('active'); refreshEncountersUI(); };
-      document.getElementById('btn-zones-close').onclick = () => document.getElementById('zones-modal').classList.remove('active');
-      document.getElementById('btn-add-encounter').onclick = () => window.addEncounter(document.getElementById('edit-zone-id').value);
-      document.getElementById('edit-zone-id').onchange = refreshEncountersUI;
+      document.getElementById('btn-manage-encounters').onclick = () => window.openModal1();
       document.getElementById('btn-gh-import').onclick = importFromGitHub;
       document.getElementById('btn-gh-export').onclick = exportToGitHub;
       document.getElementById('btn-warp-save').onclick = saveWarp;
@@ -479,30 +519,114 @@ function saveToStorage() {
       ctx.restore();
       requestAnimationFrame(render);
     }
-    window.addEncounter = (zid) => { if(!encounterZones[zid]) encounterZones[zid]=[]; encounterZones[zid].push({weight:0.1, ennemies:[]}); saveToStorage(); refreshEncountersUI(); };
-    window.removeEncounter = (zid, idx) => { encounterZones[zid].splice(idx,1); saveToStorage(); refreshEncountersUI(); };
-    window.addEnemy = (zid, encIdx) => { encounterZones[zid][encIdx].ennemies.push({key:'slime', lvl:[1,5]}); saveToStorage(); refreshEncountersUI(); };
-    window.removeEnemy = (zid, encIdx, enIdx) => { encounterZones[zid][encIdx].ennemies.splice(enIdx,1); saveToStorage(); refreshEncountersUI(); };
-    window.updateEncValue = (zid, encIdx, k, v) => { encounterZones[zid][encIdx][k] = k==='weight'?parseFloat(v):v; saveToStorage(); };
-    window.updateEnemyValue = (zid, encIdx, enIdx, k, si, v) => { if(k==='lvl') encounterZones[zid][encIdx].ennemies[enIdx].lvl[si]=parseInt(v); else encounterZones[zid][encIdx].ennemies[enIdx][k]=v; saveToStorage(); };
-    function refreshEncountersUI() {
-      const zid = document.getElementById('edit-zone-id').value;
-      const list = document.getElementById('encounters-list');
-      list.innerHTML = '';
-      if(!encounterZones[zid]) return;
-      encounterZones[zid].forEach((enc, encIdx) => {
-        const div = document.createElement('div');
-        div.style = "background:#334155; padding:10px; margin-bottom:10px; border-radius:4px; border:1px solid #475569";
-        div.innerHTML = `<div class="form-group"><label>Weight (0-1)</label><input type="number" step="0.1" value="${enc.weight}" onchange="window.updateEncValue('${zid}',${encIdx},'weight',this.value)"></div><div style="margin-bottom:8px"><span class="label">Enemies</span></div><div id="enemies-${encIdx}"></div><button onclick="window.addEnemy('${zid}',${encIdx})" style="padding:4px 8px; font-size:11px; background:#10b981; border-color:#10b981; margin-top:5px; display:inline-block; width:auto">Add Enemy</button><button onclick="window.removeEncounter('${zid}',${encIdx})" style="padding:4px 8px; font-size:11px; background:#ef4444; border-color:#ef4444; margin-top:5px; display:inline-block; width:auto">Delete Encounter</button>`;
-        list.appendChild(div);
-        const elist = div.querySelector(`#enemies-${encIdx}`);
-        enc.ennemies.forEach((en, enIdx) => {
-          const row = document.createElement('div'); row.style = "display:flex; gap:4px; margin-bottom:4px;";
-          row.innerHTML = `<input type="text" value="${en.key}" placeholder="key" style="flex:2; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'key',0,this.value)"><input type="number" value="${en.lvl[0]}" placeholder="min" style="flex:1; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'lvl',0,this.value)"><input type="number" value="${en.lvl[1]}" placeholder="max" style="flex:1; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'lvl',1,this.value)"><button onclick="window.removeEnemy('${zid}',${encIdx},${enIdx})" style="padding:4px 8px; background:#ef4444; border-color:#ef4444">×</button>`;
-          elist.appendChild(row);
-        });
+        window.currentZoneId = null;
+    window.currentEncounterIdx = null;
+    window.closeModal = (id) => document.getElementById(id).classList.remove('active');
+    window.openModal = (id) => document.getElementById(id).classList.add('active');
+    window.openModal1 = () => {
+      window.closeModal('modal-zones-2');
+      window.closeModal('modal-zones-3');
+      const container = document.getElementById('zones-list-container');
+      container.innerHTML = '';
+      Object.keys(encounterZones).sort((a,b)=>a-b).forEach(zid => {
+        const btn = document.createElement('button');
+        btn.textContent = `Zone ${zid} (${encounterZones[zid].length} encounters)`;
+        btn.style.width = '100%';
+        btn.onclick = () => window.openModal2(zid);
+        container.appendChild(btn);
       });
-    }
+      window.openModal('modal-zones-1');
+    };
+    window.addNewZone = () => {
+      let nextId = 1;
+      while(encounterZones[nextId]) nextId++;
+      encounterZones[nextId] = [];
+      saveToStorage();
+      window.openModal1();
+    };
+    window.openModal2 = (zid) => {
+      window.currentZoneId = zid;
+      window.closeModal('modal-zones-1');
+      window.closeModal('modal-zones-3');
+      document.getElementById('m2-title').textContent = `Zone ${zid} Details`;
+      document.getElementById('m2-zone-id').value = zid;
+      const container = document.getElementById('encounters-list-container');
+      container.innerHTML = '';
+      encounterZones[zid].forEach((enc, idx) => {
+        const btn = document.createElement('button');
+        btn.textContent = `Encounter ${idx} (Weight: ${enc.weight})`;
+        btn.style.width = '100%';
+        btn.onclick = () => window.openModal3(idx);
+        container.appendChild(btn);
+      });
+      window.openModal('modal-zones-2');
+    };
+    window.renameZone = (newId) => {
+      if (!newId || newId == window.currentZoneId) return;
+      if (encounterZones[newId]) { alert("Zone ID already exists"); return; }
+      encounterZones[newId] = encounterZones[window.currentZoneId];
+      delete encounterZones[window.currentZoneId];
+      window.currentZoneId = newId;
+      saveToStorage();
+      window.openModal2(newId);
+    };
+    window.deleteCurrentZone = () => {
+      if (confirm(`Delete zone ${window.currentZoneId}?`)) {
+        delete encounterZones[window.currentZoneId];
+        saveToStorage();
+        window.openModal1();
+      }
+    };
+    window.addNewEncounter = () => {
+      encounterZones[window.currentZoneId].push({ weight: 0.1, ennemies: [] });
+      saveToStorage();
+      window.openModal2(window.currentZoneId);
+    };
+    window.openModal3 = (idx) => {
+      window.currentEncounterIdx = idx;
+      window.closeModal('modal-zones-2');
+      const enc = encounterZones[window.currentZoneId][idx];
+      document.getElementById('m3-weight').value = enc.weight;
+      window.refreshEnemiesList();
+      window.openModal('modal-zones-3');
+    };
+    window.updateWeight = (val) => {
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].weight = parseFloat(val) || 0;
+      saveToStorage();
+    };
+    window.refreshEnemiesList = () => {
+      const container = document.getElementById('enemies-list-container');
+      container.innerHTML = '';
+      const enemies = encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies;
+      enemies.forEach((en, enIdx) => {
+        const div = document.createElement('div');
+        div.style = "display: flex; gap: 4px; align-items: center;";
+        div.innerHTML = `<input type="text" value="${en.key}" placeholder="Key" style="flex:2; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'key', this.value)"><input type="number" value="${en.lvl[0]}" placeholder="Min" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'min', this.value)"><input type="number" value="${en.lvl[1]}" placeholder="Max" style="flex:1; width:40px; padding:6px; background:#0f172a; border:1px solid #475569; color:white; border-radius:4px;" onchange="window.updateEnemy(${enIdx}, 'max', this.value)"><button onclick="window.deleteEnemy(${enIdx})" style="background:#ef4444; border-color:#ef4444; padding: 4px 8px;">×</button>`;
+        container.appendChild(div);
+      });
+    };
+    window.updateEnemy = (idx, field, val) => {
+      const en = encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies[idx];
+      if (field === 'key') en.key = val;
+      if (field === 'min') en.lvl[0] = parseInt(val) || 0;
+      if (field === 'max') en.lvl[1] = parseInt(val) || 0;
+      saveToStorage();
+    };
+    window.addNewEnemy = () => {
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies.push({ key: 'slime', lvl: [1, 5] });
+      saveToStorage();
+      window.refreshEnemiesList();
+    };
+    window.deleteEnemy = (idx) => {
+      encounterZones[window.currentZoneId][window.currentEncounterIdx].ennemies.splice(idx, 1);
+      saveToStorage();
+      window.refreshEnemiesList();
+    };
+    window.deleteCurrentEncounter = () => {
+      encounterZones[window.currentZoneId].splice(window.currentEncounterIdx, 1);
+      saveToStorage();
+      window.openModal2(window.currentZoneId);
+    };
     init();
   </script>
 </body>
