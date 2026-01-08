@@ -81,11 +81,11 @@
     .starter-card:hover { transform: scale(1.05); border-color: #ffeb3b; }
     .starter-card h3 { margin: 8px 0; color: #ffeb3b; font-size: 1em; }
     .starter-card .stats { font-size: 0.75em; text-align: left; margin: 8px 0; line-height: 1.3; }
-    #pc-interface { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 4px solid #444; font-family: monospace; width: 95%; max-width: 450px; max-height: 85%; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 400; }
-    .pc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
-    .pc-card { background: #eee; border: 2px solid #ccc; padding: 8px; text-align: center; cursor: pointer; border-radius: 4px; }
-    .pc-card:hover { border-color: #2196f3; background: #e3f2fd; }
-    .pc-card.active { border-color: #4caf50; background: #e8f5e9; box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); }
+    #safe-point-interface { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 4px solid #444; font-family: monospace; width: 95%; max-width: 450px; max-height: 85%; overflow-y: auto; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 400; }
+    .storage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+    .storage-card { background: #eee; border: 2px solid #ccc; padding: 8px; text-align: center; cursor: pointer; border-radius: 4px; }
+    .storage-card:hover { border-color: #2196f3; background: #e3f2fd; }
+    .storage-card.active { border-color: #4caf50; background: #e8f5e9; box-shadow: 0 0 8px rgba(76, 175, 80, 0.5); }
   </style>
 </head>
 <body>
@@ -124,9 +124,9 @@
     <div id="shop-items"></div>
     <button onclick="closeShop()" style="margin-top: 15px; width: 100%; cursor: pointer;">Exit Shop</button>
   </div>
-  <div id="pc-interface">
-    <div id="pc-content"></div>
-    <button onclick="closePC()" style="margin-top: 15px; width: 100%; cursor: pointer; padding: 12px; background: #444; color: white; border: none; font-family: monospace;">Exit System</button>
+  <div id="safe-point-interface">
+    <div id="safe-point-content"></div>
+    <button onclick="closeSafePointInterface()" style="margin-top: 15px; width: 100%; cursor: pointer; padding: 12px; background: #444; color: white; border: none; font-family: monospace;">Leave Safe Point</button>
   </div>
   <div id="menu-modal" onclick="if(event.target === this) toggleMenu()">
     <div class="modal-inner">
@@ -182,7 +182,7 @@
       party: [],
       storage: [],
       gold: 150, inventory: [],
-      lastHealLocation: null,
+      lastSafePointLocation: null,
       defeatedNpcIds: []
     };
     const MORPHOLOGY_SLOTS = {
@@ -378,35 +378,33 @@
         }
       },
       { 
-        id: 'healer', x: 52, y: 26, mapId: 'world', type: 'healer', color: '#10b981', 
-        text: "Welcome to the adventure! I have healed your monsters to full health.",
+        id: 'safe_point_village', x: 52, y: 26, mapId: 'world', type: 'safe_point',
         draw: (c, x, y) => {
-          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#10b981'; c.beginPath(); c.roundRect(x - 12, y - 40, 24, 40, 8); c.fill();
-          c.fillStyle = 'white'; c.fillRect(x-8, y-30, 16, 20);
-          c.fillStyle = '#ef4444'; c.fillRect(x-1, y-25, 2, 10); c.fillRect(x-5, y-21, 10, 2);
-          c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
-          c.fillStyle = 'white'; c.beginPath(); c.moveTo(x-8, y-52); c.lineTo(x+8, y-52); c.lineTo(x, y-60); c.closePath(); c.fill();
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
+          c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
+          c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
+          c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
         }
       },
       {
-        id: 'pc_storage', x: 54, y: 26, mapId: 'world', type: 'pc',
+        id: 'safe_point_outskirt', x: 54, y: 26, mapId: 'world', type: 'safe_point',
         draw: (c, x, y) => {
-          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#444'; c.fillRect(x - 15, y - 5, 30, 15);
-          c.fillStyle = '#666'; c.fillRect(x - 12, y - 30, 24, 25);
-          c.fillStyle = '#22d3ee'; c.fillRect(x - 10, y - 28, 20, 20);
-          c.fillStyle = '#333'; c.fillRect(x - 2, y - 5, 4, 10);
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
+          c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
+          c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
+          c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
         }
       },
       {
-        id: 'lake_pc', x: 14, y: 26, mapId: 'world', type: 'pc',
+        id: 'lake_safe_point', x: 14, y: 26, mapId: 'world', type: 'safe_point',
         draw: (c, x, y) => {
-          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#444'; c.fillRect(x - 15, y - 5, 30, 15);
-          c.fillStyle = '#666'; c.fillRect(x - 12, y - 30, 24, 25);
-          c.fillStyle = '#22d3ee'; c.fillRect(x - 10, y - 28, 20, 20);
-          c.fillStyle = '#333'; c.fillRect(x - 2, y - 5, 4, 10);
+          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
+          c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
+          c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
+          c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
+          c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
         }
       },
       {
@@ -549,106 +547,106 @@
       document.getElementById('shop').style.display = 'none';
       dialogActive = false;
     }
-    let pcSelectedIndex = null; let pcSelectedSection = null;
-    function openPCMenu() {
+    let storageSelectedIndex = null; let storageSelectedSection = null;
+    function openSafePointMenu() {
       const content = document.getElementById('menu-content');
       content.innerHTML = `
-        <h3 style="margin-top: 0;">PC System</h3>
-        <button class="menu-btn" onclick="pcHealAction()">Heal Monsters</button>
-        <button class="menu-btn" onclick="toggleMenu(); openPC();">Manage Monsters</button>
+        <h3 style="margin-top: 0;">Safe Point</h3>
+        <button class="menu-btn" onclick="safePointHealAction()">Rest & Heal Monsters</button>
+        <button class="menu-btn" onclick="toggleMenu(); openMonsterStorage();">Access Monster Storage</button>
         <button class="menu-btn" onclick="toggleMenu()">Done</button>
       `;
       document.getElementById('menu-modal').style.display = 'block';
       dialogActive = true;
     }
-    function pcHealAction() {
+    function safePointHealAction() {
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
       updateHud();
-      alert("All monsters in your party have been healed!");
-      openPCMenu();
+      alert("You rested by the fire. All monsters in your party have been healed!");
+      openSafePointMenu();
     }
-    function openPC() {
-      document.getElementById('pc-interface').style.display = 'block';
-      dialogActive = true; pcSelectedIndex = null; pcSelectedSection = null; renderPC();
+    function openMonsterStorage() {
+      document.getElementById('safe-point-interface').style.display = 'block';
+      dialogActive = true; storageSelectedIndex = null; storageSelectedSection = null; renderMonsterStorage();
     }
-    function renderPC() {
-      const container = document.getElementById('pc-content');
-      container.innerHTML = '<h3 style="margin-top:0">Monster Storage System</h3><div style="margin-bottom:8px;"><strong>Active Party (Max 4)</strong></div>';
-      const pGrid = document.createElement('div'); pGrid.className = 'pc-grid';
+    function renderMonsterStorage() {
+      const container = document.getElementById('safe-point-content');
+      container.innerHTML = '<h3 style="margin-top:0">Monster Storage</h3><div style="margin-bottom:8px;"><strong>Active Party (Max 4)</strong></div>';
+      const pGrid = document.createElement('div'); pGrid.className = 'storage-grid';
       for (let i = 0; i < 4; i++) {
         const m = playerStats.party[i];
-        if (m) pGrid.appendChild(createPCCard(m, 'party', i));
+        if (m) pGrid.appendChild(createStorageCard(m, 'party', i));
         else {
-          const empty = document.createElement('div'); empty.className = 'pc-card'; empty.style.opacity = '0.5';
+          const empty = document.createElement('div'); empty.className = 'storage-card'; empty.style.opacity = '0.5';
           empty.innerHTML = '<div style="height:50px; line-height:50px; font-size:1.5em; color:#888;">+</div><div style="font-size:0.6em;">Empty</div>';
-          if (pcSelectedSection === 'party' && pcSelectedIndex === i) empty.classList.add('active');
-          empty.onclick = () => selectPCMonster('party', i); pGrid.appendChild(empty);
+          if (storageSelectedSection === 'party' && storageSelectedIndex === i) empty.classList.add('active');
+          empty.onclick = () => selectStorageMonster('party', i); pGrid.appendChild(empty);
         }
       }
       container.appendChild(pGrid);
-      const sTitle = document.createElement('div'); sTitle.style.marginTop = '20px'; sTitle.innerHTML = '<strong>PC Storage</strong>';
+      const sTitle = document.createElement('div'); sTitle.style.marginTop = '20px'; sTitle.innerHTML = '<strong>Stored Monsters</strong>';
       container.appendChild(sTitle);
-      const sGrid = document.createElement('div'); sGrid.className = 'pc-grid';
+      const sGrid = document.createElement('div'); sGrid.className = 'storage-grid';
       if (playerStats.storage.length === 0) sGrid.innerHTML = '<p style="font-size:0.8em; color: #999; grid-column: 1/-1;">No monsters in storage.</p>';
-      else playerStats.storage.forEach((m, i) => sGrid.appendChild(createPCCard(m, 'storage', i)));
+      else playerStats.storage.forEach((m, i) => sGrid.appendChild(createStorageCard(m, 'storage', i)));
       container.appendChild(sGrid);
-      if (pcSelectedSection !== null) {
-        const list = pcSelectedSection === 'party' ? playerStats.party : playerStats.storage;
-        const m = list[pcSelectedIndex];
+      if (storageSelectedSection !== null) {
+        const list = storageSelectedSection === 'party' ? playerStats.party : playerStats.storage;
+        const m = list[storageSelectedIndex];
         if (m) {
           const price = Math.floor(m.lvl * (1 / (m.captureRate || 1)) * 2);
           const sellBtn = document.createElement('button');
           sellBtn.style.cssText = "margin-top: 20px; width: 100%; cursor: pointer; padding: 12px; background: #e74c3c; color: white; border: none; font-family: monospace;";
-          sellBtn.innerText = `Sell ${m.name} for ${price}G`;
-          sellBtn.onclick = () => sellMonsterFromPC(pcSelectedSection, pcSelectedIndex);
+          sellBtn.innerText = `Release ${m.name} for ${price}G reward`;
+          sellBtn.onclick = () => sellMonsterFromStorage(storageSelectedSection, storageSelectedIndex);
           container.appendChild(sellBtn);
         }
       }
     }
-    function createPCCard(m, section, idx) {
-      const card = document.createElement('div'); card.className = 'pc-card';
-      if (pcSelectedSection === section && pcSelectedIndex === idx) card.classList.add('active');
-      card.innerHTML = `<canvas id="pc-canvas-${section}-${idx}" width="100" height="100" style="width:50px; height:50px; display:block; margin: 0 auto;"></canvas><div style="font-size:0.75em; font-weight:bold; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name}</div><div style="font-size:0.6em;">Lvl ${m.lvl}</div>`;
-      card.onclick = () => selectPCMonster(section, idx);
-      setTimeout(() => { const c = document.getElementById(`pc-canvas-${section}-${idx}`); if(c) drawMonsterIcon(c.getContext('2d'), m.name); }, 0);
+    function createStorageCard(m, section, idx) {
+      const card = document.createElement('div'); card.className = 'storage-card';
+      if (storageSelectedSection === section && storageSelectedIndex === idx) card.classList.add('active');
+      card.innerHTML = `<canvas id="storage-canvas-${section}-${idx}" width="100" height="100" style="width:50px; height:50px; display:block; margin: 0 auto;"></canvas><div style="font-size:0.75em; font-weight:bold; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${m.name}</div><div style="font-size:0.6em;">Lvl ${m.lvl}</div>`;
+      card.onclick = () => selectStorageMonster(section, idx);
+      setTimeout(() => { const c = document.getElementById(`storage-canvas-${section}-${idx}`); if(c) drawMonsterIcon(c.getContext('2d'), m.name); }, 0);
       return card;
     }
-    function selectPCMonster(section, idx) {
-      if (pcSelectedSection === null) {
-        if (section === 'storage' || (section === 'party' && playerStats.party[idx])) { pcSelectedSection = section; pcSelectedIndex = idx; }
+    function selectStorageMonster(section, idx) {
+      if (storageSelectedSection === null) {
+        if (section === 'storage' || (section === 'party' && playerStats.party[idx])) { storageSelectedSection = section; storageSelectedIndex = idx; }
       } else {
-        if (pcSelectedSection === section && pcSelectedIndex === idx) { pcSelectedSection = null; pcSelectedIndex = null; }
+        if (storageSelectedSection === section && storageSelectedIndex === idx) { storageSelectedSection = null; storageSelectedIndex = null; }
         else {
-          const listA = pcSelectedSection === 'party' ? playerStats.party : playerStats.storage; const listB = section === 'party' ? playerStats.party : playerStats.storage;
-          const mA = listA[pcSelectedIndex]; const mB = listB[idx];
-          listA[pcSelectedIndex] = mB; listB[idx] = mA;
+          const listA = storageSelectedSection === 'party' ? playerStats.party : playerStats.storage; const listB = section === 'party' ? playerStats.party : playerStats.storage;
+          const mA = listA[storageSelectedIndex]; const mB = listB[idx];
+          listA[storageSelectedIndex] = mB; listB[idx] = mA;
           playerStats.party = playerStats.party.filter(m => m !== undefined && m !== null);
           playerStats.storage = playerStats.storage.filter(m => m !== undefined && m !== null);
           if (playerStats.party.length === 0 && playerStats.storage.length > 0) playerStats.party.push(playerStats.storage.shift());
           if (playerStats.party.length > 4) playerStats.storage.push(playerStats.party.pop());
           playerStats.storage.forEach(sm => { if(sm) { sm.hp = sm.maxHp; sm.mp = sm.maxMp; } });
-          pcSelectedSection = null; pcSelectedIndex = null;
+          storageSelectedSection = null; storageSelectedIndex = null;
         }
       }
-      renderPC(); updateHud();
+      renderMonsterStorage(); updateHud();
     }
-    function closePC() { document.getElementById('pc-interface').style.display = 'none'; dialogActive = false; }
-    function sellMonsterFromPC(section, idx) {
+    function closeSafePointInterface() { document.getElementById('safe-point-interface').style.display = 'none'; dialogActive = false; }
+    function sellMonsterFromStorage(section, idx) {
       const list = section === 'party' ? playerStats.party : playerStats.storage;
       const m = list[idx];
       if (!m) return;
       if (playerStats.party.length + playerStats.storage.length <= 1) {
-        alert("You cannot sell your last monster!");
+        alert("You cannot release your last monster!");
         return;
       }
       const price = Math.floor(m.lvl * (1 / (m.captureRate || 1)) * 2);
-      if (confirm(`Sell ${m.name} for ${price}G?`)) {
+      if (confirm(`Release ${m.name} to the wild for a reward of ${price}G?`)) {
         playerStats.gold += price;
         list.splice(idx, 1);
-        pcSelectedSection = null;
-        pcSelectedIndex = null;
+        storageSelectedSection = null;
+        storageSelectedIndex = null;
         if (playerStats.party.length === 0 && playerStats.storage.length > 0) playerStats.party.push(playerStats.storage.shift());
-        renderPC();
+        renderMonsterStorage();
         updateHud();
       }
     }
@@ -893,17 +891,12 @@
     function triggerNpc(npc) {
       if (npc.type === 'dialog') showDialog(npc.text);
       else if (npc.type === 'merchant') openShop(npc.items);
-      else if (npc.type === 'pc') {
-        playerStats.lastHealLocation = { x: player.x, y: player.y, mapId: currentMapId };
-        openPCMenu();
+      else if (npc.type === 'safe_point') {
+        playerStats.lastSafePointLocation = { x: player.x, y: player.y, mapId: currentMapId };
+        openSafePointMenu();
       }
       else if (npc.type === 'boss') startBossBattle(npc);
-      else if (npc.type === 'healer') {
-        playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
-        playerStats.lastHealLocation = { x: player.x, y: player.y, mapId: currentMapId };
-        updateHud();
-        showDialog(npc.text);
-      } else if (npc.type === 'item') {
+      else if (npc.type === 'item') {
         let msg = "You found: ";
         npc.items.forEach(item => {
           const existing = playerStats.inventory.find(i => i.name === item.name);
@@ -940,7 +933,7 @@
       playerStats.storage = data.playerStats.storage || [];
       playerStats.gold = data.playerStats.gold;
       playerStats.inventory = data.playerStats.inventory;
-      playerStats.lastHealLocation = data.playerStats.lastHealLocation || null;
+      playerStats.lastSafePointLocation = data.playerStats.lastSafePointLocation || null;
       playerStats.defeatedNpcIds = data.playerStats.defeatedNpcIds || [];
       
       playerStats.defeatedNpcIds.forEach(id => {
@@ -1349,7 +1342,7 @@
       playerStats.gold = Math.floor(playerStats.gold * 0.9);
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
       activeBossNpc = null;
-      const respawn = playerStats.lastHealLocation || { x: 52 * TILE_SIZE + 32, y: 30 * TILE_SIZE + 32, mapId: 'world' };
+      const respawn = playerStats.lastSafePointLocation || { x: 52 * TILE_SIZE + 32, y: 30 * TILE_SIZE + 32, mapId: 'world' };
       if (respawn.mapId && respawn.mapId !== currentMapId) {
         switchMap(respawn.mapId, Math.floor(respawn.x / TILE_SIZE), Math.floor(respawn.y / TILE_SIZE));
       }
@@ -1387,7 +1380,7 @@
     }
     function selectStarter(idx) {
       playerStats.party = [JSON.parse(JSON.stringify(STARTERS[idx]))];
-      playerStats.lastHealLocation = null;
+      playerStats.lastSafePointLocation = null;
       document.getElementById('starter-screen').style.display = 'none';
       updateHud();
     }
