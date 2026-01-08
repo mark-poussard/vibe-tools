@@ -283,22 +283,22 @@
       return Math.max(1, Math.floor(dmg - d.def));
     }
     const ENCOUNTER_ZONES = {
-      1: { name: 'Forest', encounters: [
+      1: [
         { weight: 0.4, enemies: [{ key: 'Leafy', lvl: [2, 5], equipment: {} }] },
         { weight: 0.3, enemies: [{ key: 'Sprout', lvl: [1, 4] }, { key: 'Sprout', lvl: [1, 4] }] },
         { weight: 0.3, enemies: [{ key: 'Rabbite', lvl: [3, 6] }] }
-      ]},
-      2: { name: 'Mountain', encounters: [
+      ],
+      2: [
         { weight: 0.4, enemies: [{ key: 'Cliff-Ram', lvl: [10, 14], equipment: { 'Head': 'Iron Helmet' } }] },
         { weight: 0.3, enemies: [{ key: 'Sky-Shredder', lvl: [12, 15] }, { key: 'Zephyros', lvl: [11, 13] }] },
         { weight: 0.3, enemies: [{ key: 'Rockogolem', lvl: [13, 16] }] }
-      ]},
-      3: { name: 'Desert', encounters: [
+      ],
+      3: [
         { weight: 0.3, enemies: [{ key: 'Sand-Stinger', lvl: [22, 28], equipment: { 'Hands': 'Power Bracers' } }] },
         { weight: 0.3, enemies: [{ key: 'Sun-Cactus', lvl: [20, 25] }, { key: 'Sun-Cactus', lvl: [20, 25] }] },
         { weight: 0.2, enemies: [{ key: 'Droid-X', lvl: [24, 30] }] },
         { weight: 0.2, enemies: [{ key: 'Mindbug', lvl: [25, 32] }] }
-      ]}
+      ]
     };
     function getExpRequired(lvl, growth) {
       const mult = growth === 'fast' ? 0.8 : (growth === 'slow' ? 1.2 : 1.0);
@@ -1083,10 +1083,10 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
-      const totalWeight = zone.encounters.reduce((s, e) => s + e.weight, 0);
+      const totalWeight = zone.reduce((s, e) => s + e.weight, 0);
       let rand = Math.random() * totalWeight;
-      let encounter = zone.encounters[0];
-      for (const e of zone.encounters) {
+      let encounter = zone[0];
+      for (const e of zone) {
         if (rand < e.weight) { encounter = e; break; }
         rand -= e.weight;
       }
@@ -1099,7 +1099,7 @@
       playerStats.party.forEach(p => p.ap = 0);
       activeActor = null; pendingAction = null; pendingSkillIdx = null;
       document.getElementById('battle-screen').style.display = 'flex';
-      nextTurn(`Wild monsters appeared in the ${zone.name}!`);
+      nextTurn(`Wild monsters appeared!`);
     }
 
     function startBossBattle(npc) {
