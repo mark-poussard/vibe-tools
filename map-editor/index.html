@@ -39,7 +39,7 @@
       <button id="tool-warp">Warps</button>
       <button id="tool-toggle-zones">View Zones</button>
       <button id="tool-toggle-warps">View Warps</button>
-      <button id="btn-settings">Settings</button>
+      <button id="btn-settings">Settings</button><button id="btn-manage-encounters">Encounters</button>
     </div>
     <div class="tool-section" id="map-select-section" style="display:none">
       <span class="label">Map</span>
@@ -79,7 +79,7 @@
       </div>
     </div>
   </div>
-  <div id="settings-modal" class="modal">
+  <div id="zones-modal" class="modal"><div class="modal-content" style="max-width: 500px; max-height: 85vh; overflow-y: auto;"><h2>Encounter Zones</h2><div class="form-group"><label>Zone ID</label><input type="number" id="edit-zone-id" value="1" min="1"></div><div id="encounters-list"></div><div class="modal-actions"><button id="btn-add-encounter" style="background: #10b981; border-color: #10b981;">Add Encounter</button><button id="btn-zones-close">Close</button></div></div></div><div id="settings-modal" class="modal">
     <div class="modal-content">
       <h2>GitHub Settings</h2>
       <div class="form-group">
@@ -135,11 +135,11 @@
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
     let showWarps = false;
-    let editingWarp = null;
+    let editingWarp = null; let encounterZones = {};
 
 function saveToStorage() {
       allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
-      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName }));
+      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones }));
     }
 
     function loadFromStorage() {
@@ -153,6 +153,7 @@ function saveToStorage() {
             mapData = allMaps[currentMapName].layout;
             zoneData = allMaps[currentMapName].encounters;
             warpData = allMaps[currentMapName].warps || [];
+            encounterZones = data.encounterZones || {};
             updateMapSelector();
           }
         } catch (e) { console.error("Failed to load map", e); }
@@ -186,6 +187,10 @@ function saveToStorage() {
       };
       document.getElementById('btn-settings').onclick = () => document.getElementById('settings-modal').classList.add('active');
       document.getElementById('btn-settings-close').onclick = () => document.getElementById('settings-modal').classList.remove('active');
+      document.getElementById('btn-manage-encounters').onclick = () => { document.getElementById('zones-modal').classList.add('active'); refreshEncountersUI(); };
+      document.getElementById('btn-zones-close').onclick = () => document.getElementById('zones-modal').classList.remove('active');
+      document.getElementById('btn-add-encounter').onclick = () => window.addEncounter(document.getElementById('edit-zone-id').value);
+      document.getElementById('edit-zone-id').onchange = refreshEncountersUI;
       document.getElementById('btn-gh-import').onclick = importFromGitHub;
       document.getElementById('btn-gh-export').onclick = exportToGitHub;
       document.getElementById('btn-warp-save').onclick = saveWarp;
@@ -313,6 +318,8 @@ function saveToStorage() {
         const match = content.match(/(?:const|let|var)\s+MAP_DATA\s*=\s*({[\s\S]*?});/);
         if (!match) throw new Error("MAP_DATA not found in file");
         const parsed = new Function(`return ${match[1]}`)();
+        const matchZones = content.match(/(?:const|let|var)\s+ENCOUNTER_ZONES\s*=\s*({[\s\S]*?});/);
+        if (matchZones) encounterZones = new Function(`return ${matchZones[1]}`)();
         allMaps = parsed;
         currentMapName = Object.keys(allMaps)[0];
         mapData = allMaps[currentMapName].layout;
@@ -346,6 +353,7 @@ function saveToStorage() {
         const content = decodeURIComponent(escape(atob(fileData.content)));
         const sha = fileData.sha;
         const regex = /((?:const|let|var)\s+MAP_DATA\s*=\s*)({[\s\S]*?});/;
+        const regexZones = /((?:const|let|var)\s+ENCOUNTER_ZONES\s*=\s*)({[\s\S]*?});/;
         const match = content.match(regex);
         let remoteMaps = {};
         if (match) {
@@ -362,7 +370,8 @@ function saveToStorage() {
           };
         });
         const jsonStr = JSON.stringify(mergedMaps);
-        const newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
+        let newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
+        newContent = newContent.replace(regexZones, (m, p1, p2) => p1 + JSON.stringify(encounterZones) + ";");
         const updateRes = await fetch(url, {
           method: 'PUT',
           headers,
@@ -469,6 +478,30 @@ function saveToStorage() {
       }
       ctx.restore();
       requestAnimationFrame(render);
+    }
+    window.addEncounter = (zid) => { if(!encounterZones[zid]) encounterZones[zid]=[]; encounterZones[zid].push({weight:0.1, ennemies:[]}); saveToStorage(); refreshEncountersUI(); };
+    window.removeEncounter = (zid, idx) => { encounterZones[zid].splice(idx,1); saveToStorage(); refreshEncountersUI(); };
+    window.addEnemy = (zid, encIdx) => { encounterZones[zid][encIdx].ennemies.push({key:'slime', lvl:[1,5]}); saveToStorage(); refreshEncountersUI(); };
+    window.removeEnemy = (zid, encIdx, enIdx) => { encounterZones[zid][encIdx].ennemies.splice(enIdx,1); saveToStorage(); refreshEncountersUI(); };
+    window.updateEncValue = (zid, encIdx, k, v) => { encounterZones[zid][encIdx][k] = k==='weight'?parseFloat(v):v; saveToStorage(); };
+    window.updateEnemyValue = (zid, encIdx, enIdx, k, si, v) => { if(k==='lvl') encounterZones[zid][encIdx].ennemies[enIdx].lvl[si]=parseInt(v); else encounterZones[zid][encIdx].ennemies[enIdx][k]=v; saveToStorage(); };
+    function refreshEncountersUI() {
+      const zid = document.getElementById('edit-zone-id').value;
+      const list = document.getElementById('encounters-list');
+      list.innerHTML = '';
+      if(!encounterZones[zid]) return;
+      encounterZones[zid].forEach((enc, encIdx) => {
+        const div = document.createElement('div');
+        div.style = "background:#334155; padding:10px; margin-bottom:10px; border-radius:4px; border:1px solid #475569";
+        div.innerHTML = `<div class="form-group"><label>Weight (0-1)</label><input type="number" step="0.1" value="${enc.weight}" onchange="window.updateEncValue('${zid}',${encIdx},'weight',this.value)"></div><div style="margin-bottom:8px"><span class="label">Enemies</span></div><div id="enemies-${encIdx}"></div><button onclick="window.addEnemy('${zid}',${encIdx})" style="padding:4px 8px; font-size:11px; background:#10b981; border-color:#10b981; margin-top:5px; display:inline-block; width:auto">Add Enemy</button><button onclick="window.removeEncounter('${zid}',${encIdx})" style="padding:4px 8px; font-size:11px; background:#ef4444; border-color:#ef4444; margin-top:5px; display:inline-block; width:auto">Delete Encounter</button>`;
+        list.appendChild(div);
+        const elist = div.querySelector(`#enemies-${encIdx}`);
+        enc.ennemies.forEach((en, enIdx) => {
+          const row = document.createElement('div'); row.style = "display:flex; gap:4px; margin-bottom:4px;";
+          row.innerHTML = `<input type="text" value="${en.key}" placeholder="key" style="flex:2; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'key',0,this.value)"><input type="number" value="${en.lvl[0]}" placeholder="min" style="flex:1; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'lvl',0,this.value)"><input type="number" value="${en.lvl[1]}" placeholder="max" style="flex:1; padding:4px; font-size:11px" onchange="window.updateEnemyValue('${zid}',${encIdx},${enIdx},'lvl',1,this.value)"><button onclick="window.removeEnemy('${zid}',${encIdx},${enIdx})" style="padding:4px 8px; background:#ef4444; border-color:#ef4444">×</button>`;
+          elist.appendChild(row);
+        });
+      });
     }
     init();
   </script>
