@@ -36,7 +36,9 @@
       <button id="tool-pan">Pan</button>
       <button id="tool-pen">Tiles</button>
       <button id="tool-zone">Zones</button>
+      <button id="tool-warp">Warps</button>
       <button id="tool-toggle-zones">View Zones</button>
+      <button id="tool-toggle-warps">View Warps</button>
       <button id="btn-settings">Settings</button>
     </div>
     <div class="tool-section" id="map-select-section" style="display:none">
@@ -55,6 +57,28 @@
     <canvas id="editorCanvas"></canvas>
   </div>
   <div id="status">X: 0, Y: 0</div>
+  <div id="warp-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="warp-modal-title">Edit Warp</h2>
+      <div class="form-group">
+        <label>Destination Map</label>
+        <select id="warp-dest-map"></select>
+      </div>
+      <div class="form-group">
+        <label>Destination X</label>
+        <input type="number" id="warp-dest-x">
+      </div>
+      <div class="form-group">
+        <label>Destination Y</label>
+        <input type="number" id="warp-dest-y">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-warp-delete" style="background: #ef4444; border-color: #ef4444;">Delete</button>
+        <button id="btn-warp-save" style="background: #2563eb; border-color: #2563eb;">Save</button>
+        <button id="btn-warp-close">Close</button>
+      </div>
+    </div>
+  </div>
   <div id="settings-modal" class="modal">
     <div class="modal-content">
       <h2>GitHub Settings</h2>
@@ -98,10 +122,11 @@
       'W': { type: 'water', color: '#3498db' },
       'b': { type: 'boulder', color: '#475569' }
     };
-    let allMaps = { 'default': { layout: Array.from({ length: DEFAULT_SIZE }, () => ' '.repeat(DEFAULT_SIZE)), encounters: Array.from({ length: DEFAULT_SIZE }, () => Array(DEFAULT_SIZE).fill(0)) } };
+    let allMaps = { 'default': { layout: Array.from({ length: DEFAULT_SIZE }, () => ' '.repeat(DEFAULT_SIZE)), encounters: Array.from({ length: DEFAULT_SIZE }, () => Array(DEFAULT_SIZE).fill(0)), warps: [] } };
     let currentMapName = 'default';
     let mapData = allMaps['default'].layout;
     let zoneData = allMaps['default'].encounters;
+    let warpData = allMaps['default'].warps || [];
     let cam = { x: 50, y: 50 };
     let mode = 'pen';
     let brush = ' ';
@@ -109,9 +134,11 @@
     let isDown = false;
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
+    let showWarps = false;
+    let editingWarp = null;
 
 function saveToStorage() {
-      allMaps[currentMapName] = { layout: mapData, encounters: zoneData };
+      allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
       localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName }));
     }
 
@@ -125,6 +152,7 @@ function saveToStorage() {
             currentMapName = data.currentMapName || Object.keys(allMaps)[0];
             mapData = allMaps[currentMapName].layout;
             zoneData = allMaps[currentMapName].encounters;
+            warpData = allMaps[currentMapName].warps || [];
             updateMapSelector();
           }
         } catch (e) { console.error("Failed to load map", e); }
@@ -147,14 +175,22 @@ function saveToStorage() {
       document.getElementById('tool-pan').onclick = () => setMode('pan');
       document.getElementById('tool-pen').onclick = () => setMode('pen');
       document.getElementById('tool-zone').onclick = () => setMode('zone');
+      document.getElementById('tool-warp').onclick = () => setMode('warp');
       document.getElementById('tool-toggle-zones').onclick = () => {
         showZones = !showZones;
         document.getElementById('tool-toggle-zones').classList.toggle('active', showZones);
+      };
+      document.getElementById('tool-toggle-warps').onclick = () => {
+        showWarps = !showWarps;
+        document.getElementById('tool-toggle-warps').classList.toggle('active', showWarps);
       };
       document.getElementById('btn-settings').onclick = () => document.getElementById('settings-modal').classList.add('active');
       document.getElementById('btn-settings-close').onclick = () => document.getElementById('settings-modal').classList.remove('active');
       document.getElementById('btn-gh-import').onclick = importFromGitHub;
       document.getElementById('btn-gh-export').onclick = exportToGitHub;
+      document.getElementById('btn-warp-save').onclick = saveWarp;
+      document.getElementById('btn-warp-delete').onclick = deleteWarp;
+      document.getElementById('btn-warp-close').onclick = () => document.getElementById('warp-modal').classList.remove('active');
       document.getElementById('map-select').onchange = (e) => switchMap(e.target.value);
       document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
       window.addEventListener('resize', resize);
@@ -210,10 +246,50 @@ function saveToStorage() {
     }
 
     function switchMap(name) {
-      allMaps[currentMapName] = { layout: mapData, encounters: zoneData };
+      allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
       currentMapName = name;
       mapData = allMaps[name].layout;
       zoneData = allMaps[name].encounters;
+      warpData = allMaps[name].warps || [];
+    }
+
+    function openWarpModal(tx, ty) {
+      editingWarp = warpData.find(w => w.x === tx && w.y === ty);
+      document.getElementById('warp-modal-title').textContent = editingWarp ? 'Edit Warp' : 'New Warp';
+      const destSelect = document.getElementById('warp-dest-map');
+      destSelect.innerHTML = '';
+      Object.keys(allMaps).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = m;
+        destSelect.appendChild(opt);
+      });
+      if (editingWarp) {
+        destSelect.value = editingWarp.destMap;
+        document.getElementById('warp-dest-x').value = editingWarp.destX;
+        document.getElementById('warp-dest-y').value = editingWarp.destY;
+        document.getElementById('btn-warp-delete').style.display = 'block';
+      } else {
+        destSelect.value = currentMapName;
+        document.getElementById('warp-dest-x').value = tx;
+        document.getElementById('warp-dest-y').value = ty;
+        document.getElementById('btn-warp-delete').style.display = 'none';
+        editingWarp = { x: tx, y: ty };
+      }
+      document.getElementById('warp-modal').classList.add('active');
+    }
+
+    function saveWarp() {
+      const w = { x: editingWarp.x, y: editingWarp.y, destMap: document.getElementById('warp-dest-map').value, destX: parseInt(document.getElementById('warp-dest-x').value) || 0, destY: parseInt(document.getElementById('warp-dest-y').value) || 0 };
+      const idx = warpData.findIndex(ex => ex.x === w.x && ex.y === w.y);
+      if (idx !== -1) warpData[idx] = w; else warpData.push(w);
+      saveToStorage();
+      document.getElementById('warp-modal').classList.remove('active');
+    }
+
+    function deleteWarp() {
+      warpData = warpData.filter(w => !(w.x === editingWarp.x && w.y === editingWarp.y));
+      saveToStorage();
+      document.getElementById('warp-modal').classList.remove('active');
     }
 
     async function importFromGitHub() {
@@ -240,6 +316,7 @@ function saveToStorage() {
         currentMapName = Object.keys(allMaps)[0];
         mapData = allMaps[currentMapName].layout;
         zoneData = allMaps[currentMapName].encounters;
+        warpData = allMaps[currentMapName].warps || [];
         updateMapSelector();
         saveToStorage();
         document.getElementById('settings-modal').classList.remove('active');
@@ -274,7 +351,8 @@ function saveToStorage() {
           mergedMaps[key] = {
             ...remoteEntry,
             layout: allMaps[key].layout,
-            encounters: allMaps[key].encounters
+            encounters: allMaps[key].encounters,
+            warps: allMaps[key].warps || []
           };
         });
         const jsonStr = JSON.stringify(mergedMaps);
@@ -299,10 +377,11 @@ function saveToStorage() {
       document.getElementById('tool-pan').classList.toggle('active', mode === 'pan');
       document.getElementById('tool-pen').classList.toggle('active', mode === 'pen');
       document.getElementById('tool-zone').classList.toggle('active', mode === 'zone');
+      document.getElementById('tool-warp').classList.toggle('active', mode === 'warp');
       Array.from(palette.getElementsByTagName('button')).forEach(b => {
         b.classList.toggle('active', mode === 'pen' && b.dataset.char === brush);
       });
-      canvas.style.cursor = mode === 'pan' ? 'grab' : (mode === 'zone' ? 'cell' : 'crosshair');
+      canvas.style.cursor = mode === 'pan' ? 'grab' : (mode === 'zone' ? 'cell' : (mode === 'warp' ? 'alias' : 'crosshair'));
     }
 
     function resize() {
@@ -329,6 +408,9 @@ function saveToStorage() {
             zoneData[ty][tx] = activeZone;
             changed = true;
           }
+        } else if (mode === 'warp') {
+          isDown = false;
+          openWarpModal(tx, ty);
         }
         if (changed) saveToStorage();
       }
@@ -364,6 +446,20 @@ function saveToStorage() {
           ctx.strokeStyle = 'rgba(0,0,0,0.1)';
           ctx.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
+      }
+      if (showWarps || mode === 'warp') {
+        warpData.forEach(w => {
+          if (w.x >= vX0 && w.x < vX1 && w.y >= vY0 && w.y < vY1) {
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.arc(w.x * TILE_SIZE + TILE_SIZE/2, w.y * TILE_SIZE + TILE_SIZE/2, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+          }
+        });
       }
       ctx.restore();
       requestAnimationFrame(render);
