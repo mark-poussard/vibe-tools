@@ -3,9 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>puissance4</title>
+  <title>Connect 4</title>
+  <style>
+    :root { --bg-color: #2c3e50; --empty-cell: #ecf0f1; --player1: #e74c3c; --player2: #f1c40f; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f4f7f6; color: #333; }
+    #game-container { text-align: center; }
+    #board { display: grid; grid-template-columns: repeat(7, 60px); grid-gap: 10px; background-color: var(--bg-color); padding: 12px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin: 20px auto; }
+    .cell { width: 60px; height: 60px; background-color: var(--empty-cell); border-radius: 50%; cursor: pointer; transition: background 0.3s ease; }
+    .cell.p1 { background-color: var(--player1); }
+    .cell.p2 { background-color: var(--player2); }
+    #status { font-size: 28px; font-weight: bold; height: 40px; margin-bottom: 10px; }
+    button { padding: 12px 24px; font-size: 16px; font-weight: 600; color: white; background-color: #2c3e50; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+    button:hover { background-color: #34495e; }
+  </style>
 </head>
 <body>
-  <h1>puissance4</h1>
+  <div id="game-container">
+    <h1>Connect 4</h1>
+    <div id="status">Red's Turn</div>
+    <div id="board"></div>
+    <button onclick="resetGame()">New Game</button>
+  </div>
+  <script>
+    const ROWS = 6, COLS = 7;
+    let board = [], currentPlayer = 1, gameActive = true;
+    function initBoard() {
+      const boardDiv = document.getElementById('board');
+      boardDiv.innerHTML = '';
+      board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.id = `c-${r}-${c}`;
+          cell.onclick = () => handleMove(c);
+          boardDiv.appendChild(cell);
+        }
+      }
+    }
+    function handleMove(c) {
+      if (!gameActive) return;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][c] === 0) {
+          board[r][c] = currentPlayer;
+          document.getElementById(`c-${r}-${c}`).classList.add(currentPlayer === 1 ? 'p1' : 'p2');
+          if (checkWin(r, c)) {
+            gameActive = false;
+            document.getElementById('status').innerText = (currentPlayer === 1 ? 'Red' : 'Yellow') + ' Wins!';
+          } else if (board.flat().every(v => v !== 0)) {
+            gameActive = false;
+            document.getElementById('status').innerText = "It's a Draw!";
+          } else {
+            currentPlayer = 3 - currentPlayer;
+            document.getElementById('status').innerText = (currentPlayer === 1 ? "Red's Turn" : "Yellow's Turn");
+          }
+          return;
+        }
+      }
+    }
+    function checkWin(r, c) {
+      const directions = [[0,1], [1,0], [1,1], [1,-1]];
+      for (let [dr, dc] of directions) {
+        let count = 1;
+        for (let step of [-1, 1]) {
+          let nr = r + dr * step, nc = c + dc * step;
+          while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && board[nr][nc] === currentPlayer) {
+            count++; nr += dr * step; nc += dc * step;
+          }
+        }
+        if (count >= 4) return true;
+      }
+      return false;
+    }
+    function resetGame() {
+      currentPlayer = 1; gameActive = true;
+      document.getElementById('status').innerText = "Red's Turn";
+      initBoard();
+    }
+    initBoard();
+  </script>
 </body>
 </html>
