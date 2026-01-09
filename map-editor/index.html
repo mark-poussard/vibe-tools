@@ -296,6 +296,7 @@ function saveToStorage() {
       mapData = allMaps[name].layout;
       zoneData = allMaps[name].encounters;
       warpData = allMaps[name].warps || [];
+      cam.x = 0; cam.y = 0;
     }
 
     function openWarpModal(tx, ty) {
