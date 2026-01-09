@@ -103,7 +103,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label>Data (JSON)</label>
+        <label>NPC Data (JS)</label>
         <textarea id="npc-json" style="width:100%; height:150px; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; font-family:monospace; padding:8px; box-sizing:border-box; outline:none;"></textarea>
       </div>
       <div class="modal-actions">
@@ -183,7 +183,7 @@
     </div>
   </div>
   <script>
-    const canvas = document.getElementById('editorCanvas');
+    function stringifyJS(obj, indent = 0) {\n      const pad = '  '.repeat(indent);\n      if (Array.isArray(obj)) {\n        if (obj.length === 0) return '[]';\n        return '[\\n' + obj.map(v => '  ' + pad + stringifyJS(v, indent + 1)).join(',\\n') + '\\n' + pad + ']';\n      } else if (obj !== null && typeof obj === 'object') {\n        const keys = Object.keys(obj);\n        if (keys.length === 0) return '{}';\n        return '{\\n' + keys.map(k => '  ' + pad + JSON.stringify(k) + ': ' + (typeof obj[k] === 'function' ? obj[k].toString() : stringifyJS(obj[k], indent + 1))).join(',\\n') + '\\n' + pad + '}';\n      }\n      return JSON.stringify(obj);\n    }\n    const canvas = document.getElementById('editorCanvas');
     const ctx = canvas.getContext('2d');
     const palette = document.getElementById('palette');
     const status = document.getElementById('status');
@@ -216,7 +216,7 @@
 
 function saveToStorage() {
       allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
-      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones, monsterDb, npcLocations }));
+      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones, monsterDb, npcLocations: stringifyJS(npcLocations) }));
     }
 
     function loadFromStorage() {
@@ -231,7 +231,7 @@ function saveToStorage() {
             zoneData = allMaps[currentMapName].encounters;
             warpData = allMaps[currentMapName].warps || [];
             encounterZones = data.encounterZones || {}; monsterDb = data.monsterDb || {};
-            npcLocations = data.npcLocations || [];
+            npcLocations = (typeof data.npcLocations === 'string') ? (new Function("return " + data.npcLocations))() : (data.npcLocations || []);
             updateMapSelector();
           }
         } catch (e) { console.error("Failed to load map", e); }
@@ -461,7 +461,7 @@ function saveToStorage() {
         let newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
         newContent = newContent.replace(regexZones, (m, p1, p2) => p1 + JSON.stringify(encounterZones) + ";");
         const regexNpcs = /((?:const|let|var)\s+NPC_LOCATIONS\s*=\s*)(\[[\s\S]*?\]);/;
-        newContent = newContent.replace(regexNpcs, (m, p1, p2) => p1 + JSON.stringify(npcLocations) + ";");
+        newContent = newContent.replace(regexNpcs, (m, p1, p2) => p1 + stringifyJS(npcLocations) + ";");
         const updateRes = await fetch(url, {
           method: 'PUT',
           headers,
@@ -724,7 +724,7 @@ function saveToStorage() {
         document.getElementById('npc-map-id').value = npc.mapId;
         document.getElementById('npc-x').value = npc.x;
         document.getElementById('npc-y').value = npc.y;
-        document.getElementById('npc-json').value = JSON.stringify(npc, null, 2);
+        document.getElementById('npc-json').value = stringifyJS(npc);
         document.getElementById('btn-npc-delete').style.display = 'block';
       } else {
         document.getElementById('npc-modal-title').textContent = 'New NPC';
@@ -733,14 +733,14 @@ function saveToStorage() {
         document.getElementById('npc-map-id').value = currentMapName;
         document.getElementById('npc-x').value = tx;
         document.getElementById('npc-y').value = ty;
-        document.getElementById('npc-json').value = JSON.stringify(newNpc, null, 2);
+        document.getElementById('npc-json').value = stringifyJS(newNpc);
         document.getElementById('btn-npc-delete').style.display = 'none';
       }
       document.getElementById('npc-modal').classList.add('active');
     }
     function saveNpc() {
       try {
-        const data = JSON.parse(document.getElementById('npc-json').value);
+        const data = (new Function("return (" + document.getElementById('npc-json').value + ")"))();
         data.id = document.getElementById('npc-id').value;
         data.mapId = document.getElementById('npc-map-id').value;
         data.x = parseInt(document.getElementById('npc-x').value) || 0;
