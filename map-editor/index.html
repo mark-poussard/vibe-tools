@@ -37,8 +37,10 @@
       <button id="tool-pen">Tiles</button>
       <button id="tool-zone">Zones</button>
       <button id="tool-warp">Warps</button>
+      <button id="tool-npc">NPCs</button>
       <button id="tool-toggle-zones">View Zones</button>
       <button id="tool-toggle-warps">View Warps</button>
+      <button id="tool-toggle-npcs">View NPCs</button>
       <button id="btn-settings">Settings</button><button id="btn-manage-encounters">Encounters</button>
     </div>
     <div class="tool-section" id="map-select-section" style="display:none">
@@ -76,6 +78,38 @@
         <button id="btn-warp-delete" style="background: #ef4444; border-color: #ef4444;">Delete</button>
         <button id="btn-warp-save" style="background: #2563eb; border-color: #2563eb;">Save</button>
         <button id="btn-warp-close">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="npc-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <h2 id="npc-modal-title">Edit NPC</h2>
+      <div class="form-group">
+        <label>NPC ID</label>
+        <input type="text" id="npc-id">
+      </div>
+      <div class="form-group">
+        <label>Map ID</label>
+        <select id="npc-map-id"></select>
+      </div>
+      <div style="display:flex; gap:8px">
+        <div class="form-group" style="flex:1">
+          <label>X</label>
+          <input type="number" id="npc-x">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Y</label>
+          <input type="number" id="npc-y">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data (JSON)</label>
+        <textarea id="npc-json" style="width:100%; height:150px; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; font-family:monospace; padding:8px; box-sizing:border-box; outline:none;"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-npc-delete" style="background: #ef4444; border-color: #ef4444;">Delete</button>
+        <button id="btn-npc-save" style="background: #2563eb; border-color: #2563eb;">Save</button>
+        <button id="btn-npc-close">Close</button>
       </div>
     </div>
   </div>
@@ -178,11 +212,11 @@
     let lastPos = { x: 0, y: 0 };
     let showZones = false;
     let showWarps = false;
-    let editingWarp = null; let encounterZones = {}; let monsterDb = {};
+    let editingWarp = null; let encounterZones = {}; let monsterDb = {}; let npcLocations = []; let showNpcs = false; let editingNpcIdx = null;
 
 function saveToStorage() {
       allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
-      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones, monsterDb }));
+      localStorage.setItem('map_editor_save', JSON.stringify({ allMaps, currentMapName, encounterZones, monsterDb, npcLocations }));
     }
 
     function loadFromStorage() {
@@ -197,6 +231,7 @@ function saveToStorage() {
             zoneData = allMaps[currentMapName].encounters;
             warpData = allMaps[currentMapName].warps || [];
             encounterZones = data.encounterZones || {}; monsterDb = data.monsterDb || {};
+            npcLocations = data.npcLocations || [];
             updateMapSelector();
           }
         } catch (e) { console.error("Failed to load map", e); }
@@ -220,6 +255,7 @@ function saveToStorage() {
       document.getElementById('tool-pen').onclick = () => setMode('pen');
       document.getElementById('tool-zone').onclick = () => setMode('zone');
       document.getElementById('tool-warp').onclick = () => setMode('warp');
+      document.getElementById('tool-npc').onclick = () => setMode('npc');
       document.getElementById('tool-toggle-zones').onclick = () => {
         showZones = !showZones;
         document.getElementById('tool-toggle-zones').classList.toggle('active', showZones);
@@ -227,6 +263,10 @@ function saveToStorage() {
       document.getElementById('tool-toggle-warps').onclick = () => {
         showWarps = !showWarps;
         document.getElementById('tool-toggle-warps').classList.toggle('active', showWarps);
+      };
+      document.getElementById('tool-toggle-npcs').onclick = () => {
+        showNpcs = !showNpcs;
+        document.getElementById('tool-toggle-npcs').classList.toggle('active', showNpcs);
       };
       document.getElementById('btn-settings').onclick = () => document.getElementById('settings-modal').classList.add('active');
       document.getElementById('btn-settings-close').onclick = () => document.getElementById('settings-modal').classList.remove('active');
@@ -236,6 +276,9 @@ function saveToStorage() {
       document.getElementById('btn-warp-save').onclick = saveWarp;
       document.getElementById('btn-warp-delete').onclick = deleteWarp;
       document.getElementById('btn-warp-close').onclick = () => document.getElementById('warp-modal').classList.remove('active');
+      document.getElementById('btn-npc-save').onclick = saveNpc;
+      document.getElementById('btn-npc-delete').onclick = deleteNpc;
+      document.getElementById('btn-npc-close').onclick = () => document.getElementById('npc-modal').classList.remove('active');
       document.getElementById('map-select').onchange = (e) => switchMap(e.target.value);
       document.getElementById('zone-id').onchange = (e) => activeZone = parseInt(e.target.value) || 0;
       window.addEventListener('resize', resize);
@@ -360,7 +403,11 @@ function saveToStorage() {
         if (!match) throw new Error("MAP_DATA not found in file");
         const parsed = new Function(`return ${match[1]}`)();
         const matchZones = content.match(/(?:const|let|var)\s+ENCOUNTER_ZONES\s*=\s*({[\s\S]*?});/);
-        if (matchZones) encounterZones = new Function(`return ${matchZones[1]}`)(); const matchMonsters = content.match(/(?:const|let|var)\s+MONSTER_DB\s*=\s*({[\s\S]*?});/); if (matchMonsters) monsterDb = new Function("return " + matchMonsters[1])();
+        if (matchZones) encounterZones = new Function(`return ${matchZones[1]}`)();
+        const matchMonsters = content.match(/(?:const|let|var)\s+MONSTER_DB\s*=\s*({[\s\S]*?});/);
+        if (matchMonsters) monsterDb = new Function("return " + matchMonsters[1])();
+        const matchNpcs = content.match(/(?:const|let|var)\s+NPC_LOCATIONS\s*=\s*(\[[\s\S]*?\]);/);
+        if (matchNpcs) npcLocations = new Function(`return ${matchNpcs[1]}`)();
         allMaps = parsed;
         currentMapName = Object.keys(allMaps)[0];
         mapData = allMaps[currentMapName].layout;
@@ -413,6 +460,8 @@ function saveToStorage() {
         const jsonStr = JSON.stringify(mergedMaps);
         let newContent = content.replace(regex, (m, p1, p2) => p1 + jsonStr + ";");
         newContent = newContent.replace(regexZones, (m, p1, p2) => p1 + JSON.stringify(encounterZones) + ";");
+        const regexNpcs = /((?:const|let|var)\s+NPC_LOCATIONS\s*=\s*)(\[[\s\S]*?\]);/;
+        newContent = newContent.replace(regexNpcs, (m, p1, p2) => p1 + JSON.stringify(npcLocations) + ";");
         const updateRes = await fetch(url, {
           method: 'PUT',
           headers,
@@ -434,10 +483,11 @@ function saveToStorage() {
       document.getElementById('tool-pen').classList.toggle('active', mode === 'pen');
       document.getElementById('tool-zone').classList.toggle('active', mode === 'zone');
       document.getElementById('tool-warp').classList.toggle('active', mode === 'warp');
+      document.getElementById('tool-npc').classList.toggle('active', mode === 'npc');
       Array.from(palette.getElementsByTagName('button')).forEach(b => {
         b.classList.toggle('active', mode === 'pen' && b.dataset.char === brush);
       });
-      canvas.style.cursor = mode === 'pan' ? 'grab' : (mode === 'zone' ? 'cell' : (mode === 'warp' ? 'alias' : 'crosshair'));
+      canvas.style.cursor = mode === 'pan' ? 'grab' : (mode === 'zone' ? 'cell' : (mode === 'warp' ? 'alias' : (mode === 'npc' ? 'pointer' : 'crosshair')));
     }
 
     function resize() {
@@ -467,6 +517,9 @@ function saveToStorage() {
         } else if (mode === 'warp') {
           isDown = false;
           openWarpModal(tx, ty);
+        } else if (mode === 'npc') {
+          isDown = false;
+          openNpcModal(tx, ty);
         }
         if (changed) saveToStorage();
       }
@@ -514,6 +567,27 @@ function saveToStorage() {
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.lineWidth = 1;
+          }
+        });
+      }
+      if (showNpcs || mode === 'npc') {
+        npcLocations.forEach(n => {
+          if (n.mapId === currentMapName && n.x >= vX0 && n.x < vX1 && n.y >= vY0 && n.y < vY1) {
+            ctx.fillStyle = '#a855f7';
+            ctx.beginPath();
+            ctx.moveTo(n.x * TILE_SIZE + TILE_SIZE / 2, n.y * TILE_SIZE + 4);
+            ctx.lineTo(n.x * TILE_SIZE + TILE_SIZE - 4, n.y * TILE_SIZE + TILE_SIZE - 4);
+            ctx.lineTo(n.x * TILE_SIZE + 4, n.y * TILE_SIZE + TILE_SIZE - 4);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(n.id.substring(0, 5), n.x * TILE_SIZE + TILE_SIZE / 2, n.y * TILE_SIZE + TILE_SIZE + 10);
           }
         });
       }
@@ -633,6 +707,57 @@ function saveToStorage() {
       saveToStorage();
       window.openModal2(window.currentZoneId);
     };
+
+    function openNpcModal(tx, ty) {
+      editingNpcIdx = npcLocations.findIndex(n => n.mapId === currentMapName && n.x === tx && n.y === ty);
+      const npc = editingNpcIdx !== -1 ? npcLocations[editingNpcIdx] : null;
+      const destSelect = document.getElementById('npc-map-id');
+      destSelect.innerHTML = '';
+      Object.keys(allMaps).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = m;
+        destSelect.appendChild(opt);
+      });
+      if (npc) {
+        document.getElementById('npc-modal-title').textContent = 'Edit NPC';
+        document.getElementById('npc-id').value = npc.id;
+        document.getElementById('npc-map-id').value = npc.mapId;
+        document.getElementById('npc-x').value = npc.x;
+        document.getElementById('npc-y').value = npc.y;
+        document.getElementById('npc-json').value = JSON.stringify(npc, null, 2);
+        document.getElementById('btn-npc-delete').style.display = 'block';
+      } else {
+        document.getElementById('npc-modal-title').textContent = 'New NPC';
+        const newNpc = { id: 'npc_' + Math.random().toString(36).substr(2, 5), x: tx, y: ty, mapId: currentMapName };
+        document.getElementById('npc-id').value = newNpc.id;
+        document.getElementById('npc-map-id').value = currentMapName;
+        document.getElementById('npc-x').value = tx;
+        document.getElementById('npc-y').value = ty;
+        document.getElementById('npc-json').value = JSON.stringify(newNpc, null, 2);
+        document.getElementById('btn-npc-delete').style.display = 'none';
+      }
+      document.getElementById('npc-modal').classList.add('active');
+    }
+    function saveNpc() {
+      try {
+        const data = JSON.parse(document.getElementById('npc-json').value);
+        data.id = document.getElementById('npc-id').value;
+        data.mapId = document.getElementById('npc-map-id').value;
+        data.x = parseInt(document.getElementById('npc-x').value) || 0;
+        data.y = parseInt(document.getElementById('npc-y').value) || 0;
+        if (editingNpcIdx !== -1) npcLocations[editingNpcIdx] = data;
+        else npcLocations.push(data);
+        saveToStorage();
+        document.getElementById('npc-modal').classList.remove('active');
+      } catch (e) { alert("Invalid JSON: " + e.message); }
+    }
+    function deleteNpc() {
+      if (editingNpcIdx !== -1) {
+        npcLocations.splice(editingNpcIdx, 1);
+        saveToStorage();
+      }
+      document.getElementById('npc-modal').classList.remove('active');
+    }
     init();
   </script>
 </body>
