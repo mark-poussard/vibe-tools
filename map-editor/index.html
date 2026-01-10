@@ -214,7 +214,13 @@
     let showWarps = false;
     let editingWarp = null; let encounterZones = {}; let monsterDb = {}; let npcLocations = []; let showNpcs = false; let editingNpcIdx = null;
 
-function toJS(obj) { const placeholders = []; const json = JSON.stringify(obj, (k, v) => { if (typeof v === 'function') { placeholders.push(v.toString()); return '__FUNC_PLACEHOLDER_' + (placeholders.length - 1) + '__'; } return v; }, 2); return json.replace(/\"__FUNC_PLACEHOLDER_(\d+)__\"/g, (m, id) => placeholders[parseInt(id)]); } function saveToStorage() {
+    function toJS(obj) { 
+      const placeholders = []; 
+      const json = JSON.stringify(obj, (k, v) => { if (typeof v === 'function') { placeholders.push(v.toString()); return '__FUNC_PLACEHOLDER_' + (placeholders.length - 1) + '__'; } return v; }, 2); 
+      return json.replace(/\"__FUNC_PLACEHOLDER_(\d+)__\"/g, (m, id) => placeholders[parseInt(id)]); 
+    }
+
+    function saveToStorage() {
       allMaps[currentMapName] = { layout: mapData, encounters: zoneData, warps: warpData };
       localStorage.setItem('map_editor_save', toJS({ allMaps, currentMapName, encounterZones, monsterDb, npcLocations }));
     }
