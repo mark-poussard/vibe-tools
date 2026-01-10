@@ -714,6 +714,7 @@
                 <div class="modal-header" id="project-settings-title">Project Settings</div>
                 <div class="modal-actions" style="flex-direction: column; gap: 10px;">
                     <button type="button" class="btn" style="background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary)" onclick="App.confirmDuplicate(App.state.selectedProject)">👯 Duplicate Project</button>
+                    <button type="button" class="btn" style="background: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-primary)" onclick="App.clearProjectHistory(App.state.selectedProject)">🧹 Clear Chat History</button>
                     <button type="button" class="btn" style="background-color: var(--danger-color); color: white;" onclick="App.confirmDelete(App.state.selectedProject)">🗑️ Delete Project</button>
                     <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary); margin-top: 10px;" onclick="App.closeModals()">Cancel</button>
                 </div>
@@ -1187,6 +1188,16 @@
                 } catch (e) { this.showToast("Duplication failed: " + e.message); } finally { btn.textContent = originalText; btn.disabled = false; }
             },
             confirmDelete(name) { this.closeModals(); this.state.projectToDelete = name; this.openModal('modal-delete-confirm'); },
+            clearProjectHistory(name) {
+                if (this.state.projectHistory[name]) {
+                    delete this.state.projectHistory[name];
+                    localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
+                    this.showToast("Project chat history cleared.");
+                } else {
+                    this.showToast("No local history found for this project.");
+                }
+                this.closeModals();
+            },
             async deleteProject() {
                 const btn = document.getElementById('btn-confirm-delete');
                 const originalText = btn.textContent; try {
@@ -1207,6 +1218,10 @@
                     };
                     
                     await deleteRecursive(projectName);
+                    if (this.state.projectHistory[projectName]) {
+                        delete this.state.projectHistory[projectName];
+                        localStorage.setItem(this.STORAGE_KEY_HISTORY, JSON.stringify(this.state.projectHistory));
+                    }
                     this.state.projects = this.state.projects.filter(p => p.name !== projectName);
                     this.renderProjects();
                     this.closeModals(); this.showToast("Project deleted.");
