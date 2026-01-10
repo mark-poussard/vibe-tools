@@ -396,7 +396,7 @@ function toJS(obj) { const placeholders = []; const json = JSON.stringify(obj, (
       const headers = token ? { 'Authorization': `token ${token}` } : {};
       try {
         const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(res.statusText);
+        if (!res.ok) throw new Error("Import failed : " + res.statusText);
         const data = await res.json();
         const content = atob(data.content);
         const match = content.match(/(?:const|let|var)\s+MAP_DATA\s*=\s*({[\s\S]*?});/);
@@ -417,7 +417,7 @@ function toJS(obj) { const placeholders = []; const json = JSON.stringify(obj, (
         saveToStorage();
         document.getElementById('settings-modal').classList.remove('active');
         alert("Imported " + Object.keys(allMaps).length + " maps");
-      } catch (e) { alert("Error: " + e.message); }
+      } catch (e) { alert("Error processing import: " + e.message); }
     }
 
     async function exportToGitHub() {
@@ -471,7 +471,7 @@ function toJS(obj) { const placeholders = []; const json = JSON.stringify(obj, (
             sha: sha
           })
         });
-        if (!updateRes.ok) throw new Error((await updateRes.json()).message || updateRes.statusText);
+        if (!updateRes.ok) throw new Error("Export failed" + (await updateRes.json()).message || updateRes.statusText);
         alert("Successfully exported to GitHub!");
         document.getElementById('settings-modal').classList.remove( 'active');
       } catch (e) { alert("Export Error: " + e.message); }
