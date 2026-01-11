@@ -96,7 +96,7 @@
 
     .family-row {
       display: grid;
-      grid-template-columns: 100px 1fr 1fr;
+      grid-template-columns: 1fr 100px 1fr;
       gap: 10px;
       align-items: center;
       margin-bottom: 10px;
@@ -108,6 +108,11 @@
       font-weight: bold;
       text-transform: uppercase;
       font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
 
     .influence-box {
@@ -376,11 +381,14 @@
 
     function selectCard(index) {
       if (gameState.players[gameState.currentPlayerIndex].isAI) return;
-      if (gameState.turnPhase === 'SELECT_CARD') {
+      if (gameState.selectedCardIndex === index) {
+        gameState.selectedCardIndex = null;
+        gameState.turnPhase = 'SELECT_CARD';
+      } else {
         gameState.selectedCardIndex = index;
         gameState.turnPhase = 'SELECT_TARGET';
-        render();
       }
+      render();
     }
 
     function placeCard(targetType, targetId = null, subTarget = null) {
@@ -437,21 +445,23 @@
         const statusText = standing === 1 ? 'GOOD' : (standing === -1 ? 'BAD' : 'NONE');
         
         const isTargetable = gameState.turnPhase === 'SELECT_TARGET' && !gameState.actionsDone.table && 
+                             gameState.hand[gameState.selectedCardIndex] && 
                              gameState.hand[gameState.selectedCardIndex].name === f.name;
 
         return `
           <div class="family-row">
+            <div class="influence-box ${isTargetable ? 'targetable' : ''}" onclick="placeCard('table', null, 'below')">
+              <span>BELOW</span>
+              <div class="influence-count">${gameState.table[f.name].below}</div>
+            </div>
             <div class="family-label">
-              ${f.icon} ${f.name}
+              <div style="font-size: 28px;">${f.icon}</div>
+              <div style="font-size: 9px; margin-top: -2px;">${f.name}</div>
               <div class="family-status ${statusClass}">${statusText}</div>
             </div>
             <div class="influence-box ${isTargetable ? 'targetable' : ''}" onclick="placeCard('table', null, 'above')">
               <span>ABOVE</span>
               <div class="influence-count">${gameState.table[f.name].above}</div>
-            </div>
-            <div class="influence-box ${isTargetable ? 'targetable' : ''}" onclick="placeCard('table', null, 'below')">
-              <span>BELOW</span>
-              <div class="influence-count">${gameState.table[f.name].below}</div>
             </div>
           </div>
         `;
@@ -465,6 +475,8 @@
         const canTarget = gameState.turnPhase === 'SELECT_TARGET' && 
                           ((isSelf && !gameState.actionsDone.self) || (isOther && !gameState.actionsDone.other));
         
+        const sortedArea = [...p.area].sort((a, b) => a.name.localeCompare(b.name));
+
         return `
           <div class="player-area ${canTarget ? 'active-target' : ''}" 
                onclick="placeCard('${isSelf ? 'self' : 'other'}', ${idx})">
@@ -473,7 +485,7 @@
               <span>Score: ${calculatePlayerScore(p)}</span>
             </div>
             <div class="cards-list">
-              ${p.area.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
             </div>
           </div>
         `;
@@ -508,15 +520,18 @@
 
       const sorted = [...gameState.players].sort((a, b) => calculatePlayerScore(b) - calculatePlayerScore(a));
       
-      const finalHtml = sorted.map((p, i) => `
-        <div class="player-area">
-          <h2>#${i+1} ${p.name}</h2>
-          <p>Final Score: ${calculatePlayerScore(p)}</p>
-          <div class="cards-list">
-            ${p.area.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+      const finalHtml = sorted.map((p, i) => {
+        const sortedArea = [...p.area].sort((a, b) => a.name.localeCompare(b.name));
+        return `
+          <div class="player-area">
+            <h2>#${i+1} ${p.name}</h2>
+            <p>Final Score: ${calculatePlayerScore(p)}</p>
+            <div class="cards-list">
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
       
       document.getElementById('final-scores').innerHTML = finalHtml;
     }
