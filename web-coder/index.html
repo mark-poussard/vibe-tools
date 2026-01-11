@@ -856,11 +856,10 @@
                     
                     <div class="chat-input-area">
                         <select id="model-select" class="model-selector">
-                            <option value="gemini-3-pro-preview">Gemini 3 Pro Preview</option>
-                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
-                            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini 2.0 Flash Lite</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                         </select>
                         <div style="display:flex; gap: 8px;">
                             <textarea id="ai-prompt" rows="2" placeholder="e.g., Change the background to blue..." style="resize:none;"></textarea>
@@ -980,19 +979,19 @@
         const GoogleAI = {
             baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 
-            // Define the schema for the Diff format
+            // Define the schema for the Diff format (using standard lowercase types)
             schema: {
-                type: "OBJECT",
+                type: "object",
                 properties: {
-                    commit_message: { type: "STRING" },
+                    commit_message: { type: "string" },
                     operations: {
-                        type: "ARRAY",
+                        type: "array",
                         items: {
-                            type: "OBJECT",
+                            type: "object",
                             properties: {
-                                type: { type: "STRING", enum: ["replace"] },
-                                search_string: { type: "STRING" },
-                                replacement_string: { type: "STRING" }
+                                type: { type: "string", enum: ["replace"] },
+                                search_string: { type: "string" },
+                                replacement_string: { type: "string" }
                             },
                             required: ["type", "search_string", "replacement_string"]
                         }
@@ -1050,13 +1049,23 @@
                 }
                 
                 const data = await response.json();
+                console.log("AI Raw Response:", data);
                 
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                    const reason = data.candidates?.[0]?.finishReason || "UNKNOWN";
+                    console.error("AI Response error: No content. Finish Reason:", reason);
+                    throw new Error(`AI returned no content (Reason: ${reason}). Check safety filters or quota.`);
+                }
+
                 try {
                     const text = data.candidates[0].content.parts[0].text;
-                    const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    console.log("AI Extracted Text:", text);
+                    // Improved JSON extraction to handle markdown blocks if present
+                    const jsonStr = text.replace(/^\s*/, '').replace(/\s*$/, '').trim();
                     return JSON.parse(jsonStr);
                 } catch (e) {
-                    throw new Error('Failed to parse AI response');
+                    console.error("AI Deserialization Error:", e, data.candidates[0].content.parts[0].text);
+                    throw new Error('Failed to parse AI response as valid project JSON: ' + e.message);
                 }
             }
         };
