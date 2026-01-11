@@ -164,6 +164,20 @@
       font-size: 20px;
       color: white;
       box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .crown {
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      font-size: 8px;
+    }
+
+    .hand-cards .card .crown {
+      font-size: 14px;
+      top: 2px;
+      left: 2px;
     }
 
     .card.selected {
@@ -296,7 +310,7 @@
       let deck = [];
       FAMILIES.forEach(f => {
         for (let i = 0; i < 15; i++) {
-          deck.push({ ...f });
+          deck.push({ ...f, isNoble: i < 2 });
         }
       });
       return deck.sort(() => Math.random() - 0.5);
@@ -347,10 +361,11 @@
       const perms = [[0,1,2], [0,2,1], [1,0,2], [1,2,0], [2,0,1], [2,1,0]];
       for (const p of perms) {
         const cS = hand[p[0]], cT = hand[p[1]], cO = hand[p[2]];
+        const wT = cT.isNoble ? 2 : 1;
         for (const side of ['above', 'below']) {
           for (let oIdx = 0; oIdx < gameState.players.length; oIdx++) {
             if (oIdx === pIdx) continue;
-            gameState.table[cT.name][side]++;
+            gameState.table[cT.name][side] += wT;
             gameState.players[pIdx].area.push(cS);
             gameState.players[oIdx].area.push(cO);
             const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
@@ -361,7 +376,7 @@
             }
             gameState.players[oIdx].area.pop();
             gameState.players[pIdx].area.pop();
-            gameState.table[cT.name][side]--;
+            gameState.table[cT.name][side] -= wT;
           }
         }
       }
@@ -399,11 +414,12 @@
     function executePlaceCard(targetType, targetId = null, subTarget = null) {
       if (gameState.turnPhase !== 'SELECT_TARGET' || gameState.selectedCardIndex === null) return;
       const card = gameState.hand[gameState.selectedCardIndex];
+      const weight = card.isNoble ? 2 : 1;
       if (targetType === 'self' && !gameState.actionsDone.self) {
         gameState.players[gameState.currentPlayerIndex].area.push(card);
         gameState.actionsDone.self = true;
       } else if (targetType === 'table' && !gameState.actionsDone.table) {
-        gameState.table[card.name][subTarget]++;
+        gameState.table[card.name][subTarget] += weight;
         gameState.actionsDone.table = true;
       } else if (targetType === 'other' && !gameState.actionsDone.other) {
         if (targetId === gameState.currentPlayerIndex) return;
@@ -430,7 +446,8 @@
 
     function calculatePlayerScore(player) {
       return player.area.reduce((score, card) => {
-        return score + getStanding(card.name);
+        const weight = card.isNoble ? 2 : 1;
+        return score + (weight * getStanding(card.name));
       }, 0);
     }
 
@@ -485,7 +502,7 @@
               <span>Score: ${calculatePlayerScore(p)}</span>
             </div>
             <div class="cards-list">
-              ${sortedArea.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.icon}</div>`).join('')}
             </div>
           </div>
         `;
@@ -495,7 +512,7 @@
       // Render Hand
       const handHtml = gameState.hand.map((c, i) => `
         <div class="card ${c.name} ${gameState.selectedCardIndex === i ? 'selected' : ''}" 
-             onclick="selectCard(${i})">${c.icon}</div>
+             onclick="selectCard(${i})">${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.icon}</div>
       `).join('');
       document.getElementById('player-hand').innerHTML = handHtml;
 
