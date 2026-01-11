@@ -185,6 +185,13 @@
       transform: scale(1.1);
     }
 
+    .card.targetable-destruct {
+      outline: 3px solid #ff4444 !important;
+      cursor: pointer;
+      box-shadow: 0 0 10px #ff4444;
+      z-index: 10;
+    }
+
     .Lions { background-color: var(--gold); }
     .Sharks { background-color: var(--blue); }
     .Spiders { background-color: var(--purple); }
@@ -276,6 +283,7 @@
     <div class="hand-overlay">
       <div class="instruction-text" id="game-instruction">Select a card from your hand</div>
       <div class="hand-cards" id="player-hand"></div>
+      <button id="skip-destruct-btn" class="hidden" onclick="skipDestruction()" style="background: #c62828; color: white;">Skip Destruction</button>
     </div>
   </div>
 
@@ -309,9 +317,9 @@
     function initDeck() {
       let deck = [];
       FAMILIES.forEach(f => {
-        for (let i = 0; i < 15; i++) {
-          deck.push({ ...f, isNoble: i < 2 });
-        }
+        for (let i = 0; i < 4; i++) deck.push({ ...f, isNoble: true, isAssassin: false });
+        for (let i = 0; i < 2; i++) deck.push({ ...f, isNoble: false, isAssassin: true });
+        for (let i = 0; i < 9; i++) deck.push({ ...f, isNoble: false, isAssassin: false });
       });
       return deck.sort(() => Math.random() - 0.5);
     }
@@ -332,7 +340,7 @@
       for (let i = 0; i < ais; i++) {
         gameState.players.push({ id: humans + i, name: `AI ${i + 1}`, area: [], isAI: true });
       }
-      FAMILIES.forEach(f => { gameState.table[f.name] = { above: 0, below: 0 }; });
+      FAMILIES.forEach(f => { gameState.table[f.name] = { above: [], below: [] }; });
       document.getElementById('screen-setup').classList.remove('active');
       document.getElementById('screen-game').classList.add('active');
       startTurn();
@@ -361,11 +369,10 @@
       const perms = [[0,1,2], [0,2,1], [1,0,2], [1,2,0], [2,0,1], [2,1,0]];
       for (const p of perms) {
         const cS = hand[p[0]], cT = hand[p[1]], cO = hand[p[2]];
-        const wT = cT.isNoble ? 2 : 1;
         for (const side of ['above', 'below']) {
           for (let oIdx = 0; oIdx < gameState.players.length; oIdx++) {
             if (oIdx === pIdx) continue;
-            gameState.table[cT.name][side] += wT;
+            gameState.table[cT.name][side].push(cT);
             gameState.players[pIdx].area.push(cS);
             gameState.players[oIdx].area.push(cO);
             const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
@@ -376,7 +383,7 @@
             }
             gameState.players[oIdx].area.pop();
             gameState.players[pIdx].area.pop();
-            gameState.table[cT.name][side] -= wT;
+            gameState.table[cT.name][side].pop();
           }
         }
       }
@@ -391,6 +398,10 @@
         render();
         await new Promise(r => setTimeout(r, 800));
         executePlaceCard(s.type, s.target, s.sub);
+        if (gameState.turnPhase === 'DESTRUCTION') {
+          await new Promise(r => setTimeout(r, 400));
+          skipDestruction();
+        }
       }
     }
 
@@ -414,40 +425,77 @@
     function executePlaceCard(targetType, targetId = null, subTarget = null) {
       if (gameState.turnPhase !== 'SELECT_TARGET' || gameState.selectedCardIndex === null) return;
       const card = gameState.hand[gameState.selectedCardIndex];
-      const weight = card.isNoble ? 2 : 1;
+      let destructContext = null;
       if (targetType === 'self' && !gameState.actionsDone.self) {
         gameState.players[gameState.currentPlayerIndex].area.push(card);
         gameState.actionsDone.self = true;
+        destructContext = { type: 'player', id: gameState.currentPlayerIndex };
       } else if (targetType === 'table' && !gameState.actionsDone.table) {
-        gameState.table[card.name][subTarget] += weight;
+        gameState.table[card.name][subTarget].push(card);
         gameState.actionsDone.table = true;
+        destructContext = { type: 'table' };
       } else if (targetType === 'other' && !gameState.actionsDone.other) {
         if (targetId === gameState.currentPlayerIndex) return;
         gameState.players[targetId].area.push(card);
         gameState.actionsDone.other = true;
+        destructContext = { type: 'player', id: targetId };
       } else return;
+
+      const playedCard = card;
       gameState.hand.splice(gameState.selectedCardIndex, 1);
       gameState.selectedCardIndex = null;
+
+      if (playedCard.isAssassin) {
+        gameState.turnPhase = 'DESTRUCTION';
+        gameState.destructContext = destructContext;
+        gameState.lastPlayedCard = playedCard;
+        render();
+      } else {
+        finishAction();
+      }
+    }
+
+    function handleDestruction(loc, id, sub, idx) {
+      if (gameState.turnPhase !== 'DESTRUCTION') return;
+      if (loc === 'player') {
+        gameState.players[id].area.splice(idx, 1);
+      } else if (loc === 'table') {
+        gameState.table[id][sub].splice(idx, 1);
+      }
+      finishAction();
+    }
+
+    function skipDestruction() {
+      if (gameState.turnPhase !== 'DESTRUCTION') return;
+      finishAction();
+    }
+
+    function finishAction() {
+      gameState.turnPhase = 'SELECT_CARD';
+      gameState.destructContext = null;
+      gameState.lastPlayedCard = null;
       if (gameState.actionsDone.self && gameState.actionsDone.table && gameState.actionsDone.other) {
         gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
         startTurn();
       } else {
-        gameState.turnPhase = 'SELECT_CARD';
         render();
       }
     }
 
+    function getWeight(card) { return card.isNoble ? 2 : 1; }
+
     function getStanding(familyName) {
       const f = gameState.table[familyName];
-      if (f.above > f.below) return 1;
-      if (f.above < f.below) return -1;
+      const above = f.above.reduce((sum, c) => sum + getWeight(c), 0);
+      const below = f.below.reduce((sum, c) => sum + getWeight(c), 0);
+      if (above > below) return 1;
+      if (above < below) return -1;
       return 0;
     }
 
     function calculatePlayerScore(player) {
       return player.area.reduce((score, card) => {
-        const weight = card.isNoble ? 2 : 1;
-        return score + (weight * getStanding(card.name));
+        return score + (getWeight(card) * getStanding(card.name));
       }, 0);
     }
 
@@ -460,25 +508,38 @@
         const standing = getStanding(f.name);
         const statusClass = standing === 1 ? 'status-good' : (standing === -1 ? 'status-bad' : 'status-neutral');
         const statusText = standing === 1 ? 'GOOD' : (standing === -1 ? 'BAD' : 'NONE');
-        
-        const isTargetable = gameState.turnPhase === 'SELECT_TARGET' && !gameState.actionsDone.table && 
+        const tState = gameState.table[f.name];
+        const isPlacing = gameState.turnPhase === 'SELECT_TARGET' && !gameState.actionsDone.table && 
                              gameState.hand[gameState.selectedCardIndex] && 
                              gameState.hand[gameState.selectedCardIndex].name === f.name;
 
+        const renderTableCards = (side) => {
+          return tState[side].map((c, idx) => {
+            const isDestructable = gameState.turnPhase === 'DESTRUCTION' && gameState.destructContext.type === 'table' && c !== gameState.lastPlayedCard;
+            return `<div class="card ${c.name} ${isDestructable ? 'targetable-destruct' : ''}" 
+                         style="width:22px; height:32px; font-size:14px; margin-bottom:2px;"
+                         onclick="event.stopPropagation(); if(${isDestructable}) handleDestruction('table', '${f.name}', '${side}', ${idx})">
+                      ${c.isNoble ? '👑' : (c.isAssassin ? '💀' : c.icon)}
+                    </div>`;
+          }).join('');
+        };
+
         return `
           <div class="family-row">
-            <div class="influence-box ${isTargetable ? 'targetable' : ''}" onclick="placeCard('table', null, 'below')">
+            <div class="influence-box ${isPlacing ? 'targetable' : ''}" onclick="placeCard('table', null, 'below')">
               <span>BELOW</span>
-              <div class="influence-count">${gameState.table[f.name].below}</div>
+              <div class="influence-count">${tState.below.reduce((s,c)=>s+getWeight(c),0)}</div>
+              <div class="cards-list" style="justify-content:center; gap:2px">${renderTableCards('below')}</div>
             </div>
             <div class="family-label">
               <div style="font-size: 28px;">${f.icon}</div>
               <div style="font-size: 9px; margin-top: -2px;">${f.name}</div>
               <div class="family-status ${statusClass}">${statusText}</div>
             </div>
-            <div class="influence-box ${isTargetable ? 'targetable' : ''}" onclick="placeCard('table', null, 'above')">
+            <div class="influence-box ${isPlacing ? 'targetable' : ''}" onclick="placeCard('table', null, 'above')">
               <span>ABOVE</span>
-              <div class="influence-count">${gameState.table[f.name].above}</div>
+              <div class="influence-count">${tState.above.reduce((s,c)=>s+getWeight(c),0)}</div>
+              <div class="cards-list" style="justify-content:center; gap:2px">${renderTableCards('above')}</div>
             </div>
           </div>
         `;
@@ -502,7 +563,16 @@
               <span>Score: ${calculatePlayerScore(p)}</span>
             </div>
             <div class="cards-list">
-              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.icon}</div>`).join('')}
+              ${p.area.map((c, cIdx) => {
+                const isDestructable = gameState.turnPhase === 'DESTRUCTION' && 
+                                   gameState.destructContext.type === 'player' && 
+                                   gameState.destructContext.id === idx &&
+                                   c !== gameState.lastPlayedCard;
+                return `<div class="card ${c.name} ${isDestructable ? 'targetable-destruct' : ''}" 
+                             onclick="event.stopPropagation(); if(${isDestructable}) handleDestruction('player', ${idx}, null, ${cIdx})">
+                          ${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.isAssassin ? '💀' : c.icon}
+                        </div>`;
+              }).join('')}
             </div>
           </div>
         `;
@@ -510,23 +580,29 @@
       document.getElementById('players-list').innerHTML = playersHtml;
 
       // Render Hand
-      const handHtml = gameState.hand.map((c, i) => `
+      const handHtml = (gameState.turnPhase === 'DESTRUCTION' ? [] : gameState.hand).map((c, i) => `
         <div class="card ${c.name} ${gameState.selectedCardIndex === i ? 'selected' : ''}" 
-             onclick="selectCard(${i})">${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.icon}</div>
+             onclick="selectCard(${i})">${c.isNoble ? '<div class="crown">👑</div>' : ''}${c.isAssassin ? '💀' : c.icon}</div>
       `).join('');
       document.getElementById('player-hand').innerHTML = handHtml;
 
       // Instruction
       let instruction = "";
+      const skipBtn = document.getElementById('skip-destruct-btn');
+      skipBtn.classList.add('hidden');
+
       if (gameState.turnPhase === 'SELECT_CARD') {
         instruction = "Select a card to play";
+      } else if (gameState.turnPhase === 'DESTRUCTION') {
+        instruction = "Assassin played! Choose a card to destroy (Optional)";
+        skipBtn.classList.remove('hidden');
       } else {
         const card = gameState.hand[gameState.selectedCardIndex];
         const options = [];
         if (!gameState.actionsDone.self) options.push("your area");
         if (!gameState.actionsDone.table) options.push(`Queen's table (${card.name})`);
         if (!gameState.actionsDone.other) options.push("another player's area");
-        instruction = `Place ${card.icon} in: ` + options.join(", ");
+        instruction = `Place ${card.isAssassin ? '💀' : card.icon} in: ` + options.join(", ");
       }
       document.getElementById('game-instruction').innerText = instruction;
     }
@@ -544,7 +620,7 @@
             <h2>#${i+1} ${p.name}</h2>
             <p>Final Score: ${calculatePlayerScore(p)}</p>
             <div class="cards-list">
-              ${sortedArea.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isNoble ? '👑' : (c.isAssassin ? '💀' : c.icon)}</div>`).join('')}
             </div>
           </div>
         `;
