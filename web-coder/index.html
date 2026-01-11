@@ -413,6 +413,30 @@
         /* Utilities */
         .hidden { display: none !important; }
 
+        .log-fab {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: rgba(30, 30, 30, 0.8);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 14px;
+            transition: transform 0.1s;
+        }
+        .log-fab:active { transform: scale(0.9); }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px solid #222; padding-bottom: 2px; word-break: break-all; }
+        .log-entry.error { color: var(--danger-color); }
+        .log-entry.warn { color: #fbbf24; }
+
         /* Floating Action Button */
         .fab {
             position: fixed;
@@ -844,6 +868,7 @@
 
                 <!-- Tab: AI Coder -->
                 <div id="tab-ai" class="tab-content active">
+                    <button id="btn-show-logs" class="log-fab" title="Show Logs">📋</button>
                     <div id="chat-history" class="chat-container">
                         <div class="message system">Welcome. Select a model and describe your changes.</div>
                     </div>
@@ -879,6 +904,19 @@
                 </div>
             </div>
         </section>
+
+        <!-- MODAL: Console Logs -->
+        <div id="modal-logs" class="modal-overlay">
+            <div class="modal-content" style="max-width: 90%; height: 80vh; display: flex; flex-direction: column;">
+                <div class="modal-header">Console Logs</div>
+                <div id="log-container" style="flex: 1; overflow-y: auto; background: #000; color: #0f0; font-family: monospace; font-size: 0.8rem; padding: 10px; border-radius: 4px; line-height: 1.4;">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" style="background:transparent; border:1px solid var(--border-color); color: var(--text-primary)" onclick="App.clearLogs()">Clear</button>
+                    <button type="button" class="btn btn-primary" onclick="App.closeModals()">Close</button>
+                </div>
+            </div>
+        </div>
 
         <!-- MODAL: Commit Changes -->
         <div id="modal-commit" class="modal-overlay">
@@ -1053,13 +1091,14 @@
                 projectToDelete: null, projectToDuplicate: null, selectedProject: null,
                 currentProject: null,
                 fileData: { content: '', sha: '', pendingContent: '', commitMsg: '', lastAiResponseJson: null },
-                isLoading: false
+                isLoading: false,
+                logs: []
             },
             
             STORAGE_KEY_CONFIG: 'webcoder_config',
             STORAGE_KEY_HISTORY: 'webcoder_history', STORAGE_KEY_PROJECTS: 'webcoder_projects',
 
-            init() { this.loadState(); this.router(); this.bindEvents(); },
+            init() { this.setupConsoleInterceptor(); this.loadState(); this.router(); this.bindEvents(); },
             loadState() {
                 const c = localStorage.getItem(this.STORAGE_KEY_CONFIG);
                 if(c) this.state.config = JSON.parse(c);
@@ -1802,6 +1841,10 @@
                 });
                 document.getElementById('btn-apply-selected').onclick = () => this.applySelectedChanges();
                 document.getElementById('btn-apply-manual').onclick = () => this.applyManualChange();
+                document.getElementById('btn-show-logs').onclick = () => {
+                    this.renderLogs();
+                    this.openModal('modal-logs');
+                };
 
                 document.getElementById('manual-line-search').addEventListener('input', (e) => {
                     this._scrolledToFirstMatch = false;
@@ -1855,6 +1898,38 @@
                     try { this.state.projects=JSON.parse(e.target.result); this.renderProjects(); this.saveProjects(); this.closeModals(); this.showToast("Imported"); }
                     catch(x){ this.showToast("Bad JSON");}
                 }; r.readAsText(f);
+            },
+            setupConsoleInterceptor() {
+                const originalLog = console.log;
+                const originalError = console.error;
+                const originalWarn = console.warn;
+                const add = (type, args) => {
+                    const msg = Array.from(args).map(arg => {
+                        try { return typeof arg === 'object' ? JSON.stringify(arg) : String(arg); }
+                        catch(e) { return String(arg); }
+                    }).join(' ');
+                    this.state.logs.push({ type, msg, time: new Date().toLocaleTimeString() });
+                    if (this.state.logs.length > 200) this.state.logs.shift();
+                };
+                console.log = (...args) => { originalLog.apply(console, args); add('log', args); };
+                console.error = (...args) => { originalError.apply(console, args); add('error', args); };
+                console.warn = (...args) => { originalWarn.apply(console, args); add('warn', args); };
+                window.onerror = (msg, url, line, col, error) => {
+                    add('error', [`Uncaught Error: ${msg} at ${line}:${col}`]);
+                    return false;
+                };
+            },
+            renderLogs() {
+                const container = document.getElementById('log-container');
+                if (!container) return;
+                container.innerHTML = this.state.logs.map(l => 
+                    `<div class="log-entry ${l.type}"><span style="color: #555; font-size: 0.7rem;">[${l.time}]</span> ${this.escapeHtml(l.msg)}</div>`
+                ).join('');
+                container.scrollTop = container.scrollHeight;
+            },
+            clearLogs() {
+                this.state.logs = [];
+                this.renderLogs();
             }
         };
 
