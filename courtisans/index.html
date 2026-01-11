@@ -419,19 +419,20 @@
         for (const side of ['above', 'below']) {
           for (let oIdx = 0; oIdx < gameState.players.length; oIdx++) {
             if (oIdx === pIdx) continue;
-            gameState.table[cT.name][side].push(cT);
+            const tableTarget = cT.isSpy ? (side === 'above' ? gameState.table.spiesAbove : gameState.table.spiesBelow) : gameState.table[cT.name][side];
+            tableTarget.push(cT);
             gameState.players[pIdx].area.push(cS);
             gameState.players[oIdx].area.push(cO);
-            const others = gameState.players.filter((_, i) => i !== pIdx).map(p => calculatePlayerScore(p, true));
+            const others = gameState.players.filter((_, i) => i !== pIdx).map(p => calculatePlayerScore(p));
             const maxOther = others.length ? Math.max(...others) : 0;
-            const score = calculatePlayerScore(gameState.players[pIdx], true) - maxOther;
+            const score = calculatePlayerScore(gameState.players[pIdx]) - maxOther;
             if (score > bestScore) {
               bestScore = score;
               bestMove = { cS, cT, cO, side, oIdx };
             }
             gameState.players[oIdx].area.pop();
             gameState.players[pIdx].area.pop();
-            gameState.table[cT.name][side].pop();
+            tableTarget.pop();
           }
         }
       }
@@ -611,6 +612,7 @@
 
     function calculatePlayerScore(player, includeSpies = false) {
       return player.area.reduce((score, card) => {
+        if (!includeSpies && card.isSpy) return score;
         const weight = card.isNoble ? 2 : 1;
         return score + (weight * getStanding(card.name, includeSpies));
       }, 0);
