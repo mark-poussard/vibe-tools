@@ -323,37 +323,72 @@
     let pendingSkillIdx = null;
 
     let NPC_LOCATIONS = [
-      { 
-        id: 'guide', x: 52, y: 34, mapId: 'world', type: 'dialog',
-        text: "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
-        draw: (c, x, y) => {
+  {
+    "id": "guide",
+    "x": 52,
+    "y": 34,
+    "mapId": "world",
+    "type": "dialog",
+    "text": "Hello! Follow the road west through the forest. You'll find a lake and the merchant there.",
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#4444ff'; c.beginPath(); c.roundRect(x - 12, y - 35, 24, 35, 5); c.fill();
           c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 40, 10, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#eab308'; c.beginPath(); c.ellipse(x, y - 45, 15, 5, 0, 0, Math.PI*2); c.fill();
           c.beginPath(); c.arc(x, y - 48, 6, Math.PI, 0); c.fill();
         }
-      },
-      { 
-        id: 'boss_cliffram', x: 18, y: 30, mapId: 'world', type: 'boss', monsterKey: 'Cliff-Ram', level: 12,
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "boss_cliffram",
+    "x": 18,
+    "y": 30,
+    "mapId": "world",
+    "type": "boss",
+    "monsterKey": "Cliff-Ram",
+    "level": 12,
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(x - 15, y - 25, 30, 25, 5); c.fill();
           c.strokeStyle = 'white'; c.lineWidth = 3; c.beginPath(); c.moveTo(x-10, y-25); c.quadraticCurveTo(x-15, y-35, x-20, y-25); c.moveTo(x+10, y-25); c.quadraticCurveTo(x+15, y-35, x+20, y-25); c.stroke();
         }
+  },
+  {
+    "id": "merchant",
+    "x": 12,
+    "y": 26,
+    "mapId": "world",
+    "type": "merchant",
+    "items": [
+      {
+        "key": "hp_potion",
+        "price": 15
       },
-      { 
-        id: 'merchant', x: 12, y: 26, mapId: 'world', type: 'merchant',
-        items: [
-          { key: 'hp_potion', price: 15 },
-          { key: 'mp_potion', price: 15 },
-          { key: 'monster_ball', price: 50 },
-          { key: 'iron_helmet', price: 80 },
-          { key: 'swift_sandals', price: 120 },
-          { key: 'power_bracers', price: 150 },
-          { key: 'obsidian_scales', price: 200 }
-        ],
-        draw: (c, x, y) => {
+      {
+        "key": "mp_potion",
+        "price": 15
+      },
+      {
+        "key": "monster_ball",
+        "price": 50
+      },
+      {
+        "key": "iron_helmet",
+        "price": 80
+      },
+      {
+        "key": "swift_sandals",
+        "price": 120
+      },
+      {
+        "key": "power_bracers",
+        "price": 150
+      },
+      {
+        "key": "obsidian_scales",
+        "price": 200
+      }
+    ],
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#78350f'; c.fillRect(x - 18, y - 35, 10, 25);
           c.fillStyle = '#f1c40f'; c.beginPath(); c.roundRect(x - 12, y - 35, 24, 35, 5); c.fill();
@@ -361,40 +396,44 @@
           c.fillStyle = 'white'; c.beginPath(); c.ellipse(x, y - 48, 12, 6, 0, 0, Math.PI*2); c.fill();
           c.fillStyle = '#f1c40f'; c.fillRect(x-2, y-55, 4, 4);
         }
-      },
-      { 
-        id: 'safe_point_village', x: 52, y: 26, mapId: 'world', type: 'safe_point',
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "safe_point_outskirt",
+    "x": 47,
+    "y": 29,
+    "mapId": "world",
+    "type": "safe_point",
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
           c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
           c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
           c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
         }
-      },
-      {
-        id: 'safe_point_outskirt', x: 54, y: 26, mapId: 'world', type: 'safe_point',
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "lake_safe_point",
+    "x": 14,
+    "y": 26,
+    "mapId": "world",
+    "type": "safe_point",
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
           c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
           c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
           c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
         }
-      },
-      {
-        id: 'lake_safe_point', x: 14, y: 26, mapId: 'world', type: 'safe_point',
-        draw: (c, x, y) => {
-          c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#5d4037'; c.fillRect(x - 15, y + 5, 30, 6); c.fillRect(x - 10, y + 8, 20, 6);
-          c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(x - 12, y + 5); c.quadraticCurveTo(x, y - 25, x + 12, y + 5); c.fill();
-          c.fillStyle = '#f44336'; c.beginPath(); c.moveTo(x - 8, y + 5); c.quadraticCurveTo(x, y - 15, x + 8, y + 5); c.fill();
-          c.fillStyle = '#ffeb3b'; c.beginPath(); c.moveTo(x - 4, y + 5); c.quadraticCurveTo(x, y - 8, x + 4, y + 5); c.fill();
-        }
-      },
-      {
-        id: 'boss_omnistar', x: 16, y: 56, mapId: 'world', type: 'boss', monsterKey: 'Omnistar', level: 40,
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "boss_omnistar",
+    "x": 16,
+    "y": 56,
+    "mapId": "world",
+    "type": "boss",
+    "monsterKey": "Omnistar",
+    "level": 40,
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.4)'; c.beginPath(); c.ellipse(x, y + 15, 20, 10, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#fde047'; c.beginPath();
           for(let i=0;i<5;i++){
@@ -407,27 +446,40 @@
           c.strokeStyle = '#facc15'; c.lineWidth = 2; c.stroke();
           c.fillStyle = 'white'; c.beginPath(); c.arc(x-5, y-22, 3, 0, Math.PI * 2); c.arc(x+5, y-22, 3, 0, Math.PI * 2); c.fill();
         }
-      },
-      { 
-        id: 'forest_chest_1', x: 24, y: 24, mapId: 'world', type: 'item',
-        items: [{ key: 'monster_ball', count: 5 }],
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "forest_chest_1",
+    "x": 24,
+    "y": 24,
+    "mapId": "world",
+    "type": "item",
+    "items": [
+      {
+        "key": "monster_ball",
+        "count": 5
+      }
+    ],
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 12, 6, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#78350f'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 18, 3); c.fill();
           c.fillStyle = '#a16207'; c.beginPath(); c.roundRect(x - 12, y - 10, 24, 6, 3); c.fill();
           c.fillStyle = '#facc15'; c.fillRect(x - 2, y - 6, 4, 8);
         }
-      },
-      {
-        id: 'shrine_sage', x: 5, y: 3, mapId: 'secret_shrine', type: 'dialog',
-        text: "You have discovered the Secret Shrine! Use the portal south to return.",
-        draw: (c, x, y) => {
+  },
+  {
+    "id": "shrine_sage",
+    "x": 5,
+    "y": 3,
+    "mapId": "secret_shrine",
+    "type": "dialog",
+    "text": "You have discovered the Secret Shrine! Use the portal south to return.",
+    "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 15, 8, 0, 0, Math.PI * 2); c.fill();
           c.fillStyle = '#ff44ff'; c.beginPath(); c.roundRect(x - 12, y - 40, 24, 40, 8); c.fill();
           c.fillStyle = '#ffdbac'; c.beginPath(); c.arc(x, y - 45, 10, 0, Math.PI * 2); c.fill();
         }
-      }
-    ];
+  }
+];
     let activeInteractionTarget = null;
     let activeBossNpc = null;
     let dialogActive = false;
