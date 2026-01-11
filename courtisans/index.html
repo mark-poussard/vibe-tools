@@ -230,8 +230,14 @@
   <div id="screen-setup" class="screen active">
     <h1>COURTISANS</h1>
     <div class="setup-controls">
-      <label>Number of Players (3-6)</label>
-      <input type="number" id="player-count" min="3" max="6" value="3">
+      <div style="display:flex; flex-direction:column; gap:5px">
+        <label>Human Players</label>
+        <input type="number" id="player-count" min="1" max="6" value="1">
+      </div>
+      <div style="display:flex; flex-direction:column; gap:5px">
+        <label>AI Players</label>
+        <input type="number" id="ai-count" min="0" max="5" value="2">
+      </div>
       <button onclick="startGame()">Start Game</button>
     </div>
   </div>
@@ -292,26 +298,21 @@
     }
 
     function startGame() {
-      const count = parseInt(document.getElementById('player-count').value);
-      if (count < 3 || count > 6) return alert('3-6 players allowed');
-
+      const humans = parseInt(document.getElementById('player-count').value) || 0;
+      const ais = parseInt(document.getElementById('ai-count').value) || 0;
+      const total = humans + ais;
+      if (total < 3 || total > 6) return alert('Total players (Human + AI) must be between 3 and 6');
       gameState.deck = initDeck();
       gameState.players = [];
-      for (let i = 0; i < count; i++) {
-        gameState.players.push({
-          id: i,
-          name: `Player ${i + 1}`,
-          area: []
-        });
+      for (let i = 0; i < humans; i++) {
+        gameState.players.push({ id: i, name: `Player ${i + 1}`, area: [], isAI: false });
       }
-
-      FAMILIES.forEach(f => {
-        gameState.table[f.name] = { above: 0, below: 0 };
-      });
-
+      for (let i = 0; i < ais; i++) {
+        gameState.players.push({ id: humans + i, name: `AI ${i + 1}`, area: [], isAI: true });
+      }
+      FAMILIES.forEach(f => { gameState.table[f.name] = { above: 0, below: 0 }; });
       document.getElementById('screen-setup').classList.remove('active');
       document.getElementById('screen-game').classList.add('active');
-
       startTurn();
     }
 
@@ -320,15 +321,58 @@
         endGame();
         return;
       }
-
       gameState.hand = [gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop()];
       gameState.actionsDone = { self: false, table: false, other: false };
       gameState.turnPhase = 'SELECT_CARD';
       gameState.selectedCardIndex = null;
       render();
+      if (gameState.players[gameState.currentPlayerIndex].isAI) {
+        setTimeout(aiTurn, 1000);
+      }
+    }
+
+    async function aiTurn() {
+      let bestScore = -Infinity;
+      let bestMove = null;
+      const pIdx = gameState.currentPlayerIndex;
+      const hand = [...gameState.hand];
+      const perms = [[0,1,2], [0,2,1], [1,0,2], [1,2,0], [2,0,1], [2,1,0]];
+      for (const p of perms) {
+        const cS = hand[p[0]], cT = hand[p[1]], cO = hand[p[2]];
+        for (const side of ['above', 'below']) {
+          for (let oIdx = 0; oIdx < gameState.players.length; oIdx++) {
+            if (oIdx === pIdx) continue;
+            gameState.table[cT.name][side]++;
+            gameState.players[pIdx].area.push(cS);
+            gameState.players[oIdx].area.push(cO);
+            const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
+            const score = calculatePlayerScore(gameState.players[pIdx]) - Math.max(...others);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMove = { cS, cT, cO, side, oIdx };
+            }
+            gameState.players[oIdx].area.pop();
+            gameState.players[pIdx].area.pop();
+            gameState.table[cT.name][side]--;
+          }
+        }
+      }
+      const steps = [
+        { card: bestMove.cS, type: 'self' },
+        { card: bestMove.cT, type: 'table', sub: bestMove.side },
+        { card: bestMove.cO, type: 'other', target: bestMove.oIdx }
+      ];
+      for (const s of steps) {
+        gameState.selectedCardIndex = gameState.hand.indexOf(s.card);
+        gameState.turnPhase = 'SELECT_TARGET';
+        render();
+        await new Promise(r => setTimeout(r, 800));
+        executePlaceCard(s.type, s.target, s.sub);
+      }
     }
 
     function selectCard(index) {
+      if (gameState.players[gameState.currentPlayerIndex].isAI) return;
       if (gameState.turnPhase === 'SELECT_CARD') {
         gameState.selectedCardIndex = index;
         gameState.turnPhase = 'SELECT_TARGET';
@@ -337,10 +381,13 @@
     }
 
     function placeCard(targetType, targetId = null, subTarget = null) {
+      if (gameState.players[gameState.currentPlayerIndex].isAI) return;
+      executePlaceCard(targetType, targetId, subTarget);
+    }
+
+    function executePlaceCard(targetType, targetId = null, subTarget = null) {
       if (gameState.turnPhase !== 'SELECT_TARGET' || gameState.selectedCardIndex === null) return;
-
       const card = gameState.hand[gameState.selectedCardIndex];
-
       if (targetType === 'self' && !gameState.actionsDone.self) {
         gameState.players[gameState.currentPlayerIndex].area.push(card);
         gameState.actionsDone.self = true;
@@ -351,13 +398,9 @@
         if (targetId === gameState.currentPlayerIndex) return;
         gameState.players[targetId].area.push(card);
         gameState.actionsDone.other = true;
-      } else {
-        return;
-      }
-
+      } else return;
       gameState.hand.splice(gameState.selectedCardIndex, 1);
       gameState.selectedCardIndex = null;
-
       if (gameState.actionsDone.self && gameState.actionsDone.table && gameState.actionsDone.other) {
         gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
         startTurn();
