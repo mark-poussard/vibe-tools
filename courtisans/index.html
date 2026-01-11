@@ -179,7 +179,7 @@
       position: relative;
     }
 
-    .crown, .dagger {
+    .crown, .dagger, .shield {
       position: absolute;
       top: 1px;
       left: 1px;
@@ -210,7 +210,7 @@
       display: none !important;
     }
 
-    .hand-cards .card .crown, .hand-cards .card .dagger, .hand-cards .card .mask {
+    .hand-cards .card .crown, .hand-cards .card .dagger, .hand-cards .card .mask, .hand-cards .card .shield {
       font-size: 14px;
       top: 2px;
       left: 2px;
@@ -360,7 +360,8 @@
             id: Math.random().toString(36).substr(2, 9),
             isNoble: i < 4,
             isAssassin: i >= 4 && i < 6,
-            isSpy: i >= 6 && i < 8
+            isSpy: i >= 6 && i < 8,
+            isGuard: i >= 8 && i < 11
           });
         }
       });
@@ -474,7 +475,7 @@
         ['spiesAbove', 'spiesBelow'].forEach(sKey => {
           const list = gameState.table[sKey];
           for (let i = 0; i < list.length; i++) {
-            if (list[i].id === ctx.cardId) continue;
+            if (list[i].id === ctx.cardId || list[i].isGuard) continue;
             const temp = list.splice(i, 1)[0];
             const diff = getGap() - initialGap;
             if (diff > bestGapDiff) {
@@ -488,7 +489,7 @@
           ['above', 'below'].forEach(side => {
             const list = gameState.table[f.name][side];
             for (let i = 0; i < list.length; i++) {
-              if (list[i].id === ctx.cardId) continue;
+              if (list[i].id === ctx.cardId || list[i].isGuard) continue;
               const temp = list.splice(i, 1)[0];
               const diff = getGap() - initialGap;
               if (diff > bestGapDiff) {
@@ -503,7 +504,7 @@
         const p = gameState.players[ctx.targetId];
         if (p) {
           for (let i = 0; i < p.area.length; i++) {
-            if (p.area[i].id === ctx.cardId) continue;
+            if (p.area[i].id === ctx.cardId || p.area[i].isGuard) continue;
             const temp = p.area.splice(i, 1)[0];
             const diff = getGap() - initialGap;
             if (diff > bestGapDiff) {
@@ -631,12 +632,13 @@
               <div class="cards-list" style="justify-content:center">
                 ${list.map((c, i) => {
                   const isHidden = !gameState.gameEnded;
-                  const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source === 'table' && c.id !== gameState.destructionContext.cardId;
+                  const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source === 'table' && c.id !== gameState.destructionContext.cardId && !c.isGuard;
                   return `<div class="card ${c.name} ${isHidden ? 'hidden-face' : ''} ${isDestroyable ? 'destroyable' : ''}" style="width:20px;height:28px;font-size:12px" 
                     onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('spyTable', null, ${i}, null, '${side}')">
                     ${c.isNoble ? '<div class="crown" style="font-size:6px">👑</div>' : ''}
                     ${c.isAssassin ? '<div class="dagger" style="font-size:6px">🗡️</div>' : ''}
                     ${c.isSpy ? '<div class="mask" style="font-size:6px">🎭</div>' : ''}
+                    ${c.isGuard ? '<div class="shield" style="font-size:6px">🛡️</div>' : ''}
                     ${c.icon}</div>`;
                 }).join('')}
               </div>
@@ -659,12 +661,13 @@
               <div class="influence-count">${weight}</div>
               <div class="cards-list" style="justify-content:center">
                 ${gameState.table[f.name][side].map((c, i) => {
-                  const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source === 'table' && c.id !== gameState.destructionContext.cardId;
+                  const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source === 'table' && c.id !== gameState.destructionContext.cardId && !c.isGuard;
                   return `<div class="card ${c.name} ${isDestroyable ? 'destroyable' : ''}" style="width:20px;height:28px;font-size:12px" 
                     onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('table', null, ${i}, '${f.name}', '${side}')">
                     ${c.isNoble ? '<div class="crown" style="font-size:6px">👑</div>' : ''}
                     ${c.isAssassin ? '<div class="dagger" style="font-size:6px">🗡️</div>' : ''}
                     ${c.isSpy ? '<div class="mask" style="font-size:6px">🎭</div>' : ''}
+                    ${c.isGuard ? '<div class="shield" style="font-size:6px">🛡️</div>' : ''}
                     ${c.icon}</div>`;
                 }).join('')}
               </div>
@@ -698,12 +701,13 @@
               ${areaCards.map((c, i) => {
                 const isHidden = !gameState.gameEnded && c.isSpy;
                 const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source !== 'table' && 
-                                     gameState.destructionContext.targetId === idx && c.id !== gameState.destructionContext.cardId;
+                                     gameState.destructionContext.targetId === idx && c.id !== gameState.destructionContext.cardId && !c.isGuard;
                 return `<div class="card ${c.name} ${isHidden ? 'hidden-face' : ''} ${isDestroyable ? 'destroyable' : ''}" 
                   onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('player', ${idx}, ${i})">
                   ${c.isNoble ? '<div class="crown">👑</div>' : ''}
                   ${c.isAssassin ? '<div class="dagger">🗡️</div>' : ''}
                   ${c.isSpy ? '<div class="mask">🎭</div>' : ''}
+                  ${c.isGuard ? '<div class="shield">🛡️</div>' : ''}
                   ${c.icon}</div>`;
               }).join('')}
             </div>
@@ -719,6 +723,7 @@
           ${c.isNoble ? '<div class="crown">👑</div>' : ''}
           ${c.isAssassin ? '<div class="dagger">🗡️</div>' : ''}
           ${c.isSpy ? '<div class="mask">🎭</div>' : ''}
+          ${c.isGuard ? '<div class="shield">🛡️</div>' : ''}
           ${c.icon}</div>`;
       }).join('');
       document.getElementById('player-hand').innerHTML = handHtml;
@@ -754,7 +759,7 @@
             <h2>#${i+1} ${p.name}</h2>
             <p>Final Score: ${calculatePlayerScore(p, true)}</p>
             <div class="cards-list">
-              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isSpy ? '<div class="mask">🎭</div>' : ''}${c.icon}</div>`).join('')}
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isSpy ? '<div class="mask">🎭</div>' : ''}${c.isGuard ? '<div class="shield">🛡️</div>' : ''}${c.icon}</div>`).join('')}
             </div>
           </div>
         `;
