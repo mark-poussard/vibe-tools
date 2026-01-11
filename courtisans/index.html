@@ -301,8 +301,11 @@
       const humans = parseInt(document.getElementById('player-count').value) || 0;
       const ais = parseInt(document.getElementById('ai-count').value) || 0;
       const total = humans + ais;
-      if (total < 3 || total > 6) return alert('Total players (Human + AI) must be between 3 and 6');
+      if (total < 2 || total > 6) return alert('Total players (Human + AI) must be between 2 and 6');
       gameState.deck = initDeck();
+      if (total === 2) gameState.deck = gameState.deck.slice(30);
+      else if (total === 3) gameState.deck = gameState.deck.slice(18);
+      else if (total === 4) gameState.deck = gameState.deck.slice(6);
       gameState.players = [];
       for (let i = 0; i < humans; i++) {
         gameState.players.push({ id: i, name: `Player ${i + 1}`, area: [], isAI: false });
