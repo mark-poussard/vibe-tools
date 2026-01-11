@@ -411,9 +411,6 @@
       const pIdx = gameState.currentPlayerIndex;
       const hand = [...gameState.hand];
       if (hand.length < 3) return;
-      const pIdx = gameState.currentPlayerIndex;
-      const hand = [...gameState.hand];
-      if (hand.length < 3) return;
       let bestScore = -Infinity;
       let bestMove = null;
       const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
