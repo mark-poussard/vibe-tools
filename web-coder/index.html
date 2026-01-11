@@ -413,26 +413,7 @@
         /* Utilities */
         .hidden { display: none !important; }
 
-        .log-fab {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: rgba(30, 30, 30, 0.8);
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 10;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            font-size: 14px;
-            transition: transform 0.1s;
-        }
-        .log-fab:active { transform: scale(0.9); }
+
         .log-entry { margin-bottom: 4px; border-bottom: 1px solid #222; padding-bottom: 2px; word-break: break-all; }
         .log-entry.error { color: var(--danger-color); }
         .log-entry.warn { color: #fbbf24; }
@@ -698,6 +679,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="font-size: 1.2rem;">My Projects</h2>
                 <div>
+                    <button class="icon-btn" id="btn-show-logs" title="Show Logs">📋</button>
                     <button class="icon-btn" id="btn-import-export" title="Import/Export">⇄</button>
                     <button class="icon-btn" id="btn-settings" title="Settings">⚙️</button>
                 </div>
@@ -868,7 +850,6 @@
 
                 <!-- Tab: AI Coder -->
                 <div id="tab-ai" class="tab-content active">
-                    <button id="btn-show-logs" class="log-fab" title="Show Logs">📋</button>
                     <div id="chat-history" class="chat-container">
                         <div class="message system">Welcome. Select a model and describe your changes.</div>
                     </div>
@@ -1903,6 +1884,8 @@
                 const originalLog = console.log;
                 const originalError = console.error;
                 const originalWarn = console.warn;
+                const originalInfo = console.info;
+                const originalDebug = console.debug;
                 const add = (type, args) => {
                     const msg = Array.from(args).map(arg => {
                         try { return typeof arg === 'object' ? JSON.stringify(arg) : String(arg); }
@@ -1914,6 +1897,8 @@
                 console.log = (...args) => { originalLog.apply(console, args); add('log', args); };
                 console.error = (...args) => { originalError.apply(console, args); add('error', args); };
                 console.warn = (...args) => { originalWarn.apply(console, args); add('warn', args); };
+                console.info = (...args) => { originalInfo.apply(console, args); add('log', args); };
+                console.debug = (...args) => { originalDebug.apply(console, args); add('log', args); };
                 window.onerror = (msg, url, line, col, error) => {
                     add('error', [`Uncaught Error: ${msg} at ${line}:${col}`]);
                     return false;
