@@ -191,7 +191,26 @@
       right: 1px;
     }
 
-    .hand-cards .card .crown, .hand-cards .card .dagger {
+    .mask {
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      font-size: 8px;
+      z-index: 2;
+    }
+
+    .card.hidden-face {
+      background: #444 !important;
+      background-image: repeating-linear-gradient(45deg, #333, #333 5px, #444 5px, #444 10px) !important;
+      border: 1px solid #666 !important;
+      color: transparent !important;
+    }
+
+    .card.hidden-face * {
+      display: none !important;
+    }
+
+    .hand-cards .card .crown, .hand-cards .card .dagger, .hand-cards .card .mask {
       font-size: 14px;
       top: 2px;
       left: 2px;
@@ -323,8 +342,9 @@
       players: [],
       deck: [],
       currentPlayerIndex: 0,
-      table: {}, // familyName: { above: [], below: [] }
-      turnPhase: 'SELECT_CARD', // SELECT_CARD, SELECT_TARGET, SELECT_DESTROY_TARGET
+      table: { spiesAbove: [], spiesBelow: [] }, // familyName: { above: [], below: [] }
+      turnPhase: 'SELECT_CARD', 
+      gameEnded: false, // SELECT_CARD, SELECT_TARGET, SELECT_DESTROY_TARGET
       actionsDone: { self: false, table: false, other: false },
       hand: [],
       selectedCardIndex: null,
@@ -339,7 +359,8 @@
             ...f,
             id: Math.random().toString(36).substr(2, 9),
             isNoble: i < 4,
-            isAssassin: i >= 4 && i < 6
+            isAssassin: i >= 4 && i < 6,
+            isSpy: i >= 6 && i < 8
           });
         }
       });
@@ -363,6 +384,9 @@
         gameState.players.push({ id: humans + i, name: `AI ${i + 1}`, area: [], isAI: true });
       }
       FAMILIES.forEach(f => { gameState.table[f.name] = { above: [], below: [] }; });
+      gameState.table.spiesAbove = [];
+      gameState.table.spiesBelow = [];
+      gameState.gameEnded = false;
       document.getElementById('screen-setup').classList.remove('active');
       document.getElementById('screen-game').classList.add('active');
       startTurn();
@@ -387,6 +411,9 @@
       const pIdx = gameState.currentPlayerIndex;
       const hand = [...gameState.hand];
       if (hand.length < 3) return;
+      const pIdx = gameState.currentPlayerIndex;
+      const hand = [...gameState.hand];
+      if (hand.length < 3) return;
       let bestScore = -Infinity;
       let bestMove = null;
       const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
@@ -398,9 +425,9 @@
             gameState.table[cT.name][side].push(cT);
             gameState.players[pIdx].area.push(cS);
             gameState.players[oIdx].area.push(cO);
-            const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
+            const others = gameState.players.filter((_, i) => i !== pIdx).map(p => calculatePlayerScore(p, true));
             const maxOther = others.length ? Math.max(...others) : 0;
-            const score = calculatePlayerScore(gameState.players[pIdx]) - maxOther;
+            const score = calculatePlayerScore(gameState.players[pIdx], true) - maxOther;
             if (score > bestScore) {
               bestScore = score;
               bestMove = { cS, cT, cO, side, oIdx };
@@ -446,6 +473,19 @@
       let bestGapDiff = 0;
       let target = null;
       if (ctx.source === 'table') {
+        ['spiesAbove', 'spiesBelow'].forEach(sKey => {
+          const list = gameState.table[sKey];
+          for (let i = 0; i < list.length; i++) {
+            if (list[i].id === ctx.cardId) continue;
+            const temp = list.splice(i, 1)[0];
+            const diff = getGap() - initialGap;
+            if (diff > bestGapDiff) {
+              bestGapDiff = diff;
+              target = { type: 'spyTable', sub: sKey === 'spiesAbove' ? 'above' : 'below', idx: i };
+            }
+            list.splice(i, 0, temp);
+          }
+        });
         FAMILIES.forEach(f => {
           ['above', 'below'].forEach(side => {
             const list = gameState.table[f.name][side];
@@ -507,7 +547,11 @@
         gameState.players[gameState.currentPlayerIndex].area.push(card);
         gameState.actionsDone.self = true;
       } else if (targetType === 'table' && !gameState.actionsDone.table) {
-        gameState.table[card.name][subTarget].push(card);
+        if (card.isSpy) {
+          gameState.table[subTarget === 'above' ? 'spiesAbove' : 'spiesBelow'].push(card);
+        } else {
+          gameState.table[card.name][subTarget].push(card);
+        }
         gameState.actionsDone.table = true;
       } else if (targetType === 'other' && !gameState.actionsDone.other) {
         if (targetId === gameState.currentPlayerIndex) return;
@@ -546,6 +590,8 @@
       if (gameState.turnPhase !== 'SELECT_DESTROY_TARGET') return;
       if (type === 'player') {
         gameState.players[pIdx].area.splice(cIdx, 1);
+      } else if (type === 'spyTable') {
+        gameState.table[sub === 'above' ? 'spiesAbove' : 'spiesBelow'].splice(cIdx, 1);
       } else {
         gameState.table[family][sub].splice(cIdx, 1);
       }
@@ -553,19 +599,23 @@
     }
 
     function getWeight(card) { return card.isNoble ? 2 : 1; }
-    function getStanding(familyName) {
+    function getStanding(familyName, includeSpies = false) {
       const f = gameState.table[familyName];
-      const aboveW = f.above.reduce((s, c) => s + getWeight(c), 0);
-      const belowW = f.below.reduce((s, c) => s + getWeight(c), 0);
+      let aboveW = f.above.reduce((s, c) => s + getWeight(c), 0);
+      let belowW = f.below.reduce((s, c) => s + getWeight(c), 0);
+      if (includeSpies) {
+        aboveW += gameState.table.spiesAbove.filter(c => c.name === familyName).reduce((s, c) => s + getWeight(c), 0);
+        belowW += gameState.table.spiesBelow.filter(c => c.name === familyName).reduce((s, c) => s + getWeight(c), 0);
+      }
       if (aboveW > belowW) return 1;
       if (aboveW < belowW) return -1;
       return 0;
     }
 
-    function calculatePlayerScore(player) {
+    function calculatePlayerScore(player, includeSpies = false) {
       return player.area.reduce((score, card) => {
         const weight = card.isNoble ? 2 : 1;
-        return score + (weight * getStanding(card.name));
+        return score + (weight * getStanding(card.name, includeSpies));
       }, 0);
     }
 
@@ -574,8 +624,30 @@
       document.getElementById('turn-indicator').innerText = `${currentP.name}'s Turn`;
       document.getElementById('action-buttons').style.display = gameState.turnPhase === 'SELECT_DESTROY_TARGET' ? 'block' : 'none';
 
-      const tableHtml = FAMILIES.map(f => {
-        const standing = getStanding(f.name);
+      const renderSpyPile = (side) => {
+        const list = side === 'above' ? gameState.table.spiesAbove : gameState.table.spiesBelow;
+        return `<div class="family-row" style="grid-template-columns: 1fr; border: 1px dashed #555; margin-bottom: 5px;">
+            <div class="influence-box" style="min-height: 40px">
+              <span style="font-size: 9px">SPIES ${side.toUpperCase()}</span>
+              <div class="cards-list" style="justify-content:center">
+                ${list.map((c, i) => {
+                  const isHidden = !gameState.gameEnded;
+                  const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source === 'table' && c.id !== gameState.destructionContext.cardId;
+                  return `<div class="card ${c.name} ${isHidden ? 'hidden-face' : ''} ${isDestroyable ? 'destroyable' : ''}" style="width:20px;height:28px;font-size:12px" 
+                    onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('spyTable', null, ${i}, null, '${side}')">
+                    ${c.isNoble ? '<div class="crown" style="font-size:6px">👑</div>' : ''}
+                    ${c.isAssassin ? '<div class="dagger" style="font-size:6px">🗡️</div>' : ''}
+                    ${c.isSpy ? '<div class="mask" style="font-size:6px">🎭</div>' : ''}
+                    ${c.icon}</div>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
+      };
+
+      let tableHtml = renderSpyPile('below');
+      tableHtml += FAMILIES.map(f => {
+        const standing = getStanding(f.name, gameState.gameEnded);
         const statusClass = standing === 1 ? 'status-good' : (standing === -1 ? 'status-bad' : 'status-neutral');
         const isTableSelectable = gameState.turnPhase === 'SELECT_TARGET' && !gameState.actionsDone.table && 
                              gameState.hand[gameState.selectedCardIndex] && gameState.hand[gameState.selectedCardIndex].name === f.name;
@@ -593,6 +665,7 @@
                     onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('table', null, ${i}, '${f.name}', '${side}')">
                     ${c.isNoble ? '<div class="crown" style="font-size:6px">👑</div>' : ''}
                     ${c.isAssassin ? '<div class="dagger" style="font-size:6px">🗡️</div>' : ''}
+                    ${c.isSpy ? '<div class="mask" style="font-size:6px">🎭</div>' : ''}
                     ${c.icon}</div>`;
                 }).join('')}
               </div>
@@ -609,7 +682,7 @@
             </div>
             ${renderSlot('above')}
           </div>`;
-      }).join('');
+      }).join('') + renderSpyPile('above');
       document.getElementById('table-rows').innerHTML = tableHtml;
 
       const playersHtml = gameState.players.map((p, idx) => {
@@ -620,16 +693,18 @@
           <div class="player-area ${canTarget ? 'active-target' : ''}" onclick="placeCard('${isSelf ? 'self' : 'other'}', ${idx})">
             <div style="display:flex; justify-content:space-between">
               <strong>${p.name} ${isSelf ? '(You)' : ''}</strong>
-              <span>Score: ${calculatePlayerScore(p)}</span>
+              <span>Score: ${calculatePlayerScore(p, gameState.gameEnded)}</span>
             </div>
             <div class="cards-list">
               ${areaCards.map((c, i) => {
+                const isHidden = !gameState.gameEnded && c.isSpy;
                 const isDestroyable = gameState.turnPhase === 'SELECT_DESTROY_TARGET' && gameState.destructionContext.source !== 'table' && 
                                      gameState.destructionContext.targetId === idx && c.id !== gameState.destructionContext.cardId;
-                return `<div class="card ${c.name} ${isDestroyable ? 'destroyable' : ''}" 
+                return `<div class="card ${c.name} ${isHidden ? 'hidden-face' : ''} ${isDestroyable ? 'destroyable' : ''}" 
                   onclick="event.stopPropagation(); if(${isDestroyable}) destroyCard('player', ${idx}, ${i})">
                   ${c.isNoble ? '<div class="crown">👑</div>' : ''}
                   ${c.isAssassin ? '<div class="dagger">🗡️</div>' : ''}
+                  ${c.isSpy ? '<div class="mask">🎭</div>' : ''}
                   ${c.icon}</div>`;
               }).join('')}
             </div>
@@ -637,12 +712,16 @@
       }).join('');
       document.getElementById('players-list').innerHTML = playersHtml;
 
-      const handHtml = gameState.hand.map((c, i) => `
-        <div class="card ${c.name} ${gameState.selectedCardIndex === i ? 'selected' : ''}" onclick="selectCard(${i})">
+      const handHtml = gameState.hand.map((c, i) => {
+        const isAI = currentP.isAI;
+        const isSelected = gameState.selectedCardIndex === i;
+        const isHidden = isAI ? c.isSpy : (c.isSpy && !isSelected);
+        return `<div class="card ${c.name} ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-face' : ''}" onclick="selectCard(${i})">
           ${c.isNoble ? '<div class="crown">👑</div>' : ''}
           ${c.isAssassin ? '<div class="dagger">🗡️</div>' : ''}
-          ${c.icon}</div>
-      `).join('');
+          ${c.isSpy ? '<div class="mask">🎭</div>' : ''}
+          ${c.icon}</div>`;
+      }).join('');
       document.getElementById('player-hand').innerHTML = handHtml;
 
       let instruction = "";
@@ -662,19 +741,21 @@
     }
 
     function endGame() {
+      gameState.gameEnded = true;
+      render();
       document.getElementById('screen-game').classList.remove('active');
       document.getElementById('screen-end').classList.add('active');
 
-      const sorted = [...gameState.players].sort((a, b) => calculatePlayerScore(b) - calculatePlayerScore(a));
+      const sorted = [...gameState.players].sort((a, b) => calculatePlayerScore(b, true) - calculatePlayerScore(a, true));
       
       const finalHtml = sorted.map((p, i) => {
         const sortedArea = [...p.area].sort((a, b) => a.name.localeCompare(b.name));
         return `
           <div class="player-area">
             <h2>#${i+1} ${p.name}</h2>
-            <p>Final Score: ${calculatePlayerScore(p)}</p>
+            <p>Final Score: ${calculatePlayerScore(p, true)}</p>
             <div class="cards-list">
-              ${sortedArea.map(c => `<div class="card ${c.name}">${c.icon}</div>`).join('')}
+              ${sortedArea.map(c => `<div class="card ${c.name}">${c.isSpy ? '<div class="mask">🎭</div>' : ''}${c.icon}</div>`).join('')}
             </div>
           </div>
         `;
