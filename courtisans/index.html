@@ -384,10 +384,11 @@
     }
 
     async function aiTurn() {
-      let bestScore = -Infinity;
-      let bestMove = null;
       const pIdx = gameState.currentPlayerIndex;
       const hand = [...gameState.hand];
+      if (hand.length < 3) return;
+      let bestScore = -Infinity;
+      let bestMove = null;
       const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
       for (const p of perms) {
         const cS = hand[p[0]], cT = hand[p[1]], cO = hand[p[2]];
@@ -398,7 +399,8 @@
             gameState.players[pIdx].area.push(cS);
             gameState.players[oIdx].area.push(cO);
             const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
-            const score = calculatePlayerScore(gameState.players[pIdx]) - Math.max(...others);
+            const maxOther = others.length ? Math.max(...others) : 0;
+            const score = calculatePlayerScore(gameState.players[pIdx]) - maxOther;
             if (score > bestScore) {
               bestScore = score;
               bestMove = { cS, cT, cO, side, oIdx };
@@ -409,13 +411,17 @@
           }
         }
       }
+      if (!bestMove) return;
       const steps = [
         { card: bestMove.cS, type: 'self' },
         { card: bestMove.cT, type: 'table', sub: bestMove.side },
         { card: bestMove.cO, type: 'other', target: bestMove.oIdx }
       ];
       for (const s of steps) {
-        gameState.selectedCardIndex = gameState.hand.indexOf(s.card);
+        if (gameState.currentPlayerIndex !== pIdx) break;
+        const currentCardIdx = gameState.hand.findIndex(c => c.id === s.card.id);
+        if (currentCardIdx === -1) continue;
+        gameState.selectedCardIndex = currentCardIdx;
         gameState.turnPhase = 'SELECT_TARGET';
         render();
         await new Promise(r => setTimeout(r, 600));
@@ -429,42 +435,48 @@
 
     function aiChooseDestruction() {
       const ctx = gameState.destructionContext;
+      if (!ctx) return skipDestruction();
       const pIdx = gameState.currentPlayerIndex;
-      let bestDiff = -Infinity;
+      const getGap = () => {
+        const pScore = calculatePlayerScore(gameState.players[pIdx]);
+        const others = gameState.players.filter((_, i) => i !== pIdx).map(calculatePlayerScore);
+        return pScore - (others.length ? Math.max(...others) : 0);
+      };
+      const initialGap = getGap();
+      let bestGapDiff = 0;
       let target = null;
-
       if (ctx.source === 'table') {
-        for (const f of FAMILIES) {
+        FAMILIES.forEach(f => {
           ['above', 'below'].forEach(side => {
-            gameState.table[f.name][side].forEach((card, idx) => {
-              if (card.id === ctx.cardId) return;
-              const prevScore = calculatePlayerScore(gameState.players[pIdx]);
-              const temp = gameState.table[f.name][side].splice(idx, 1)[0];
-              const diff = calculatePlayerScore(gameState.players[pIdx]) - prevScore;
-              if (diff > bestDiff) {
-                bestDiff = diff;
-                target = { type: 'table', family: f.name, sub: side, idx };
+            const list = gameState.table[f.name][side];
+            for (let i = 0; i < list.length; i++) {
+              if (list[i].id === ctx.cardId) continue;
+              const temp = list.splice(i, 1)[0];
+              const diff = getGap() - initialGap;
+              if (diff > bestGapDiff) {
+                bestGapDiff = diff;
+                target = { type: 'table', family: f.name, sub: side, idx: i };
               }
-              gameState.table[f.name][side].splice(idx, 0, temp);
-            });
+              list.splice(i, 0, temp);
+            }
           });
-        }
+        });
       } else {
         const p = gameState.players[ctx.targetId];
-        p.area.forEach((card, idx) => {
-          if (card.id === ctx.cardId) return;
-          const standing = getStanding(card.name);
-          const weight = card.isNoble ? 2 : 1;
-          const impact = standing * weight;
-          const diff = ctx.targetId === pIdx ? -impact : impact;
-          if (diff > bestDiff) {
-            bestDiff = diff;
-            target = { type: 'player', targetId: ctx.targetId, idx };
+        if (p) {
+          for (let i = 0; i < p.area.length; i++) {
+            if (p.area[i].id === ctx.cardId) continue;
+            const temp = p.area.splice(i, 1)[0];
+            const diff = getGap() - initialGap;
+            if (diff > bestGapDiff) {
+              bestGapDiff = diff;
+              target = { type: 'player', targetId: ctx.targetId, idx: i };
+            }
+            p.area.splice(i, 0, temp);
           }
-        });
+        }
       }
-
-      if (target && bestDiff > 0) {
+      if (target && bestGapDiff > 0) {
         destroyCard(target.type, target.targetId, target.idx, target.family, target.sub);
       } else {
         skipDestruction();
