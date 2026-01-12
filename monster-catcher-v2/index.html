@@ -1262,7 +1262,7 @@
       if (gameState !== 'BATTLE' || activeActor.hp <= 0) return;
       const targets = playerStats.party.filter(p => p.hp > 0);
       if (targets.length === 0) return;
-      const equipSkills = []; for (let s in activeActor.equipment) { const itm = EQUIPMENT_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+      const equipSkills = []; for (let s in activeActor.equipment) { const itm = ITEM_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
       const allSkills = [...(activeActor.learnedSkills || []), ...equipSkills];
       const usableSkills = allSkills.filter(s => activeActor.mp >= s.cost);
       let target = targets[Math.floor(Math.random() * targets.length)];
@@ -1326,7 +1326,7 @@
         if (target.hp <= 0) { gainXp(target.rewardXp); msg += `${target.name} defeated! `; }
       } else if (type === 'useSkill') {
         const target = enemies[targetIdx];
-        const equipSkills = []; for (let s in activeActor.equipment) { const itm = EQUIPMENT_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
+        const equipSkills = []; for (let s in activeActor.equipment) { const itm = ITEM_DB[activeActor.equipment[s]]; if (itm && itm.stats.skill) equipSkills.push(itm.stats.skill); }
         const skill = [...(activeActor.learnedSkills || []), ...equipSkills][data];
         activeActor.mp -= skill.cost; const dmg = calculateSkillDamage(activeActor, target, skill);
         target.hp = Math.max(0, target.hp - dmg); if (skill.heal) activeActor.hp = Math.min(activeActor.maxHp, activeActor.hp + skill.heal);
