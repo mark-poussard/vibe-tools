@@ -467,7 +467,7 @@
         }
   },
   {
-    "id": "npc_lgbri",
+    "id": "boss_rabbite",
     "x": 50,
     "y": 34,
     "mapId": "world",
@@ -476,8 +476,11 @@
     "level": 3,
     "draw": (c, x, y) => {
           c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(x, y + 15, 18, 10, 0, 0, Math.PI * 2); c.fill();
-          c.fillStyle = '#94a3b8'; c.beginPath(); c.roundRect(x - 15, y - 25, 30, 25, 5); c.fill();
-          c.strokeStyle = 'white'; c.lineWidth = 3; c.beginPath(); c.moveTo(x-10, y-25); c.quadraticCurveTo(x-15, y-35, x-20, y-25); c.moveTo(x+10, y-25); c.quadraticCurveTo(x+15, y-35, x+20, y-25); c.stroke();
+          c.save(); c.translate(x, y);
+          c.fillStyle = 'white'; c.beginPath(); c.arc(0, -15, 20, 0, Math.PI*2); c.fill();
+          c.beginPath(); c.ellipse(-8, -40, 6, 15, -0.1, 0, Math.PI*2); c.fill();
+          c.beginPath(); c.ellipse(8, -40, 6, 15, 0.1, 0, Math.PI*2); c.fill();
+          c.restore();
         }
   },
   {
