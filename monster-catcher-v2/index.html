@@ -318,6 +318,7 @@
     const STARTERS = [ createMonster('Sylvaris', 5), createMonster('Ignifrit', 5), createMonster('Aquasaur', 5) ];
     let activeActor = null;
     let enemies = [];
+    let capturedThisBattle = [];
     let battleBusy = false;
     let pendingAction = null;
     let pendingSkillIdx = null;
@@ -1156,6 +1157,7 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
+      capturedThisBattle = [];
       const totalWeight = zone.reduce((s, e) => s + e.weight, 0);
       let rand = Math.random() * totalWeight;
       let encounter = zone[0];
@@ -1181,6 +1183,7 @@
       document.getElementById('flash-overlay').classList.add('flashing');
       setTimeout(() => document.getElementById('flash-overlay').classList.remove('flashing'), 500);
       gameState = 'BATTLE';
+      capturedThisBattle = [];
       let m = createMonster(npc.monsterKey, npc.level, false);
       if (npc.equipment) m.equipment = JSON.parse(JSON.stringify(npc.equipment));
       enemies = [m];
@@ -1343,12 +1346,8 @@
           toggleMenu();
           if (Math.random() < chance) {
             const captured = JSON.parse(JSON.stringify(itmTarget));
-            if (playerStats.party.length < 4) { playerStats.party.push(captured); msg = `Captured ${itmTarget.name}! `; }
-            else {
-              captured.hp = captured.maxHp; captured.mp = captured.maxMp;
-              playerStats.storage.push(captured); msg = `Captured ${itmTarget.name}! Sent to PC. `;
-            }
-            
+            capturedThisBattle.push(captured);
+            msg = `Captured ${itmTarget.name}! ` + (playerStats.party.length + capturedThisBattle.length > 4 ? "(Sent to storage after battle)" : "");
             enemies.splice(targetIdx, 1);
           } else msg = "Capture failed! ";
         } else {
@@ -1395,6 +1394,11 @@
 
     function endBattle(msg) {
       updateBattleUI(msg);
+      capturedThisBattle.forEach(captured => {
+        if (playerStats.party.length < 4) { playerStats.party.push(captured); }
+        else { captured.hp = captured.maxHp; captured.mp = captured.maxMp; playerStats.storage.push(captured); }
+      });
+      capturedThisBattle = [];
       setTimeout(() => {
         if (activeBossNpc && enemies.every(e => e.hp <= 0)) {
           const idx = NPC_LOCATIONS.indexOf(activeBossNpc);
@@ -1413,6 +1417,7 @@
     }
 
     function handleDefeat() {
+      capturedThisBattle = [];
       alert("All your monsters have fainted! You lost some gold and rushed back to safety...");
       playerStats.gold = Math.floor(playerStats.gold * 0.9);
       playerStats.party.forEach(p => { p.hp = p.maxHp; p.mp = p.maxMp; });
