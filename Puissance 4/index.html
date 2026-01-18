@@ -1,11 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Puissance 4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Puissance 4 Mobile</title>
+  <style>
+    :root {
+      --bg-color: #2c3e50;
+      --board-color: #34495e;
+      --empty-slot: #ecf0f1;
+      --player1: #e74c3c;
+      --player2: #f1c40f;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background-color: #ecf0f1;
+      touch-action: manipulation;
+    }
+    h1 { margin: 10px 0; color: var(--bg-color); }
+    #status { font-weight: bold; margin-bottom: 10px; font-size: 1.2rem; }
+    #game-board {
+      background-color: var(--board-color);
+      padding: 10px;
+      border-radius: 10px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .cell {
+      width: 11vw;
+      height: 11vw;
+      max-width: 60px;
+      max-height: 60px;
+      background-color: var(--empty-slot);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .cell.p1 { background-color: var(--player1); }
+    .cell.p2 { background-color: var(--player2); }
+    #controls {
+      margin-top: 20px;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 1rem;
+      background-color: var(--bg-color);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.95); }
+  </style>
 </head>
 <body>
   <h1>Puissance 4</h1>
+  <div id="status">Tour du Joueur 1</div>
+  <div id="game-board"></div>
+  <div id="controls">
+    <button onclick="resetGame()">Rejouer</button>
+  </div>
+
+  <script>
+    const ROWS = 6;
+    const COLS = 7;
+    let board = [];
+    let currentPlayer = 1;
+    let gameActive = true;
+
+    function createBoard() {
+      const boardElement = document.getElementById('game-board');
+      boardElement.innerHTML = '';
+      board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          cell.onclick = () => handleMove(c);
+          boardElement.appendChild(cell);
+        }
+      }
+    }
+
+    function handleMove(col) {
+      if (!gameActive) return;
+      
+      for (let r = ROWS - 1; r >= 0; r--) {
+        if (board[r][col] === 0) {
+          board[r][col] = currentPlayer;
+          updateUI();
+          
+          if (checkWin(r, col)) {
+            document.getElementById('status').innerText = `Le Joueur ${currentPlayer} a gagné !`;
+            gameActive = false;
+          } else if (board.flat().every(cell => cell !== 0)) {
+            document.getElementById('status').innerText = "Match nul !";
+            gameActive = false;
+          } else {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            document.getElementById('status').innerText = `Tour du Joueur ${currentPlayer}`;
+            document.getElementById('status').style.color = currentPlayer === 1 ? 'var(--player1)' : 'var(--player2)';
+          }
+          return;
+        }
+      }
+    }
+
+    function updateUI() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        const r = cell.dataset.row;
+        const c = cell.dataset.col;
+        cell.className = 'cell';
+        if (board[r][c] === 1) cell.classList.add('p1');
+        if (board[r][c] === 2) cell.classList.add('p2');
+      });
+    }
+
+    function checkWin(r, c) {
+      const directions = [[0,1], [1,0], [1,1], [1,-1]];
+      for (let [dr, dc] of directions) {
+        let count = 1;
+        for (let i = 1; i < 4; i++) {
+          if (board[r + dr*i]?.[c + dc*i] === currentPlayer) count++; else break;
+        }
+        for (let i = 1; i < 4; i++) {
+          if (board[r - dr*i]?.[c - dc*i] === currentPlayer) count++; else break;
+        }
+        if (count >= 4) return true;
+      }
+      return false;
+    }
+
+    function resetGame() {
+      currentPlayer = 1;
+      gameActive = true;
+      document.getElementById('status').innerText = "Tour du Joueur 1";
+      document.getElementById('status').style.color = "black";
+      createBoard();
+    }
+
+    createBoard();
+  </script>
 </body>
 </html>
