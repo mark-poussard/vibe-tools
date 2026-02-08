@@ -50,6 +50,30 @@
             color: #777;
             pointer-events: none;
         }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(20, 30, 40, 0.95);
+            padding: 30px;
+            border: 2px solid #ff5252;
+            text-align: center;
+            display: none;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: #233a4a;
+            color: #e0d8c3;
+            border: 1px solid #e0d8c3;
+            padding: 10px 20px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +87,11 @@
         <div class="stat-box">
             Hull: <span id="hull-val">0</span>%
         </div>
+    </div>
+    <div id="game-over">
+        <h1 style="color: #ff5252; margin-top: 0;">SUNK!</h1>
+        <p>Your crew starved at sea...</p>
+        <button class="btn" onclick="location.reload()">RETRY</button>
     </div>
     <div class="debug-info" id="debug">FPS: 60</div>
     <canvas id="gameCanvas"></canvas>
@@ -133,19 +162,27 @@
             _data: {
                 gold: 150,
                 food: 100,
-                ship: { hull: 100, maxHull: 100, speed: 2 },
+                ship: { hull: 100, maxHull: 100, speed: 0.15, x: 0, y: 0, angle: 0, target: null },
                 world: { nodes: [] },
+                status: 'idle',
                 lastUpdate: Date.now()
             },
             observers: [],
             init() {
                 const saved = localStorage.getItem('salt_scurvy_v1');
                 if (saved) {
-                    try { this._data = JSON.parse(saved); } catch (e) { console.error(e); }
+                    try {
+                        const d = JSON.parse(saved);
+                        if (d.ship && d.world) this._data = d;
+                    } catch (e) { console.error(e); }
                 }
                 if (!this._data.world || !this._data.world.nodes || !this._data.world.nodes.length) {
                     const gen = new MapGenerator(window.innerWidth, window.innerHeight);
                     this._data.world = { nodes: gen.generate() };
+                    if (this._data.world.nodes.length > 0) {
+                        this._data.ship.x = this._data.world.nodes[0].x;
+                        this._data.ship.y = this._data.world.nodes[0].y;
+                    }
                 }
                 this.notify();
             },
@@ -181,12 +218,22 @@
 
             init() {
                 window.addEventListener('resize', () => this.resize());
+                this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
                 this.resize();
                 
                 State.init();
                 State.subscribe((data) => this.syncUI(data));
 
                 requestAnimationFrame((t) => this.loop(t));
+            }
+
+            handleInput(e) {
+                if (State._data.status === 'gameover') return;
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                State._data.ship.target = { x, y };
+                State._data.status = 'sailing';
             }
 
             resize() {
@@ -203,12 +250,34 @@
             }
 
             update(dt) {
-                // Game logic here
-                // For demonstration: slow consumption of food
-                const foodConsumption = 0.001 * dt;
-                if (State._data.food > 0) {
-                    State._data.food -= foodConsumption;
-                    if (Math.random() > 0.99) State.notify(); // Throttle UI updates
+                if (State._data.status === 'gameover') return;
+                const s = State._data;
+                const ship = s.ship;
+                if (s.status === 'sailing' && ship.target) {
+                    const dx = ship.target.x - ship.x;
+                    const dy = ship.target.y - ship.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist > 5) {
+                        const moveDist = ship.speed * dt;
+                        ship.x += (dx / dist) * moveDist;
+                        ship.y += (dy / dist) * moveDist;
+                        s.food -= (moveDist * 0.02);
+                        const targetAngle = Math.atan2(dy, dx);
+                        let diff = targetAngle - ship.angle;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        ship.angle += diff * 0.1;
+                        if (s.food <= 0) {
+                            s.food = 0;
+                            s.status = 'gameover';
+                            document.getElementById('game-over').style.display = 'block';
+                        }
+                    } else {
+                        ship.x = ship.target.x;
+                        ship.y = ship.target.y;
+                        s.status = 'idle';
+                    }
+                    State.notify();
                 }
             }
 
@@ -263,6 +332,18 @@
                     ctx.font = '9px "Courier New"';
                     ctx.fillText(`💀 D:${n.danger} R:${n.reward}`, n.x, n.y + 38);
                 });
+
+                const ship = State._data.ship;
+                ctx.save();
+                ctx.translate(ship.x, ship.y);
+                ctx.rotate(ship.angle);
+                ctx.fillStyle = '#e0d8c3';
+                ctx.beginPath();
+                ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-10, 10);
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = 'white';
+                ctx.fillRect(-2, -8, 2, 16);
+                ctx.restore();
             }
 
             loop(timestamp) {
