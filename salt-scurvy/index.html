@@ -164,6 +164,8 @@
                 food: 100,
                 ship: { hull: 100, maxHull: 100, speed: 0.15, x: 0, y: 0, angle: 0, target: null },
                 world: { nodes: [] },
+                hazards: [],
+                shake: 0,
                 status: 'idle',
                 lastUpdate: Date.now()
             },
@@ -253,6 +255,7 @@
                 if (State._data.status === 'gameover') return;
                 const s = State._data;
                 const ship = s.ship;
+                if (s.shake > 0) s.shake -= dt * 0.05;
                 if (s.status === 'sailing' && ship.target) {
                     const dx = ship.target.x - ship.x;
                     const dy = ship.target.y - ship.y;
@@ -267,82 +270,77 @@
                         while (diff < -Math.PI) diff += Math.PI * 2;
                         while (diff > Math.PI) diff -= Math.PI * 2;
                         ship.angle += diff * 0.1;
+                        if (Math.random() < 0.03) {
+                            const angle = ship.angle + (Math.random() - 0.5) * 2.5;
+                            s.hazards.push({ x: ship.x + Math.cos(angle) * 350, y: ship.y + Math.sin(angle) * 350, type: Math.random() > 0.4 ? 'whirlpool' : 'shark', radius: 20 });
+                        }
                         if (s.food <= 0) {
-                            s.food = 0;
-                            s.status = 'gameover';
+                            s.food = 0; s.status = 'gameover';
                             document.getElementById('game-over').style.display = 'block';
+                            document.querySelector('#game-over p').innerText = "Your crew starved at sea...";
                         }
                     } else {
-                        ship.x = ship.target.x;
-                        ship.y = ship.target.y;
-                        s.status = 'idle';
+                        ship.x = ship.target.x; ship.y = ship.target.y; s.status = 'idle'; s.hazards = [];
+                    }
+                    for (let i = s.hazards.length - 1; i >= 0; i--) {
+                        const h = s.hazards[i];
+                        if (h.type === 'shark') {
+                            const hdx = ship.x - h.x, hdy = ship.y - h.y, hdist = Math.hypot(hdx, hdy);
+                            h.x += (hdx / hdist) * 0.07 * dt; h.y += (hdy / hdist) * 0.07 * dt;
+                        }
+                        const distToShip = Math.hypot(ship.x - h.x, ship.y - h.y);
+                        if (distToShip < h.radius + 12) {
+                            s.ship.hull -= 15; s.shake = 15; s.hazards.splice(i, 1);
+                            if (s.ship.hull <= 0) {
+                                s.ship.hull = 0; s.status = 'gameover';
+                                document.getElementById('game-over').style.display = 'block';
+                                document.getElementById('game-over').querySelector('h1').innerText = "SUNK!";
+                                document.querySelector('#game-over p').innerText = "Your ship was claimed by the depths!";
+                            }
+                        } else if (distToShip > 800) s.hazards.splice(i, 1);
                     }
                     State.notify();
                 }
             }
 
             render() {
-                const ctx = this.ctx;
-                const w = this.canvas.width;
-                const h = this.canvas.height;
-                ctx.fillStyle = '#1a2a35';
-                ctx.fillRect(0, 0, w, h);
-
-                ctx.strokeStyle = '#233a4a';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < w; i += 100) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
-                }
-                for (let i = 0; i < h; i += 100) {
-                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke();
-                }
-
-                if (!State._data.world || !State._data.world.nodes) return;
-                const nodes = State._data.world.nodes;
-
-                ctx.strokeStyle = 'rgba(224, 216, 195, 0.15)';
-                ctx.setLineDash([5, 10]);
-                nodes.forEach(n => {
+                const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height, s = State._data;
+                ctx.fillStyle = '#1a2a35'; ctx.fillRect(0, 0, w, h);
+                ctx.save();
+                if (s.shake > 0) ctx.translate((Math.random() - 0.5) * s.shake, (Math.random() - 0.5) * s.shake);
+                ctx.strokeStyle = '#233a4a'; ctx.lineWidth = 1;
+                for (let i = 0; i < w; i += 100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke(); }
+                for (let i = 0; i < h; i += 100) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke(); }
+                if (!s.world || !s.world.nodes) { ctx.restore(); return; }
+                ctx.strokeStyle = 'rgba(224, 216, 195, 0.15)'; ctx.setLineDash([5, 10]);
+                s.world.nodes.forEach(n => {
                     n.connections.forEach(cid => {
-                        const target = nodes.find(tn => tn.id === cid);
-                        if (target) {
-                            ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(target.x, target.y); ctx.stroke();
-                        }
+                        const target = s.world.nodes.find(tn => tn.id === cid);
+                        if (target) { ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(target.x, target.y); ctx.stroke(); }
                     });
                 });
                 ctx.setLineDash([]);
-
-                nodes.forEach(n => {
-                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                    ctx.beginPath(); ctx.arc(n.x + 3, n.y + 3, 16, 0, Math.PI * 2); ctx.fill();
-                    ctx.fillStyle = n.color;
-                    ctx.beginPath(); ctx.arc(n.x, n.y, 16, 0, Math.PI * 2); ctx.fill();
-                    ctx.strokeStyle = '#e0d8c3';
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-                    ctx.fillStyle = '#1a2a35';
-                    ctx.font = '18px serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(n.icon, n.x, n.y);
-                    ctx.fillStyle = '#e0d8c3';
-                    ctx.font = '10px "Courier New"';
-                    ctx.fillText(n.type, n.x, n.y + 28);
-                    ctx.fillStyle = '#ff5252';
-                    ctx.font = '9px "Courier New"';
-                    ctx.fillText(`💀 D:${n.danger} R:${n.reward}`, n.x, n.y + 38);
+                s.world.nodes.forEach(n => {
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.arc(n.x + 3, n.y + 3, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(n.x, n.y, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#e0d8c3'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.fillStyle = '#1a2a35'; ctx.font = '18px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(n.icon, n.x, n.y);
+                    ctx.fillStyle = '#e0d8c3'; ctx.font = '10px "Courier New"'; ctx.fillText(n.type, n.x, n.y + 28);
+                    ctx.fillStyle = '#ff5252'; ctx.font = '9px "Courier New"'; ctx.fillText(`💀 D:${n.danger} R:${n.reward}`, n.x, n.y + 38);
                 });
-
-                const ship = State._data.ship;
-                ctx.save();
-                ctx.translate(ship.x, ship.y);
-                ctx.rotate(ship.angle);
-                ctx.fillStyle = '#e0d8c3';
-                ctx.beginPath();
-                ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-10, 10);
-                ctx.closePath(); ctx.fill();
-                ctx.fillStyle = 'white';
-                ctx.fillRect(-2, -8, 2, 16);
+                s.hazards.forEach(haz => {
+                    ctx.save(); ctx.translate(haz.x, haz.y);
+                    if (haz.type === 'whirlpool') {
+                        ctx.rotate(Date.now() * 0.005); ctx.strokeStyle = 'rgba(0, 150, 255, 0.4)';
+                        for(let r=5; r<haz.radius; r+=5) { ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 1.5); ctx.stroke(); }
+                        ctx.font = '14px serif'; ctx.fillText('🌀', 0, 0);
+                    } else { ctx.font = '20px serif'; ctx.fillText('🦈', 0, 0); }
+                    ctx.restore();
+                });
+                const ship = s.ship;
+                ctx.save(); ctx.translate(ship.x, ship.y); ctx.rotate(ship.angle); ctx.fillStyle = '#e0d8c3';
+                ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-10, -10); ctx.lineTo(-10, 10); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = 'white'; ctx.fillRect(-2, -8, 2, 16); ctx.restore();
                 ctx.restore();
             }
 
