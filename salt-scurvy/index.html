@@ -1,11 +1,293 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>salt-scurvy</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Salt & Scurvy</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0e171d;
+            font-family: 'Courier New', Courier, monospace;
+            color: #e0d8c3;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            touch-action: none;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            padding: 15px;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 2px 2px 0px #000;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border: 1px solid #5d5d5d;
+            border-radius: 4px;
+        }
+
+        .debug-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 10px;
+            color: #777;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
-  <h1>salt-scurvy</h1>
+    <div id="ui-layer">
+        <div class="stat-box">
+            Gold: <span id="gold-val">0</span>
+        </div>
+        <div class="stat-box">
+            Food: <span id="food-val">0</span>
+        </div>
+        <div class="stat-box">
+            Hull: <span id="hull-val">0</span>%
+        </div>
+    </div>
+    <div class="debug-info" id="debug">FPS: 60</div>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        /**
+         * STATE MANAGEMENT
+         */
+        /**
+         * MAP GENERATOR
+         */
+        class MapGenerator {
+            constructor(width, height) {
+                this.width = width;
+                this.height = height;
+                this.cellSize = 160;
+            }
+
+            generate() {
+                const nodes = [];
+                const cols = Math.floor(this.width / this.cellSize);
+                const rows = Math.floor(this.height / this.cellSize);
+                const types = [
+                    { name: 'Foraging', icon: '🌿', color: '#81c784', weight: 0.3, props: { foodRange: [10, 30] } },
+                    { name: 'Port', icon: '⚓', color: '#4fc3f7', weight: 0.2, props: { repairCost: 5, foodPrice: 2 } },
+                    { name: 'Ruins', icon: '🗿', color: '#ba68c8', weight: 0.25, props: { lootRange: [20, 100], risk: 0.4 } },
+                    { name: 'Wreck', icon: '🏚️', color: '#ff8a65', weight: 0.25, props: { salvageRange: [5, 50] } }
+                ];
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        if (Math.random() > 0.6) continue;
+                        const x = (c * this.cellSize) + 40 + Math.random() * (this.cellSize - 80);
+                        const y = (r * this.cellSize) + 40 + Math.random() * (this.cellSize - 80);
+                        const dist = Math.hypot(x, y);
+                        const maxDist = Math.hypot(this.width, this.height);
+                        const danger = parseFloat((dist / maxDist).toFixed(2));
+                        const reward = parseFloat((1 + (dist / maxDist) * 2).toFixed(2));
+                        const typeRoll = Math.random();
+                        let type = types[0];
+                        let cum = 0;
+                        for (const t of types) {
+                            cum += t.weight;
+                            if (typeRoll < cum) { type = t; break; }
+                        }
+                        nodes.push({
+                            id: `n_${r}_${c}`, x, y,
+                            type: type.name, icon: type.icon, color: type.color,
+                            danger, reward, properties: { ...type.props },
+                            connections: []
+                        });
+                    }
+                }
+                nodes.forEach(n1 => {
+                    const near = nodes.filter(n2 => n2.id !== n1.id)
+                        .sort((a, b) => Math.hypot(a.x - n1.x, a.y - n1.y) - Math.hypot(b.x - n1.x, b.y - n1.y))
+                        .slice(0, 2);
+                    near.forEach(n2 => {
+                        if (!n1.connections.includes(n2.id)) n1.connections.push(n2.id);
+                        if (!n2.connections.includes(n1.id)) n2.connections.push(n1.id);
+                    });
+                });
+                return nodes;
+            }
+        }
+
+        const State = {
+            _data: {
+                gold: 150,
+                food: 100,
+                ship: { hull: 100, maxHull: 100, speed: 2 },
+                world: { nodes: [] },
+                lastUpdate: Date.now()
+            },
+            observers: [],
+            init() {
+                const saved = localStorage.getItem('salt_scurvy_v1');
+                if (saved) {
+                    try { this._data = JSON.parse(saved); } catch (e) { console.error(e); }
+                }
+                if (!this._data.world || !this._data.world.nodes || !this._data.world.nodes.length) {
+                    const gen = new MapGenerator(window.innerWidth, window.innerHeight);
+                    this._data.world = { nodes: gen.generate() };
+                }
+                this.notify();
+            },
+            save() { localStorage.setItem('salt_scurvy_v1', JSON.stringify(this._data)); },
+            subscribe(callback) { this.observers.push(callback); callback(this._data); },
+            notify() { this.observers.forEach(cb => cb(this._data)); },
+            updateStat(key, value) {
+                if (this._data.hasOwnProperty(key)) this._data[key] = value;
+                else if (this._data.ship.hasOwnProperty(key)) this._data.ship[key] = value;
+                this.notify();
+                this.save();
+            }
+        };
+
+        /**
+         * CORE ENGINE
+         */
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.lastTime = 0;
+                this.fps = 0;
+                
+                // Bind UI elements
+                this.uiGold = document.getElementById('gold-val');
+                this.uiFood = document.getElementById('food-val');
+                this.uiHull = document.getElementById('hull-val');
+                this.uiDebug = document.getElementById('debug');
+
+                this.init();
+            }
+
+            init() {
+                window.addEventListener('resize', () => this.resize());
+                this.resize();
+                
+                State.init();
+                State.subscribe((data) => this.syncUI(data));
+
+                requestAnimationFrame((t) => this.loop(t));
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                // Re-draw immediately on resize to prevent flicker
+                this.render();
+            }
+
+            syncUI(data) {
+                this.uiGold.innerText = Math.floor(data.gold);
+                this.uiFood.innerText = Math.floor(data.food);
+                this.uiHull.innerText = Math.floor(data.ship.hull);
+            }
+
+            update(dt) {
+                // Game logic here
+                // For demonstration: slow consumption of food
+                const foodConsumption = 0.001 * dt;
+                if (State._data.food > 0) {
+                    State._data.food -= foodConsumption;
+                    if (Math.random() > 0.99) State.notify(); // Throttle UI updates
+                }
+            }
+
+            render() {
+                const ctx = this.ctx;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                ctx.fillStyle = '#1a2a35';
+                ctx.fillRect(0, 0, w, h);
+
+                ctx.strokeStyle = '#233a4a';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < w; i += 100) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, h); ctx.stroke();
+                }
+                for (let i = 0; i < h; i += 100) {
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(w, i); ctx.stroke();
+                }
+
+                if (!State._data.world || !State._data.world.nodes) return;
+                const nodes = State._data.world.nodes;
+
+                ctx.strokeStyle = 'rgba(224, 216, 195, 0.15)';
+                ctx.setLineDash([5, 10]);
+                nodes.forEach(n => {
+                    n.connections.forEach(cid => {
+                        const target = nodes.find(tn => tn.id === cid);
+                        if (target) {
+                            ctx.beginPath(); ctx.moveTo(n.x, n.y); ctx.lineTo(target.x, target.y); ctx.stroke();
+                        }
+                    });
+                });
+                ctx.setLineDash([]);
+
+                nodes.forEach(n => {
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    ctx.beginPath(); ctx.arc(n.x + 3, n.y + 3, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = n.color;
+                    ctx.beginPath(); ctx.arc(n.x, n.y, 16, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#e0d8c3';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.fillStyle = '#1a2a35';
+                    ctx.font = '18px serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(n.icon, n.x, n.y);
+                    ctx.fillStyle = '#e0d8c3';
+                    ctx.font = '10px "Courier New"';
+                    ctx.fillText(n.type, n.x, n.y + 28);
+                    ctx.fillStyle = '#ff5252';
+                    ctx.font = '9px "Courier New"';
+                    ctx.fillText(`💀 D:${n.danger} R:${n.reward}`, n.x, n.y + 38);
+                });
+            }
+
+            loop(timestamp) {
+                const dt = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+                
+                if (dt < 100) { // Prevent massive jumps after tab focus
+                    this.update(dt);
+                    this.render();
+                }
+
+                // FPS Counter
+                if (Math.round(timestamp) % 10 === 0) {
+                    this.fps = Math.round(1000 / dt);
+                    this.uiDebug.innerText = `FPS: ${this.fps} | RES: ${this.canvas.width}x${this.canvas.height}`;
+                }
+
+                requestAnimationFrame((t) => this.loop(t));
+            }
+        }
+
+        // Start application
+        window.onload = () => {
+            window.gameInstance = new Game();
+        };
+    </script>
 </body>
 </html>
