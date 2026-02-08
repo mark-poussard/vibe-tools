@@ -51,19 +51,24 @@
             pointer-events: none;
         }
 
-        #game-over {
+        #game-over, #port-menu {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(20, 30, 40, 0.95);
+            background: rgba(10, 20, 30, 0.98);
             padding: 30px;
-            border: 2px solid #ff5252;
             text-align: center;
             display: none;
             z-index: 100;
             pointer-events: auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
         }
+
+        #game-over { border: 2px solid #ff5252; }
+        #port-menu { border: 2px solid #4fc3f7; min-width: 250px; }
+        #port-menu h2 { color: #4fc3f7; margin-top: 0; }
+        .port-btn-group { display: flex; flex-direction: column; gap: 8px; }
 
         .btn {
             background: #233a4a;
@@ -85,13 +90,23 @@
             Food: <span id="food-val">0</span>
         </div>
         <div class="stat-box">
-            Hull: <span id="hull-val">0</span>%
+            Hull: <span id="hull-val">0/100</span>
         </div>
     </div>
     <div id="game-over">
         <h1 style="color: #ff5252; margin-top: 0;">SUNK!</h1>
         <p>Your crew starved at sea...</p>
         <button class="btn" onclick="location.reload()">RETRY</button>
+    </div>
+    <div id="port-menu">
+        <h2>Trading Port</h2>
+        <div class="port-btn-group">
+            <button class="btn" onclick="gameInstance.buyFood()">Restock Food (1G/unit)</button>
+            <button class="btn" onclick="gameInstance.repairHull()">Repair Hull (25G)</button>
+            <button class="btn" onclick="gameInstance.upgradeSails()">Better Sails (100G)</button>
+            <button class="btn" onclick="gameInstance.upgradeHull()">Reinforce Hull (150G)</button>
+        </div>
+        <button class="btn" style="background: #333; margin-top: 15px;" onclick="gameInstance.closePort()">LEAVE</button>
     </div>
     <div class="debug-info" id="debug">FPS: 60</div>
     <canvas id="gameCanvas"></canvas>
@@ -162,6 +177,7 @@
             _data: {
                 gold: 150,
                 food: 100,
+                maxFood: 100,
                 ship: { hull: 100, maxHull: 100, speed: 0.15, x: 0, y: 0, angle: 0, target: null },
                 world: { nodes: [] },
                 hazards: [],
@@ -175,7 +191,10 @@
                 if (saved) {
                     try {
                         const d = JSON.parse(saved);
-                        if (d.ship && d.world) this._data = d;
+                        if (d.ship && d.world) {
+                            this._data = d;
+                            if (!this._data.maxFood) this._data.maxFood = 100;
+                        }
                     } catch (e) { console.error(e); }
                 }
                 if (!this._data.world || !this._data.world.nodes || !this._data.world.nodes.length) {
@@ -247,8 +266,8 @@
 
             syncUI(data) {
                 this.uiGold.innerText = Math.floor(data.gold);
-                this.uiFood.innerText = Math.floor(data.food);
-                this.uiHull.innerText = Math.floor(data.ship.hull);
+                this.uiFood.innerText = Math.floor(data.food) + '/' + (data.maxFood || 100);
+                this.uiHull.innerText = Math.floor(data.ship.hull) + '/' + data.ship.maxHull;
             }
 
             update(dt) {
@@ -280,7 +299,9 @@
                             document.querySelector('#game-over p').innerText = "Your crew starved at sea...";
                         }
                     } else {
-                        ship.x = ship.target.x; ship.y = ship.target.y; s.status = 'idle'; s.hazards = [];
+                        const tx = ship.target.x, ty = ship.target.y;
+                        ship.x = tx; ship.y = ty; s.status = 'idle'; s.hazards = [];
+                        this.checkArrival(tx, ty);
                     }
                     for (let i = s.hazards.length - 1; i >= 0; i--) {
                         const h = s.hazards[i];
@@ -301,6 +322,57 @@
                     }
                     State.notify();
                 }
+            }
+
+            checkArrival(x, y) {
+                const s = State._data;
+                const node = s.world.nodes.find(n => Math.hypot(n.x - x, n.y - y) < 30);
+                if (node && node.type === 'Port') {
+                    document.getElementById('port-menu').style.display = 'block';
+                }
+            }
+
+            buyFood() {
+                const s = State._data;
+                const maxF = s.maxFood || 100;
+                const cost = Math.ceil(maxF - s.food);
+                if (s.gold >= cost && cost > 0) {
+                    s.gold -= cost;
+                    s.food = maxF;
+                    State.save(); State.notify();
+                }
+            }
+
+            repairHull() {
+                const s = State._data;
+                if (s.gold >= 25 && s.ship.hull < s.ship.maxHull) {
+                    s.gold -= 25;
+                    s.ship.hull = Math.min(s.ship.maxHull, s.ship.hull + 25);
+                    State.save(); State.notify();
+                }
+            }
+
+            upgradeSails() {
+                const s = State._data;
+                if (s.gold >= 100) {
+                    s.gold -= 100;
+                    s.ship.speed += 0.03;
+                    State.save(); State.notify();
+                }
+            }
+
+            upgradeHull() {
+                const s = State._data;
+                if (s.gold >= 150) {
+                    s.gold -= 150;
+                    s.ship.maxHull += 25;
+                    s.ship.hull += 25;
+                    State.save(); State.notify();
+                }
+            }
+
+            closePort() {
+                document.getElementById('port-menu').style.display = 'none';
             }
 
             render() {
