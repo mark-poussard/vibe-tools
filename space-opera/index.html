@@ -43,14 +43,18 @@
         const angle = ship.startPhi + time * (ship.endPhi - ship.startPhi);
         let px = Math.cos(angle) * r, py = Math.sin(angle) * r;
         system.planets.forEach((p, idx) => {
-          if (idx === ship.planetIndex || idx === ship.targetPlanetIndex) return;
-          const fA = p.angle + (p.speed * 0.1) * (time * ship.transferDuration);
-          const pX = Math.cos(fA) * p.distance, pY = Math.sin(fA) * p.distance;
-          const dx = pX - px, dy = pY - py;
-          const d = Math.hypot(dx, dy), soi = p.radius * 7;
-          if (d < soi) {
-            const f = Math.pow(1 - d / soi, 2) * p.radius * 2.0;
-            px += (dx / d) * f; py += (dy / d) * f;
+          const frameOffset = (time - ship.transferT) * ship.transferDuration;
+          const pAngleAtT = p.angle + (p.speed * 0.1) * frameOffset;
+          const pX = Math.cos(pAngleAtT) * p.distance;
+          const pY = Math.sin(pAngleAtT) * p.distance;
+          const dx = px - pX, dy = py - pY;
+          const d = Math.hypot(dx, dy);
+          const safeDist = p.radius + 20;
+          if (idx === ship.planetIndex && time < 0.1) return;
+          if (idx === ship.targetPlanetIndex && time > 0.9) return;
+          if (d < safeDist) {
+            const push = (safeDist - d);
+            px += (dx / (d || 0.001)) * push; py += (dy / (d || 0.001)) * push;
           }
         });
         return { x: px, y: py };
@@ -168,7 +172,7 @@
       if (ship.state === 'ORBITING') {
         ui.innerHTML = `System: Proxima-X<br>Orbiting Planet ${ship.planetIndex + 1}`;
       } else {
-        ui.innerHTML = `System: Proxima-X<br>Calculating Fastest Intercept...<br>Advanced Grav-Assist to Planet ${ship.targetPlanetIndex + 1}`;
+        ui.innerHTML = `System: Proxima-X<br>Interplanetary Transfer: Active<br>Collision Avoidance & Navigation engaged to Planet ${ship.targetPlanetIndex + 1}`;
       }
 
       draw();
