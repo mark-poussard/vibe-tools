@@ -33,14 +33,33 @@
     };
 
     function getTransferPosition(t) {
-      const r1 = ship.r1, r2 = ship.r2;
-      const a = (r1 + r2) / 2;
-      const e = Math.abs(r2 - r1) / (r1 + r2);
-      const relTheta = t * Math.PI;
-      const theta = (r2 > r1) ? relTheta : Math.PI - relTheta;
-      const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
-      const angle = ship.startPhi + t * (ship.endPhi - ship.startPhi);
-      return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, angle: angle };
+      const calcPos = (time) => {
+        const r1 = ship.r1, r2 = ship.r2;
+        const a = (r1 + r2) / 2;
+        const e = Math.abs(r2 - r1) / (r1 + r2);
+        const relTheta = time * Math.PI;
+        const theta = (r2 > r1) ? relTheta : Math.PI - relTheta;
+        const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
+        const angle = ship.startPhi + time * (ship.endPhi - ship.startPhi);
+        let px = Math.cos(angle) * r, py = Math.sin(angle) * r;
+        system.planets.forEach((p, idx) => {
+          if (idx === ship.planetIndex || idx === ship.targetPlanetIndex) return;
+          const fA = p.angle + (p.speed * 0.1) * (time * ship.transferDuration);
+          const pX = Math.cos(fA) * p.distance, pY = Math.sin(fA) * p.distance;
+          const dx = pX - px, dy = pY - py;
+          const d = Math.hypot(dx, dy), soi = p.radius * 7;
+          if (d < soi) {
+            const f = Math.pow(1 - d / soi, 2) * p.radius * 2.0;
+            px += (dx / d) * f; py += (dy / d) * f;
+          }
+        });
+        return { x: px, y: py };
+      };
+      const pos = calcPos(t);
+      const dt = t < 1 ? 0.01 : -0.01;
+      const other = calcPos(t + dt);
+      const angle = dt > 0 ? Math.atan2(other.y - pos.y, other.x - pos.x) : Math.atan2(pos.y - other.y, pos.x - other.x);
+      return { x: pos.x, y: pos.y, angle: angle };
     }
 
     function drawShip(x, y, rot) {
@@ -71,8 +90,11 @@
       ship.r2 = p2.distance;
       ship.startPhi = p1.angle;
       const a = (ship.r1 + ship.r2) / 2;
-      ship.transferDuration = Math.sqrt(Math.pow(a, 3)) * 0.015;
-      ship.endPhi = p2.angle + (p2.speed * 0.1) * ship.transferDuration;
+      ship.transferDuration = Math.sqrt(Math.pow(a, 3)) * 0.007;
+      let diff = (p2.angle + (p2.speed * 0.1) * ship.transferDuration) - ship.startPhi;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      ship.endPhi = ship.startPhi + diff;
     }
     
     // Touch State
@@ -146,7 +168,7 @@
       if (ship.state === 'ORBITING') {
         ui.innerHTML = `System: Proxima-X<br>Orbiting Planet ${ship.planetIndex + 1}`;
       } else {
-        ui.innerHTML = `System: Proxima-X<br>Navigating to Planet ${ship.targetPlanetIndex + 1}...`;
+        ui.innerHTML = `System: Proxima-X<br>Calculating Fastest Intercept...<br>Advanced Grav-Assist to Planet ${ship.targetPlanetIndex + 1}`;
       }
 
       draw();
