@@ -20,6 +20,7 @@
     let width, height;
     let camera = { x: 0, y: 0, zoom: 0.5 };
     let system = { star: {}, planets: [] };
+    const ORBIT_MARGIN = 20;
     let ship = { 
       planetIndex: 0, 
       angle: 0, 
@@ -90,12 +91,20 @@
       ship.state = 'TRANSFERRING';
       ship.targetPlanetIndex = targetIdx;
       ship.transferT = 0;
-      ship.r1 = p1.distance;
-      ship.r2 = p2.distance;
-      ship.startPhi = p1.angle;
-      const a = (ship.r1 + ship.r2) / 2;
-      ship.transferDuration = Math.sqrt(Math.pow(a, 3)) * 0.007;
-      let diff = (p2.angle + (p2.speed * 0.1) * ship.transferDuration) - ship.startPhi;
+      const startOrbitR = p1.radius + ORBIT_MARGIN;
+      const endOrbitR = p2.radius + ORBIT_MARGIN;
+      const sX = Math.cos(p1.angle) * p1.distance + Math.cos(ship.angle) * startOrbitR;
+      const sY = Math.sin(p1.angle) * p1.distance + Math.sin(ship.angle) * startOrbitR;
+      ship.r1 = Math.hypot(sX, sY);
+      ship.startPhi = Math.atan2(sY, sX);
+      const estA = (ship.r1 + p2.distance) / 2;
+      ship.transferDuration = Math.sqrt(Math.pow(estA, 3)) * 0.007;
+      const arrivalPlanetAngle = p2.angle + (p2.speed * 0.1) * ship.transferDuration;
+      const eX = Math.cos(arrivalPlanetAngle) * p2.distance + Math.cos(0) * endOrbitR;
+      const eY = Math.sin(arrivalPlanetAngle) * p2.distance + Math.sin(0) * endOrbitR;
+      ship.r2 = Math.hypot(eX, eY);
+      const targetPhi = Math.atan2(eY, eX);
+      let diff = targetPhi - ship.startPhi;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       ship.endPhi = ship.startPhi + diff;
@@ -144,7 +153,7 @@
       }
 
       ship.planetIndex = Math.floor(Math.random() * system.planets.length);
-      ship.orbitRadius = system.planets[ship.planetIndex].radius + 15;
+      ship.orbitRadius = system.planets[ship.planetIndex].radius + ORBIT_MARGIN;
       
       // Initial camera focus
       camera.x = 0;
@@ -165,6 +174,7 @@
           ship.planetIndex = ship.targetPlanetIndex;
           ship.transferT = 0;
           ship.angle = 0;
+          ship.orbitRadius = system.planets[ship.planetIndex].radius + ORBIT_MARGIN;
         }
       }
 
