@@ -20,7 +20,60 @@
     let width, height;
     let camera = { x: 0, y: 0, zoom: 0.5 };
     let system = { star: {}, planets: [] };
-    let ship = { planetIndex: 0, angle: 0, orbitRadius: 20 };
+    let ship = { 
+      planetIndex: 0, 
+      angle: 0, 
+      orbitRadius: 20, 
+      state: 'ORBITING',
+      targetPlanetIndex: -1,
+      transferT: 0,
+      transferDuration: 0,
+      r1: 0, r2: 0,
+      startPhi: 0, endPhi: 0
+    };
+
+    function getTransferPosition(t) {
+      const r1 = ship.r1, r2 = ship.r2;
+      const a = (r1 + r2) / 2;
+      const e = Math.abs(r2 - r1) / (r1 + r2);
+      const relTheta = t * Math.PI;
+      const theta = (r2 > r1) ? relTheta : Math.PI - relTheta;
+      const r = (a * (1 - e * e)) / (1 + e * Math.cos(theta));
+      const angle = ship.startPhi + t * (ship.endPhi - ship.startPhi);
+      return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, angle: angle };
+    }
+
+    function drawShip(x, y, rot) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.moveTo(0, -8);
+      ctx.lineTo(5, 5);
+      ctx.lineTo(-5, 5);
+      ctx.closePath();
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function startTransfer(targetIdx) {
+      if (targetIdx === ship.planetIndex || ship.state === 'TRANSFERRING') return;
+      const p1 = system.planets[ship.planetIndex];
+      const p2 = system.planets[targetIdx];
+      ship.state = 'TRANSFERRING';
+      ship.targetPlanetIndex = targetIdx;
+      ship.transferT = 0;
+      ship.r1 = p1.distance;
+      ship.r2 = p2.distance;
+      ship.startPhi = p1.angle;
+      const a = (ship.r1 + ship.r2) / 2;
+      ship.transferDuration = Math.sqrt(Math.pow(a, 3)) * 0.015;
+      ship.endPhi = p2.angle + (p2.speed * 0.1) * ship.transferDuration;
+    }
     
     // Touch State
     let lastTouchX = 0, lastTouchY = 0;
@@ -73,13 +126,28 @@
     }
 
     function update() {
-      // Move planets
       system.planets.forEach(p => {
         p.angle += p.speed * 0.1;
       });
 
-      // Move ship
-      ship.angle += 0.02;
+      if (ship.state === 'ORBITING') {
+        ship.angle += 0.02;
+      } else {
+        ship.transferT += 1 / ship.transferDuration;
+        if (ship.transferT >= 1) {
+          ship.state = 'ORBITING';
+          ship.planetIndex = ship.targetPlanetIndex;
+          ship.transferT = 0;
+          ship.angle = 0;
+        }
+      }
+
+      const ui = document.getElementById('ui');
+      if (ship.state === 'ORBITING') {
+        ui.innerHTML = `System: Proxima-X<br>Orbiting Planet ${ship.planetIndex + 1}`;
+      } else {
+        ui.innerHTML = `System: Proxima-X<br>Navigating to Planet ${ship.targetPlanetIndex + 1}...`;
+      }
 
       draw();
       requestAnimationFrame(update);
@@ -122,29 +190,54 @@
         ctx.fill();
 
         // Draw Ship if it's on this planet
-        if (index === ship.planetIndex) {
+        if (ship.state === 'ORBITING' && index === ship.planetIndex) {
           const sx = px + Math.cos(ship.angle) * ship.orbitRadius;
           const sy = py + Math.sin(ship.angle) * ship.orbitRadius;
-          
-          ctx.save();
-          ctx.translate(sx, sy);
-          ctx.rotate(ship.angle + Math.PI / 2);
-          ctx.beginPath();
-          ctx.moveTo(0, -6);
-          ctx.lineTo(4, 4);
-          ctx.lineTo(-4, 4);
-          ctx.closePath();
-          ctx.fillStyle = '#fff';
-          ctx.fill();
-          ctx.restore();
+          drawShip(sx, sy, ship.angle + Math.PI / 2);
         }
       });
+
+      if (ship.state === 'TRANSFERRING') {
+        const pos = getTransferPosition(ship.transferT);
+        ctx.beginPath();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = 'rgba(255, 50, 50, 0.6)';
+        for (let t = 0; t <= 1; t += 0.02) {
+          const p = getTransferPosition(t);
+          if (t === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        for (let t = 0; t <= 1; t += 0.1) {
+          const p = getTransferPosition(t);
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#ff3333';
+          ctx.fill();
+        }
+        drawShip(pos.x, pos.y, pos.angle + Math.PI / 2);
+      }
 
       ctx.restore();
     }
 
     // Interaction Logic
+    function handlePointer(ex, ey) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = (ex - rect.left - width / 2) / camera.zoom + camera.x;
+      const my = (ey - rect.top - height / 2) / camera.zoom + camera.y;
+      system.planets.forEach((p, idx) => {
+        const px = Math.cos(p.angle) * p.distance;
+        const py = Math.sin(p.angle) * p.distance;
+        if (Math.hypot(mx - px, my - py) < p.radius + 25) startTransfer(idx);
+      });
+    }
+
+    canvas.addEventListener('mousedown', e => handlePointer(e.clientX, e.clientY));
+
     canvas.addEventListener('touchstart', e => {
+      handlePointer(e.touches[0].clientX, e.touches[0].clientY);
       if (e.touches.length === 1) {
         isDragging = true;
         lastTouchX = e.touches[0].clientX;
