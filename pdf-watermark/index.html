@@ -179,17 +179,28 @@
             processBtn.disabled = true;
             loader.style.display = "block";
             
-            // 1. Watermark with Pattern
+                        // 1. Watermark with Pattern
             status.innerText = t.statusPattern;
             const arrayBuffer = await fileInput.files[0].arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
             
+            // Estimate text width (~8px per character for a standard 14pt font)
+            const estimatedTextWidth = text.length * 8; 
+            
+            // xStep calculates the text width + the user's desired spacing gap
+            const xStep = estimatedTextWidth + spacing; 
+            
+            // yStep forces a normal line-height gap vertically 
+            // (40 units translates nicely when rotated 45 degrees)
+            const yStep = 40; 
+
             pages.forEach(page => {
                 const { width, height } = page.getSize();
-                // Create a grid larger than the page to account for rotation clipping
-                for (let x = -width; x < width * 2; x += spacing) {
-                    for (let y = -height; y < height * 2; y += spacing) {
+                
+                // Use the new xStep and yStep variables in the loops
+                for (let x = -width; x < width * 2; x += xStep) {
+                    for (let y = -height; y < height * 2; y += yStep) {
                         page.drawText(text, {
                             x: x,
                             y: y,
@@ -201,6 +212,7 @@
                     }
                 }
             });
+
 
             const watermarkedPdfBytes = await pdfDoc.save();
 
