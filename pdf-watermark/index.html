@@ -11,6 +11,8 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; padding: 40px; background: #ececf1; color: #333; }
         .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
         .input-group { margin-bottom: 1.2rem; }
+        .lang-switcher { position: absolute; top: 10px; right: 10px; font-size: 0.8rem; }
+        .lang-switcher select { padding: 4px; border-radius: 4px; border: 1px solid #ddd; }
         label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; }
         input[type="text"], input[type="file"], input[type="range"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -24,27 +26,33 @@
 </head>
 <body>
 
-<div class="card">
-    <h2 style="margin-top:0">PDF Pattern Tiler</h2>
-    <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">Creates a non-removable tiled watermark by rasterizing every page.</p>
+<div class="card" style="position: relative;">
+    <div class="lang-switcher">
+        <select id="langSelect">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+        </select>
+    </div>
+    <h2 id="title" style="margin-top:0">PDF Pattern Tiler</h2>
+    <p id="subtitle" style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">Creates a non-removable tiled watermark by rasterizing every page.</p>
     
     <div class="input-group">
-        <label>Upload PDF</label>
+        <label id="labelUpload">Upload PDF</label>
         <input type="file" id="pdfInput" accept="application/pdf">
     </div>
 
     <div class="input-group">
-        <label>Watermark Text</label>
+        <label id="labelWatermark">Watermark Text</label>
         <input type="text" id="wmText" value="INTERNAL USE ONLY">
     </div>
 
     <div class="row">
         <div class="input-group">
-            <label>Density (Spacing)</label>
+            <label id="labelDensity">Density (Spacing)</label>
             <input type="range" id="wmSpace" min="50" max="300" value="120">
         </div>
         <div class="input-group">
-            <label>Opacity</label>
+            <label id="labelOpacity">Opacity</label>
             <input type="range" id="wmOpacity" min="5" max="50" value="15">
         </div>
     </div>
@@ -60,6 +68,74 @@
     const { PDFDocument, rgb, degrees } = PDFLib;
     const { jsPDF } = window.jspdf;
 
+    const translations = {
+        en: {
+            appTitle: "Tiled PDF Watermark & Rasterizer",
+            title: "PDF Pattern Tiler",
+            subtitle: "Creates a non-removable tiled watermark by rasterizing every page.",
+            labelUpload: "Upload PDF",
+            labelWatermark: "Watermark Text",
+            labelDensity: "Density (Spacing)",
+            labelOpacity: "Opacity",
+            processBtn: "Generate Flattened PDF",
+            statusReady: "Ready",
+            errorNoFile: "Select a PDF file.",
+            statusPattern: "Generating pattern overlay...",
+            statusRaster: "Rasterizing pages (this may take a moment)...",
+            statusProcessing: "Processing Page {0} / {1}",
+            statusDownload: "Downloading...",
+            statusSuccess: "Success!",
+            errorPrefix: "Error: ",
+            defaultWatermark: "INTERNAL USE ONLY"
+        },
+        fr: {
+            appTitle: "Filigrane PDF quadrillé & Pixellisation",
+            title: "Générateur de filigrane PDF",
+            subtitle: "Crée un filigrane quadrillé non-supprimable en pixellisant chaque page.",
+            labelUpload: "Télécharger PDF",
+            labelWatermark: "Texte du filigrane",
+            labelDensity: "Densité (Espacement)",
+            labelOpacity: "Opacité",
+            processBtn: "Générer le PDF aplati",
+            statusReady: "Prêt",
+            errorNoFile: "Veuillez sélectionner un fichier PDF.",
+            statusPattern: "Génération du motif de filigrane...",
+            statusRaster: "Pixellisation des pages (cela peut prendre un moment)...",
+            statusProcessing: "Traitement de la page {0} / {1}",
+            statusDownload: "Téléchargement...",
+            statusSuccess: "Succès !",
+            errorPrefix: "Erreur : ",
+            defaultWatermark: "USAGE INTERNE UNIQUEMENT"
+        }
+    };
+
+    let currentLang = localStorage.getItem('pdf-wm-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
+    
+    function updateUI() {
+        const t = translations[currentLang];
+        document.title = t.appTitle;
+        document.getElementById('title').innerText = t.title;
+        document.getElementById('subtitle').innerText = t.subtitle;
+        document.getElementById('labelUpload').innerText = t.labelUpload;
+        document.getElementById('labelWatermark').innerText = t.labelWatermark;
+        document.getElementById('labelDensity').innerText = t.labelDensity;
+        document.getElementById('labelOpacity').innerText = t.labelOpacity;
+        document.getElementById('processBtn').innerText = t.processBtn;
+        document.getElementById('status').innerText = t.statusReady;
+        document.getElementById('langSelect').value = currentLang;
+        if (document.getElementById('wmText').value === translations.en.defaultWatermark || document.getElementById('wmText').value === translations.fr.defaultWatermark) {
+            document.getElementById('wmText').value = t.defaultWatermark;
+        }
+    }
+
+    document.getElementById('langSelect').addEventListener('change', (e) => {
+        currentLang = e.target.value;
+        localStorage.setItem('pdf-wm-lang', currentLang);
+        updateUI();
+    });
+
+    updateUI();
+
     const processBtn = document.getElementById('processBtn');
     const status = document.getElementById('status');
     const loader = document.getElementById('loader');
@@ -70,14 +146,15 @@
         const spacing = parseInt(document.getElementById('wmSpace').value);
         const opacity = parseInt(document.getElementById('wmOpacity').value) / 100;
 
-        if (!fileInput.files[0]) return alert("Select a PDF file.");
+        const t = translations[currentLang];
+        if (!fileInput.files[0]) return alert(t.errorNoFile);
 
         try {
             processBtn.disabled = true;
             loader.style.display = "block";
             
             // 1. Watermark with Pattern
-            status.innerText = "Generating pattern overlay...";
+            status.innerText = t.statusPattern;
             const arrayBuffer = await fileInput.files[0].arrayBuffer();
             const pdfDoc = await PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
@@ -102,14 +179,14 @@
             const watermarkedPdfBytes = await pdfDoc.save();
 
             // 2. Rasterize to flatten
-            status.innerText = "Rasterizing pages (this may take a moment)...";
+            status.innerText = t.statusRaster;
             const loadingTask = pdfjsLib.getDocument({ data: watermarkedPdfBytes });
             const pdf = await loadingTask.promise;
             
             const finalPdf = new jsPDF({ orientation: 'p', unit: 'px', compress: true });
 
             for (let i = 1; i <= pdf.numPages; i++) {
-                status.innerText = `Processing Page ${i} / ${pdf.numPages}`;
+                status.innerText = t.statusProcessing.replace('{0}', i).replace('{1}', pdf.numPages);
                 const page = await pdf.getPage(i);
                 const viewport = page.getViewport({ scale: 2.0 }); // High quality
                 const canvas = document.createElement('canvas');
@@ -128,13 +205,13 @@
                 finalPdf.addImage(imgData, 'JPEG', 0, 0, viewport.width, viewport.height);
             }
 
-            status.innerText = "Downloading...";
+            status.innerText = t.statusDownload;
             finalPdf.save("tiled_rasterized_document.pdf");
-            status.innerText = "Success!";
+            status.innerText = t.statusSuccess;
 
         } catch (err) {
             console.error(err);
-            status.innerText = "Error: " + err.message;
+            status.innerText = t.errorPrefix + err.message;
         } finally {
             processBtn.disabled = false;
             loader.style.display = "none";
