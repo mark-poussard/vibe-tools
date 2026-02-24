@@ -185,24 +185,29 @@
             const pdfDoc = await PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
             
-            // Estimate text width (~8px per character for a standard 14pt font)
+                        // Estimate text width (~8px per character for a standard 14pt font)
             const estimatedTextWidth = text.length * 8; 
             
             // xStep calculates the text width + the user's desired spacing gap
             const xStep = estimatedTextWidth + spacing; 
             
             // yStep forces a normal line-height gap vertically 
-            // (40 units translates nicely when rotated 45 degrees)
             const yStep = 40; 
 
             pages.forEach(page => {
                 const { width, height } = page.getSize();
                 
-                // Use the new xStep and yStep variables in the loops
-                for (let x = -width; x < width * 2; x += xStep) {
-                    for (let y = -height; y < height * 2; y += yStep) {
+                let isOddRow = false; // Toggle to track alternating rows
+                
+                // Note: We flipped the loops so 'y' (rows) is on the outside
+                for (let y = -height; y < height * 2; y += yStep) {
+                    
+                    // If it's an odd row, shift the starting X position by half a step
+                    const xOffset = isOddRow ? (xStep / 2) : 0;
+                    
+                    for (let x = -width; x < width * 2; x += xStep) {
                         page.drawText(text, {
-                            x: x,
+                            x: x + xOffset, // Add the stagger offset here
                             y: y,
                             size: 14,
                             color: rgb(0.5, 0.5, 0.5),
@@ -210,9 +215,11 @@
                             opacity: opacity,
                         });
                     }
+                    
+                    // Flip the toggle for the next row
+                    isOddRow = !isOddRow; 
                 }
             });
-
 
             const watermarkedPdfBytes = await pdfDoc.save();
 
