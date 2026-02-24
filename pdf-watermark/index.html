@@ -42,19 +42,9 @@
     </div>
 
     <div class="input-group">
-        <label id="labelWatermarkType">Watermark Type</label>
-        <select id="wmTypeSelect">
-            <option value="custom" id="optCustom">Custom Text</option>
-            <option value="date" id="optDate">Current Date</option>
-            <option value="validDate" id="optValidDate">Valid on current date</option>
-            <option value="validMonth" id="optValidMonth">Valid on current month</option>
-            <option value="validYear" id="optValidYear">Valid on current year</option>
-        </select>
-    </div>
-
-    <div class="input-group">
         <label id="labelWatermark">Watermark Text</label>
-        <input type="text" id="wmText" value="INTERNAL USE ONLY">
+        <input type="text" id="wmText" value="INTERNAL USE ONLY" list="wmSuggestions">
+        <datalist id="wmSuggestions"></datalist>
     </div>
 
     <div class="row">
@@ -137,35 +127,26 @@
 
     let currentLang = localStorage.getItem('pdf-wm-lang') || (navigator.language.startsWith('fr') ? 'fr' : 'en');
 
-    function refreshWatermarkText() {
+    function updateSuggestions() {
         const t = translations[currentLang];
-        const type = document.getElementById('wmTypeSelect').value;
-        const wmInput = document.getElementById('wmText');
+        const dl = document.getElementById('wmSuggestions');
         const now = new Date();
         const locale = currentLang === 'fr' ? 'fr-FR' : 'en-US';
         
-        if (type === 'custom') {
-            if (wmInput.value === translations.en.defaultWatermark || wmInput.value === translations.fr.defaultWatermark) {
-                wmInput.value = t.defaultWatermark;
-            }
-            return;
-        }
+        const suggestions = [
+            t.defaultWatermark,
+            now.toLocaleDateString(locale),
+            (currentLang === 'fr' ? t.validOnDate : t.validOn) + now.toLocaleDateString(locale),
+            (currentLang === 'fr' ? t.validIn : t.validOn) + now.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+            (currentLang === 'fr' ? t.validIn : t.validOn) + now.getFullYear()
+        ];
 
-        let text = "";
-        if (type === 'date') {
-            text = now.toLocaleDateString(locale);
-        } else if (type === 'validDate') {
-            const prefix = currentLang === 'fr' ? t.validOnDate : t.validOn;
-            text = prefix + now.toLocaleDateString(locale);
-        } else if (type === 'validMonth') {
-            const prefix = currentLang === 'fr' ? t.validIn : t.validOn;
-            const monthYear = now.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
-            text = prefix + monthYear;
-        } else if (type === 'validYear') {
-            const prefix = currentLang === 'fr' ? t.validIn : t.validOn;
-            text = prefix + now.getFullYear();
-        }
-        wmInput.value = text;
+        dl.innerHTML = '';
+        suggestions.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            dl.appendChild(opt);
+        });
     }
 
     function updateUI() {
@@ -174,7 +155,6 @@
         document.getElementById('title').innerText = t.title;
         document.getElementById('subtitle').innerText = t.subtitle;
         document.getElementById('labelUpload').innerText = t.labelUpload;
-        document.getElementById('labelWatermarkType').innerText = t.labelWatermarkType;
         document.getElementById('labelWatermark').innerText = t.labelWatermark;
         document.getElementById('labelDensity').innerText = t.labelDensity;
         document.getElementById('labelOpacity').innerText = t.labelOpacity;
@@ -182,13 +162,7 @@
         document.getElementById('status').innerText = t.statusReady;
         document.getElementById('langSelect').value = currentLang;
 
-        document.getElementById('optCustom').innerText = t.optCustom;
-        document.getElementById('optDate').innerText = t.optDate;
-        document.getElementById('optValidDate').innerText = t.optValidDate;
-        document.getElementById('optValidMonth').innerText = t.optValidMonth;
-        document.getElementById('optValidYear').innerText = t.optValidYear;
-
-        refreshWatermarkText();
+        updateSuggestions();
     }
 
     document.getElementById('langSelect').addEventListener('change', (e) => {
@@ -196,8 +170,6 @@
         localStorage.setItem('pdf-wm-lang', currentLang);
         updateUI();
     });
-
-    document.getElementById('wmTypeSelect').addEventListener('change', refreshWatermarkText);
 
     updateUI();
 
