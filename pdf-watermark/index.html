@@ -75,7 +75,6 @@
             title: "PDF Pattern Tiler",
             subtitle: "Creates a non-removable tiled watermark by rasterizing every page.",
             labelUpload: "Upload PDF",
-            labelWatermarkType: "Watermark Type",
             labelWatermark: "Watermark Text",
             labelDensity: "Density (Spacing)",
             labelOpacity: "Opacity",
@@ -89,38 +88,28 @@
             statusSuccess: "Success!",
             errorPrefix: "Error: ",
             defaultWatermark: "INTERNAL USE ONLY",
-            optCustom: "Custom Text",
-            optDate: "Current Date",
-            optValidDate: "Valid on current date",
-            optValidMonth: "Valid on current month",
-            optValidYear: "Valid on current year",
-            validOn: "Valid on "
+            validOn: "Valid on ",
+            validIn: "Valid in "
         },
         fr: {
-            appTitle: "Filigrane PDF quadrillé & Pixellisation",
+            appTitle: "Filigrane PDF & Pixellisation",
             title: "Générateur de filigrane PDF",
-            subtitle: "Crée un filigrane quadrillé non-supprimable en pixellisant chaque page.",
-            labelUpload: "Télécharger PDF",
-            labelWatermarkType: "Type de filigrane",
+            subtitle: "Applique un filigrane quadrillé non-supprimable en pixellisant chaque page.",
+            labelUpload: "Sélectionner un PDF",
             labelWatermark: "Texte du filigrane",
             labelDensity: "Densité (Espacement)",
             labelOpacity: "Opacité",
             processBtn: "Générer le PDF aplati",
             statusReady: "Prêt",
             errorNoFile: "Veuillez sélectionner un fichier PDF.",
-            statusPattern: "Génération du motif de filigrane...",
-            statusRaster: "Pixellisation des pages (cela peut prendre un moment)...",
+            statusPattern: "Génération du motif...",
+            statusRaster: "Pixellisation (ceci peut prendre un moment)...",
             statusProcessing: "Traitement de la page {0} / {1}",
             statusDownload: "Téléchargement...",
             statusSuccess: "Succès !",
             errorPrefix: "Erreur : ",
             defaultWatermark: "USAGE INTERNE UNIQUEMENT",
-            optCustom: "Texte personnalisé",
-            optDate: "Date actuelle",
-            optValidDate: "Valide le (date actuelle)",
-            optValidMonth: "Valide en (mois actuel)",
-            optValidYear: "Valide en (année actuelle)",
-            validOnDate: "Valide le ",
+            validOn: "Valide le ",
             validIn: "Valide en "
         }
     };
@@ -136,9 +125,9 @@
         const suggestions = [
             t.defaultWatermark,
             now.toLocaleDateString(locale),
-            (currentLang === 'fr' ? t.validOnDate : t.validOn) + now.toLocaleDateString(locale),
-            (currentLang === 'fr' ? t.validIn : t.validOn) + now.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
-            (currentLang === 'fr' ? t.validIn : t.validOn) + now.getFullYear()
+            t.validOn + now.toLocaleDateString(locale),
+            t.validIn + now.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+            t.validIn + now.getFullYear()
         ];
 
         dl.innerHTML = '';
