@@ -3,98 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Watermark & Rasterizer</title>
+    <title>Tiled PDF Watermark & Rasterizer</title>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; padding: 40px; background: #f4f4f9; }
-        .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        .input-group { margin-bottom: 1.5rem; }
-        label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
-        button:disabled { background: #ccc; }
-        #status { margin-top: 1rem; font-size: 0.9rem; color: #555; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; padding: 40px; background: #ececf1; color: #333; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        .input-group { margin-bottom: 1.2rem; }
+        label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; }
+        input[type="text"], input[type="file"], input[type="range"] { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; transition: background 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        #status { margin-top: 1.5rem; font-size: 0.85rem; color: #64748b; text-align: center; font-style: italic; }
+        .loader { display: none; margin: 10px auto; border: 3px solid #f3f3f3; border-top: 3px solid #2563eb; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>PDF Watermarker</h2>
-    <p style="font-size: 0.8rem; color: #666;">Adds a watermark and flattens (rasterizes) the document.</p>
+    <h2 style="margin-top:0">PDF Pattern Tiler</h2>
+    <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">Creates a non-removable tiled watermark by rasterizing every page.</p>
     
     <div class="input-group">
-        <label>Select PDF</label>
+        <label>Upload PDF</label>
         <input type="file" id="pdfInput" accept="application/pdf">
     </div>
 
     <div class="input-group">
         <label>Watermark Text</label>
-        <input type="text" id="wmText" value="CONFIDENTIAL" placeholder="Enter text...">
+        <input type="text" id="wmText" value="INTERNAL USE ONLY">
     </div>
 
-    <button id="processBtn">Process & Download</button>
-    <div id="status"></div>
+    <div class="row">
+        <div class="input-group">
+            <label>Density (Spacing)</label>
+            <input type="range" id="wmSpace" min="50" max="300" value="120">
+        </div>
+        <div class="input-group">
+            <label>Opacity</label>
+            <input type="range" id="wmOpacity" min="5" max="50" value="15">
+        </div>
+    </div>
+
+    <button id="processBtn">Generate Flattened PDF</button>
+    
+    <div class="loader" id="loader"></div>
+    <div id="status">Ready</div>
 </div>
 
 <script>
-    // Setup PDF.js Worker
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
     const { PDFDocument, rgb, degrees } = PDFLib;
     const { jsPDF } = window.jspdf;
 
     const processBtn = document.getElementById('processBtn');
     const status = document.getElementById('status');
+    const loader = document.getElementById('loader');
 
     processBtn.addEventListener('click', async () => {
         const fileInput = document.getElementById('pdfInput');
         const text = document.getElementById('wmText').value;
+        const spacing = parseInt(document.getElementById('wmSpace').value);
+        const opacity = parseInt(document.getElementById('wmOpacity').value) / 100;
 
-        if (!fileInput.files[0]) return alert("Please select a file first!");
+        if (!fileInput.files[0]) return alert("Select a PDF file.");
 
         try {
             processBtn.disabled = true;
-            status.innerText = "Step 1: Applying Watermark...";
+            loader.style.display = "block";
             
+            // 1. Watermark with Pattern
+            status.innerText = "Generating pattern overlay...";
             const arrayBuffer = await fileInput.files[0].arrayBuffer();
-            
-            // --- STAGE 1: WATERMARKING ---
             const pdfDoc = await PDFDocument.load(arrayBuffer);
             const pages = pdfDoc.getPages();
             
             pages.forEach(page => {
                 const { width, height } = page.getSize();
-                page.drawText(text, {
-                    x: width / 4,
-                    y: height / 2,
-                    size: 50,
-                    color: rgb(0.7, 0.1, 0.1),
-                    rotate: degrees(45),
-                    opacity: 0.3,
-                });
+                // Create a grid larger than the page to account for rotation clipping
+                for (let x = -width; x < width * 2; x += spacing) {
+                    for (let y = -height; y < height * 2; y += spacing) {
+                        page.drawText(text, {
+                            x: x,
+                            y: y,
+                            size: 14,
+                            color: rgb(0.5, 0.5, 0.5),
+                            rotate: degrees(45),
+                            opacity: opacity,
+                        });
+                    }
+                }
             });
 
             const watermarkedPdfBytes = await pdfDoc.save();
 
-            // --- STAGE 2: RASTERIZING ---
-            status.innerText = "Step 2: Rasterizing (Flattening)...";
+            // 2. Rasterize to flatten
+            status.innerText = "Rasterizing pages (this may take a moment)...";
             const loadingTask = pdfjsLib.getDocument({ data: watermarkedPdfBytes });
             const pdf = await loadingTask.promise;
             
-            const finalPdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'px',
-                compress: true
-            });
+            const finalPdf = new jsPDF({ orientation: 'p', unit: 'px', compress: true });
 
             for (let i = 1; i <= pdf.numPages; i++) {
-                status.innerText = `Rasterizing Page ${i} of ${pdf.numPages}...`;
+                status.innerText = `Processing Page ${i} / ${pdf.numPages}`;
                 const page = await pdf.getPage(i);
-                
-                // Increase scale for better resolution (2.0 is usually enough)
-                const viewport = page.getViewport({ scale: 2.0 });
+                const viewport = page.getViewport({ scale: 2.0 }); // High quality
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
@@ -102,28 +119,25 @@
 
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
                 
-                const imgData = canvas.toDataURL('image/jpeg', 0.75);
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);
                 
                 if (i > 1) finalPdf.addPage([viewport.width, viewport.height], viewport.width > viewport.height ? 'l' : 'p');
-                else finalPdf.setPage(1); // Adjust first page size
                 
-                // Ensure page size in jsPDF matches the canvas
                 finalPdf.internal.pageSize.width = viewport.width;
                 finalPdf.internal.pageSize.height = viewport.height;
-                
                 finalPdf.addImage(imgData, 'JPEG', 0, 0, viewport.width, viewport.height);
             }
 
-            // --- STAGE 3: DOWNLOAD ---
-            status.innerText = "Finalizing download...";
-            finalPdf.save("watermarked_rasterized.pdf");
-            status.innerText = "Done!";
+            status.innerText = "Downloading...";
+            finalPdf.save("tiled_rasterized_document.pdf");
+            status.innerText = "Success!";
 
         } catch (err) {
             console.error(err);
             status.innerText = "Error: " + err.message;
         } finally {
             processBtn.disabled = false;
+            loader.style.display = "none";
         }
     });
 </script>
