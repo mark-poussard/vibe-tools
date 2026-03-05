@@ -69,6 +69,11 @@
             font-size: 16px;
         }
 
+        input:disabled {
+            background-color: #F0F4F8;
+            color: #777;
+        }
+
         button {
             background-color: var(--primary);
             color: white;
@@ -199,7 +204,8 @@
                 <div class="form-group">
                     <input type="text" id="practice-input" placeholder="Enter Japanese translation..." onkeypress="handlePracticeEnter(event)">
                 </div>
-                <button onclick="checkAnswer()">Submit</button>
+                <button id="submit-btn" onclick="checkAnswer()">Submit</button>
+                <button id="next-btn" onclick="loadNextPracticeSentence()" style="display: none;">Next Sentence</button>
                 <div id="practice-feedback"></div>
             </div>
             <div class="btn-group">
@@ -234,35 +240,22 @@
         // ==========================================
         /* DATA_START */
         let sentencesMap = {
-          "1": {
-                    "english": "Nice to meet you.",
-                    "primaryJapanese": "はじめまして。",
-                    "alternates": [
-                              "はじめまして"
-                    ]
-          },
-          "2": {
-                    "english": "I am eating an apple.",
-                    "primaryJapanese": "私はりんごを食べています。",
-                    "alternates": [
-                              "りんごを食べている。",
-                              "りんごを食べています。"
-                    ]
-          },
-          "3": {
-                    "english": "Where is the station?",
-                    "primaryJapanese": "駅はどこですか。",
-                    "alternates": [
-                              "駅はどこですか？",
-                              "駅はどこ？"
-                    ]
-          },
-          "1772694260646": {
-                    "english": "I didn't miss a single class this year.",
-                    "primaryJapanese": "今年は一度も授業を欠席しませんでした。",
-                    "alternates": []
-          }
-};
+            "1": {
+                "english": "Nice to meet you.",
+                "primaryJapanese": "はじめまして。",
+                "alternates": ["はじめまして"]
+            },
+            "2": {
+                "english": "I am eating an apple.",
+                "primaryJapanese": "私はりんごを食べています。",
+                "alternates": ["りんごを食べている。", "りんごを食べています。"]
+            },
+            "3": {
+                "english": "Where is the station?",
+                "primaryJapanese": "駅はどこですか。",
+                "alternates": ["駅はどこですか？", "駅はどこ？"]
+            }
+        };
         /* DATA_END */
         // ==========================================
 
@@ -342,46 +335,73 @@
             const feedback = document.getElementById('practice-feedback');
             const input = document.getElementById('practice-input');
             const progress = document.getElementById('practice-progress');
+            const submitBtn = document.getElementById('submit-btn');
+            const nextBtn = document.getElementById('next-btn');
             
             feedback.textContent = '';
             feedback.className = '';
             input.value = '';
-            input.focus();
+            input.disabled = false;
+            
+            submitBtn.style.display = 'inline-block';
+            nextBtn.style.display = 'none';
 
             if (practiceQueue.length === 0) {
                 document.getElementById('practice-english').textContent = "🎉 All done! You cleared all sentences.";
                 progress.textContent = "0 remaining";
                 input.disabled = true;
+                submitBtn.style.display = 'none';
                 return;
             }
 
-            input.disabled = false;
             currentPracticeItem = practiceQueue[0];
             document.getElementById('practice-english').textContent = currentPracticeItem.english;
             progress.textContent = `${practiceQueue.length} sentence(s) remaining in queue`;
+            
+            // Focus input after a slight delay to ensure render is complete
+            setTimeout(() => input.focus(), 10);
         }
 
         function handlePracticeEnter(e) {
-            if (e.key === 'Enter') checkAnswer();
+            if (e.key === 'Enter') {
+                const nextBtn = document.getElementById('next-btn');
+                if (nextBtn.style.display === 'inline-block') {
+                    loadNextPracticeSentence();
+                } else {
+                    checkAnswer();
+                }
+            }
+        }
+
+        function normalizeString(str) {
+            if (!str) return "";
+            // Remove full-width/half-width spaces, and common English/Japanese punctuation
+            return str.replace(/[\s　、。！？,!?]/g, '').toLowerCase();
         }
 
         function checkAnswer() {
             if (practiceQueue.length === 0) return;
 
-            const input = document.getElementById('practice-input').value.trim();
+            const inputElement = document.getElementById('practice-input');
+            const input = inputElement.value.trim();
             if (!input) return;
 
+            const normalizedInput = normalizeString(input);
+            const normalizedPrimary = normalizeString(currentPracticeItem.primaryJapanese);
+            const normalizedAlternates = currentPracticeItem.alternates.map(normalizeString);
+
             const isCorrect = 
-                input === currentPracticeItem.primaryJapanese || 
-                currentPracticeItem.alternates.includes(input);
+                normalizedInput === normalizedPrimary || 
+                normalizedAlternates.includes(normalizedInput);
 
             const feedback = document.getElementById('practice-feedback');
+            const submitBtn = document.getElementById('submit-btn');
+            const nextBtn = document.getElementById('next-btn');
 
             if (isCorrect) {
                 feedback.textContent = "Correct!";
                 feedback.className = "text-success";
                 practiceQueue.shift(); // Remove from queue
-                setTimeout(loadNextPracticeSentence, 1000);
             } else {
                 feedback.textContent = `Incorrect. The expected answer was: ${currentPracticeItem.primaryJapanese}`;
                 feedback.className = "text-error";
@@ -390,9 +410,13 @@
                 const item = practiceQueue.shift();
                 const insertIndex = Math.min(10, practiceQueue.length);
                 practiceQueue.splice(insertIndex, 0, item);
-                
-                setTimeout(loadNextPracticeSentence, 3000);
             }
+
+            // Disable input and swap buttons
+            inputElement.disabled = true;
+            submitBtn.style.display = 'none';
+            nextBtn.style.display = 'inline-block';
+            nextBtn.focus();
         }
 
         // --- REVIEW & EDIT LOGIC ---
@@ -445,7 +469,6 @@
         }
 
         function addSentenceRow() {
-            // Generate a random ID
             const newId = Date.now().toString();
             sentencesMap[newId] = { english: "", primaryJapanese: "", alternates: [] };
             
@@ -479,8 +502,6 @@
         }
 
         // --- GITHUB SYNC LOGIC ---
-
-        // Helper to handle UTF-8 cleanly with base64 for GitHub API
         function encodeBase64Unicode(str) {
             const bytes = new TextEncoder().encode(str);
             const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
@@ -514,7 +535,6 @@
                 statusLabel.textContent = "Fetching remote file...";
                 statusLabel.style.color = "var(--text)";
 
-                // 1. Fetch current file to get the SHA and current content
                 const getRes = await fetch(url, { headers });
                 if (!getRes.ok) throw new Error(`Fetch failed: ${getRes.status} ${getRes.statusText}`);
                 
@@ -522,7 +542,6 @@
                 const remoteSha = getJson.sha;
                 const remoteContent = decodeBase64Unicode(getJson.content);
 
-                // 2. Prepare new content
                 statusLabel.textContent = "Updating map...";
                 
                 const startMarker = "/* DATA_START */";
@@ -539,7 +558,6 @@
                     return;
                 }
 
-                // 3. Push back to GitHub
                 statusLabel.textContent = "Pushing to GitHub...";
                 const putBody = {
                     message: "Sync Japanese practice sentences",
