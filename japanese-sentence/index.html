@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Practice App</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --primary-hover: #357ABD;
+            --bg: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --error: #E74C3C;
+            --success: #2ECC71;
+            --border: #E1E8ED;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1, h2 {
+            margin-top: 0;
+            color: var(--text);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        button.secondary:hover {
+            background-color: #F0F4F8;
+        }
+
+        button.danger {
+            background-color: transparent;
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        button.danger:hover {
+            background-color: #FDEDEC;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Practice Screen specific */
+        #practice-card {
+            text-align: center;
+            padding: 40px 20px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .practice-english {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        #practice-feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        .text-success { color: var(--success); }
+        .text-error { color: var(--error); }
+
+        /* Review Screen specific */
+        .sentence-row {
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            background: #FAFAFA;
+        }
+
+        .sentence-row button {
+            justify-self: start;
+        }
+        
+        #sync-status {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div id="config-screen" class="screen">
+            <h1>Setup Configuration</h1>
+            <p>Please enter your GitHub repository details to sync your sentences.</p>
+            <div class="form-group">
+                <label for="gh-token">GitHub Personal Access Token (Requires repo edit permission)</label>
+                <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label for="gh-repo">Repository (Format: username/repo)</label>
+                <input type="text" id="gh-repo" placeholder="octocat/japanese-practice">
+            </div>
+            <div class="form-group">
+                <label for="gh-path">File Path</label>
+                <input type="text" id="gh-path" placeholder="index.html" value="index.html">
+            </div>
+            <div class="btn-group">
+                <button onclick="saveConfig()">Save Configuration</button>
+            </div>
+        </div>
+
+        <div id="home-screen" class="screen">
+            <h1>Japanese Practice</h1>
+            <div class="btn-group">
+                <button onclick="startPractice()">Sentence Practice</button>
+                <button class="secondary" onclick="openReview()">Review & Edit Sentences</button>
+                <button class="danger" onclick="clearConfig()">Clear Config</button>
+            </div>
+        </div>
+
+        <div id="practice-screen" class="screen">
+            <h2>Practice</h2>
+            <div id="practice-card">
+                <div id="practice-progress" style="margin-bottom: 10px; color: #666;"></div>
+                <div class="practice-english" id="practice-english">Loading...</div>
+                <div class="form-group">
+                    <input type="text" id="practice-input" placeholder="Enter Japanese translation..." onkeypress="handlePracticeEnter(event)">
+                </div>
+                <button onclick="checkAnswer()">Submit</button>
+                <div id="practice-feedback"></div>
+            </div>
+            <div class="btn-group">
+                <button class="secondary" onclick="showScreen('home-screen')">Back to Home</button>
+            </div>
+        </div>
+
+        <div id="review-screen" class="screen">
+            <h2>Review & Edit Sentences</h2>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button onclick="addSentenceRow()">+ Add New Sentence</button>
+                <div>
+                    <button onclick="syncWithGithub()">Sync with GitHub</button>
+                    <span id="sync-status"></span>
+                </div>
+            </div>
+
+            <div id="review-list"></div>
+
+            <div class="btn-group" style="margin-top: 30px;">
+                <button class="secondary" onclick="showScreen('home-screen')">Back to Home</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // DATA STORE
+        // Do not modify the boundary comments manually
+        // ==========================================
+        /* DATA_START */
+        let sentencesMap = {
+            "1": {
+                "english": "Nice to meet you.",
+                "primaryJapanese": "はじめまして。",
+                "alternates": ["はじめまして"]
+            },
+            "2": {
+                "english": "I am eating an apple.",
+                "primaryJapanese": "私はりんごを食べています。",
+                "alternates": ["りんごを食べている。", "りんごを食べています。"]
+            },
+            "3": {
+                "english": "Where is the station?",
+                "primaryJapanese": "駅はどこですか。",
+                "alternates": ["駅はどこですか？", "駅はどこ？"]
+            }
+        };
+        /* DATA_END */
+        // ==========================================
+
+        // --- APP STATE ---
+        let practiceQueue = [];
+        let currentPracticeItem = null;
+
+        // --- NAVIGATION ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function initApp() {
+            const token = localStorage.getItem('gh_token');
+            const repo = localStorage.getItem('gh_repo');
+            const path = localStorage.getItem('gh_path');
+
+            if (token && repo && path) {
+                showScreen('home-screen');
+            } else {
+                showScreen('config-screen');
+            }
+        }
+
+        // --- CONFIGURATION ---
+        function saveConfig() {
+            const token = document.getElementById('gh-token').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            const path = document.getElementById('gh-path').value.trim();
+
+            if (!token || !repo || !path) {
+                alert("Please fill in all configuration fields.");
+                return;
+            }
+
+            localStorage.setItem('gh_token', token);
+            localStorage.setItem('gh_repo', repo);
+            localStorage.setItem('gh_path', path);
+            showScreen('home-screen');
+        }
+
+        function clearConfig() {
+            if(confirm("Are you sure you want to clear your GitHub configuration?")) {
+                localStorage.removeItem('gh_token');
+                localStorage.removeItem('gh_repo');
+                localStorage.removeItem('gh_path');
+                
+                document.getElementById('gh-token').value = '';
+                document.getElementById('gh-repo').value = '';
+                document.getElementById('gh-path').value = 'index.html';
+                
+                showScreen('config-screen');
+            }
+        }
+
+        // --- PRACTICE LOGIC ---
+        function startPractice() {
+            practiceQueue = Object.keys(sentencesMap).map(id => ({
+                id,
+                ...sentencesMap[id]
+            }));
+            
+            // Randomize array
+            practiceQueue.sort(() => Math.random() - 0.5);
+
+            if (practiceQueue.length === 0) {
+                alert("No sentences available to practice!");
+                return;
+            }
+
+            showScreen('practice-screen');
+            loadNextPracticeSentence();
+        }
+
+        function loadNextPracticeSentence() {
+            const feedback = document.getElementById('practice-feedback');
+            const input = document.getElementById('practice-input');
+            const progress = document.getElementById('practice-progress');
+            
+            feedback.textContent = '';
+            feedback.className = '';
+            input.value = '';
+            input.focus();
+
+            if (practiceQueue.length === 0) {
+                document.getElementById('practice-english').textContent = "🎉 All done! You cleared all sentences.";
+                progress.textContent = "0 remaining";
+                input.disabled = true;
+                return;
+            }
+
+            input.disabled = false;
+            currentPracticeItem = practiceQueue[0];
+            document.getElementById('practice-english').textContent = currentPracticeItem.english;
+            progress.textContent = `${practiceQueue.length} sentence(s) remaining in queue`;
+        }
+
+        function handlePracticeEnter(e) {
+            if (e.key === 'Enter') checkAnswer();
+        }
+
+        function checkAnswer() {
+            if (practiceQueue.length === 0) return;
+
+            const input = document.getElementById('practice-input').value.trim();
+            if (!input) return;
+
+            const isCorrect = 
+                input === currentPracticeItem.primaryJapanese || 
+                currentPracticeItem.alternates.includes(input);
+
+            const feedback = document.getElementById('practice-feedback');
+
+            if (isCorrect) {
+                feedback.textContent = "Correct!";
+                feedback.className = "text-success";
+                practiceQueue.shift(); // Remove from queue
+                setTimeout(loadNextPracticeSentence, 1000);
+            } else {
+                feedback.textContent = `Incorrect. The expected answer was: ${currentPracticeItem.primaryJapanese}`;
+                feedback.className = "text-error";
+                
+                // Pop from front and push 10 spaces back
+                const item = practiceQueue.shift();
+                const insertIndex = Math.min(10, practiceQueue.length);
+                practiceQueue.splice(insertIndex, 0, item);
+                
+                setTimeout(loadNextPracticeSentence, 3000);
+            }
+        }
+
+        // --- REVIEW & EDIT LOGIC ---
+        function openReview() {
+            renderReviewList();
+            showScreen('review-screen');
+        }
+
+        function renderReviewList() {
+            const container = document.getElementById('review-list');
+            container.innerHTML = '';
+
+            Object.keys(sentencesMap).forEach(id => {
+                const data = sentencesMap[id];
+                const row = createSentenceElement(id, data.english, data.primaryJapanese, data.alternates.join(' | '));
+                container.appendChild(row);
+            });
+        }
+
+        function createSentenceElement(id, eng, pri, alt) {
+            const div = document.createElement('div');
+            div.className = 'sentence-row';
+            div.dataset.id = id;
+
+            div.innerHTML = `
+                <div class="form-group" style="margin:0;">
+                    <label>English</label>
+                    <input type="text" class="edit-english" value="${escapeHtml(eng)}" onchange="updateLocalMap('${id}')">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Primary Japanese</label>
+                    <input type="text" class="edit-primary" value="${escapeHtml(pri)}" onchange="updateLocalMap('${id}')">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Alternates (pipe '|' separated)</label>
+                    <input type="text" class="edit-alternates" value="${escapeHtml(alt)}" onchange="updateLocalMap('${id}')">
+                </div>
+                <button class="danger" onclick="deleteSentence('${id}')">Delete</button>
+            `;
+            return div;
+        }
+
+        function escapeHtml(unsafe) {
+            return (unsafe || "").toString()
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function addSentenceRow() {
+            // Generate a random ID
+            const newId = Date.now().toString();
+            sentencesMap[newId] = { english: "", primaryJapanese: "", alternates: [] };
+            
+            const container = document.getElementById('review-list');
+            const row = createSentenceElement(newId, "", "", "");
+            container.prepend(row);
+        }
+
+        function deleteSentence(id) {
+            if(confirm("Delete this sentence?")) {
+                delete sentencesMap[id];
+                renderReviewList();
+            }
+        }
+
+        function updateLocalMap(id) {
+            const row = document.querySelector(`.sentence-row[data-id="${id}"]`);
+            if(!row) return;
+
+            const eng = row.querySelector('.edit-english').value;
+            const pri = row.querySelector('.edit-primary').value;
+            const altStr = row.querySelector('.edit-alternates').value;
+            
+            const alternates = altStr.split('|').map(s => s.trim()).filter(s => s.length > 0);
+
+            sentencesMap[id] = {
+                english: eng,
+                primaryJapanese: pri,
+                alternates: alternates
+            };
+        }
+
+        // --- GITHUB SYNC LOGIC ---
+
+        // Helper to handle UTF-8 cleanly with base64 for GitHub API
+        function encodeBase64Unicode(str) {
+            const bytes = new TextEncoder().encode(str);
+            const binString = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+            return btoa(binString);
+        }
+
+        function decodeBase64Unicode(b64) {
+            const binString = atob(b64);
+            const bytes = Uint8Array.from(binString, (m) => m.charCodeAt(0));
+            return new TextDecoder().decode(bytes);
+        }
+
+        async function syncWithGithub() {
+            const token = localStorage.getItem('gh_token');
+            const repo = localStorage.getItem('gh_repo');
+            const path = localStorage.getItem('gh_path');
+            const statusLabel = document.getElementById('sync-status');
+
+            if (!token || !repo || !path) {
+                alert("Configuration missing. Please set up the config screen.");
+                return;
+            }
+
+            const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            };
+
+            try {
+                statusLabel.textContent = "Fetching remote file...";
+                statusLabel.style.color = "var(--text)";
+
+                // 1. Fetch current file to get the SHA and current content
+                const getRes = await fetch(url, { headers });
+                if (!getRes.ok) throw new Error(`Fetch failed: ${getRes.status} ${getRes.statusText}`);
+                
+                const getJson = await getRes.json();
+                const remoteSha = getJson.sha;
+                const remoteContent = decodeBase64Unicode(getJson.content);
+
+                // 2. Prepare new content
+                statusLabel.textContent = "Updating map...";
+                
+                const startMarker = "/* DATA_START */";
+                const endMarker = "/* DATA_END */";
+                const regex = /\/\* DATA_START \*\/[\s\S]*?\/\* DATA_END \*\//;
+                
+                const newMapJson = JSON.stringify(sentencesMap, null, 12);
+                const replacementCode = `${startMarker}\n        let sentencesMap = ${newMapJson};\n        ${endMarker}`;
+                
+                const newFileContent = remoteContent.replace(regex, replacementCode);
+
+                if (newFileContent === remoteContent) {
+                    statusLabel.textContent = "No changes detected.";
+                    return;
+                }
+
+                // 3. Push back to GitHub
+                statusLabel.textContent = "Pushing to GitHub...";
+                const putBody = {
+                    message: "Sync Japanese practice sentences",
+                    content: encodeBase64Unicode(newFileContent),
+                    sha: remoteSha
+                };
+
+                const putRes = await fetch(url, {
+                    method: 'PUT',
+                    headers: headers,
+                    body: JSON.stringify(putBody)
+                });
+
+                if (!putRes.ok) throw new Error(`Push failed: ${putRes.status} ${putRes.statusText}`);
+
+                statusLabel.textContent = "✓ Sync successful!";
+                statusLabel.style.color = "var(--success)";
+                setTimeout(() => { statusLabel.textContent = ''; }, 3000);
+
+            } catch (error) {
+                console.error(error);
+                statusLabel.textContent = "Sync failed. See console.";
+                statusLabel.style.color = "var(--error)";
+                alert(`Sync Error: ${error.message}`);
+            }
+        }
+
+        // --- INITIALIZATION ---
+        initApp();
+
+    </script>
+</body>
+</html>
