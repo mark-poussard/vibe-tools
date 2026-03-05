@@ -60,3 +60,64 @@ On the homepage, we should have a warning banner if there is unsynced data, with
 The sentence practice should always consider edited sentence data instead of just the harcoded map.
 
 Give only the diffs to make for these changes instead of the entire `index.html`.
+
+--- Prompt 5 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We want to add a spaced repetition based sentence scoring feature to the app.
+
+## Sentence score
+
+Each sentence has a `score` which describes how well the user has responded to this sentence in the past.
+
+- All sentences initially have a score of 100
+- When the user responds incorrectly, the sentence score is updated to `0.2 x currentScore`
+- When the user responds correctly, the sentence score is updated to `1.2 x currentScore`
+
+## Sentence last studied at
+
+Each sentence has a `lastStudiedAt` which describes the last time that the sentence was studied by the user.
+A sentence is considered studied by the user when the user has responded (correctly or incorrectly) when prompted to translate the sentence.
+
+## Sentence priority
+
+Using a sentence's `score` and `lastStudiedAt`, we compute a sentence's `priority` which is the sentence `score` divided by the time since the last review session (`now` - `lastStudiedAt`)
+
+Expressed formally as `priority = score / (now - lastStudiedAt)`
+
+This sentence priority is used to create a priority queue of sentences which the user then studies through during their study session.
+
+## Study sessions
+
+A study session now occurs on the complete set of sentences, as a priority queue.
+
+When a user's answer is incorrect
+
+- we display both the user answer and the correct answer
+- the user cannot progress to the next sentence until they input a correct answer, the sentence is still considered as originally responded incorrectly
+
+When a user overrides an incorrect sentence answer, we consider the sentence score as if the user had originally responded correctly.
+
+## Storage and evolvability considerations
+
+Each sentence's `lastStudiedAt` and `score` should be stored in the webapp's local storage for inter-session persistence.
+
+Make sure that the peristed state is handled in a evolvable way, namely
+
+- sentences that did not previously exist in the stored state are initialized with a score of 100
+- the state should be normalized with regards to the global store of sentences to avoid diverging/conflicting data
+
+# Action
+
+Implement this feature, give only the diffs to apply to the `index.html` file
+
+--- Prompt 6 ---
+
+When a sentence is studied, it should be reinserted at the correct place in the priority queue with regards to its new sentence `score` and `lastStudiedAt`.
+
+Give only the diffs to apply to the `index.html` file

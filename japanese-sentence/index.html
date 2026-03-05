@@ -839,6 +839,25 @@
         // --- APP STATE ---
         let practiceQueue = [];
         let currentPracticeItem = null;
+        let isRetryState = false;
+        let originalScoreBeforeRetry = null;
+        let lastIncorrectInput = "";
+        let sentenceProgress = JSON.parse(localStorage.getItem('sentenceProgress')) || {};
+
+        function normalizeProgress() {
+            let updated = false;
+            for (let id in sentencesMap) {
+                if (!sentenceProgress[id]) {
+                    sentenceProgress[id] = { score: 100, lastStudiedAt: null };
+                    updated = true;
+                }
+            }
+            if (updated) saveProgress();
+        }
+
+        function saveProgress() {
+            localStorage.setItem('sentenceProgress', JSON.stringify(sentenceProgress));
+        }
 
         // --- NAVIGATION ---
         function showScreen(screenId) {
@@ -891,14 +910,23 @@
         }
 
         // --- PRACTICE LOGIC ---
+        function getPriority(id) {
+            const prog = sentenceProgress[id];
+            if (!prog || !prog.lastStudiedAt) return 0; // Highest priority for unstudied sentences
+            const now = Date.now();
+            const timeSince = Math.max(1, now - prog.lastStudiedAt);
+            return prog.score / timeSince;
+        }
+
         function startPractice() {
+            normalizeProgress();
             practiceQueue = Object.keys(sentencesMap).map(id => ({
                 id,
                 ...sentencesMap[id]
             }));
             
-            // Randomize array
-            practiceQueue.sort(() => Math.random() - 0.5);
+            // Priority queue (lowest priority score first)
+            practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
 
             if (practiceQueue.length === 0) {
                 alert("No sentences available to practice!");
@@ -916,7 +944,11 @@
             const submitBtn = document.getElementById('submit-btn');
             const nextBtn = document.getElementById('next-btn');
             
-            feedback.textContent = '';
+            isRetryState = false;
+            originalScoreBeforeRetry = null;
+            lastIncorrectInput = "";
+
+            feedback.innerHTML = '';
             feedback.className = '';
             input.value = '';
             input.disabled = false;
@@ -978,46 +1010,73 @@
             const nextBtn = document.getElementById('next-btn');
 
             if (isCorrect) {
+                if (!isRetryState) {
+                    sentenceProgress[currentPracticeItem.id].score *= 1.2;
+                    sentenceProgress[currentPracticeItem.id].lastStudiedAt = Date.now();
+                    saveProgress();
+                }
+
                 feedback.textContent = "Correct!";
                 feedback.className = "text-success";
-                practiceQueue.shift(); // Remove from queue
+                // Reinsert at the correct place in the priority queue
+                const item = practiceQueue.shift();
+                practiceQueue.push(item);
+                practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
+                
+                inputElement.disabled = true;
+                submitBtn.style.display = 'none';
+                nextBtn.style.display = 'inline-block';
+                nextBtn.focus();
+                
+                document.getElementById('override-btn').style.display = 'none';
             } else {
-                feedback.textContent = `Incorrect. The expected answer was: ${currentPracticeItem.primaryJapanese}`;
+                if (!isRetryState) {
+                    originalScoreBeforeRetry = sentenceProgress[currentPracticeItem.id].score;
+                    sentenceProgress[currentPracticeItem.id].score *= 0.2;
+                    sentenceProgress[currentPracticeItem.id].lastStudiedAt = Date.now();
+                    saveProgress();
+                    lastIncorrectInput = input;
+                    isRetryState = true;
+                }
+
+                feedback.innerHTML = `Incorrect.<br>Your answer: <span style="text-decoration: line-through;">${escapeHtml(input)}</span><br>Expected answer: ${escapeHtml(currentPracticeItem.primaryJapanese)}`;
                 feedback.className = "text-error";
                 
-                // Pop from front and insert at next, 3rd, and 10th positions
-                const item = practiceQueue.shift();
-                practiceQueue.splice(0, 0, item);
-                practiceQueue.splice(Math.min(3, practiceQueue.length), 0, {...item});
-                practiceQueue.splice(Math.min(10, practiceQueue.length), 0, {...item});
+                // Require user to re-type the answer correctly before moving on
+                inputElement.value = '';
+                inputElement.focus();
+                
+                document.getElementById('override-btn').style.display = 'inline-block';
             }
-
-            // Disable input and swap buttons
-            inputElement.disabled = true;
-            submitBtn.style.display = 'none';
-            nextBtn.style.display = 'inline-block';
-            nextBtn.focus();
-            
-            // Show override button only if the answer was marked incorrect
-            document.getElementById('override-btn').style.display = isCorrect ? 'none' : 'inline-block';
         }
 
         function overrideAnswer() {
-            const input = document.getElementById('practice-input').value.trim();
             const id = currentPracticeItem.id;
             
+            if (originalScoreBeforeRetry !== null) {
+                sentenceProgress[id].score = originalScoreBeforeRetry * 1.2;
+                saveProgress();
+            }
+
             // Add to alternates and mark unsynced
-            sentencesMap[id].alternates.push(input);
+            sentencesMap[id].alternates.push(lastIncorrectInput);
             markUnsynced();
             
-             // Remove all occurrences of this sentence from the queue
-            practiceQueue = practiceQueue.filter(item => item.id !== id);
+            // Reinsert at the correct place in the priority queue
+            const item = practiceQueue.shift();
+            practiceQueue.push(item);
+            practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
             
             // Update UI
             const feedback = document.getElementById('practice-feedback');
             feedback.textContent = "Correct (Added as alternate)!";
             feedback.className = "text-success";
             
+            const inputElement = document.getElementById('practice-input');
+            inputElement.disabled = true;
+            document.getElementById('submit-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'inline-block';
+            document.getElementById('next-btn').focus();
             document.getElementById('override-btn').style.display = 'none';
         }
 
