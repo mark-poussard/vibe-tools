@@ -1035,7 +1035,7 @@
                     isRetryState = true;
                 }
 
-                feedback.innerHTML = `Incorrect.<br>Your answer: <span style="text-decoration: line-through;">${escapeHtml(input)}</span><br>Expected answer: ${escapeHtml(currentPracticeItem.primaryJapanese)}`;
+                feedback.innerHTML = `Incorrect.<br>Your answer: <span>${escapeHtml(input)}</span><br>Expected answer: ${escapeHtml(currentPracticeItem.primaryJapanese)}`;
                 feedback.className = "text-error";
                 
                 // Require user to re-type the answer correctly before moving on
