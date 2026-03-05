@@ -187,6 +187,39 @@
             margin-left: 10px;
         }
         #override-btn:hover { background-color: #D68910; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .modal-details {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .modal-details div { margin-bottom: 10px; }
+        .modal-details strong { color: #555; }
     </style>
 </head>
 <body>
@@ -264,6 +297,22 @@
             </div>
         </div>
 
+    </div>
+    
+    <div id="override-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Confirm New Alternate</h3>
+            <p>Are you sure you want to add this as a correct alternate translation?</p>
+            <div class="modal-details">
+                <div><strong>English:</strong><br><span id="modal-eng"></span></div>
+                <div><strong>Primary Japanese:</strong><br><span id="modal-pri"></span></div>
+                <div style="color: var(--success);"><strong>New Alternate:</strong><br><span id="modal-new-alt"></span></div>
+            </div>
+            <div class="btn-group" style="justify-content: flex-end;">
+                <button class="secondary" onclick="closeOverrideModal()">Cancel</button>
+                <button onclick="confirmOverride()">Confirm & Add</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1047,6 +1096,20 @@
         }
 
         function overrideAnswer() {
+            // Populate modal data
+            document.getElementById('modal-eng').textContent = currentPracticeItem.english;
+            document.getElementById('modal-pri').textContent = currentPracticeItem.primaryJapanese;
+            document.getElementById('modal-new-alt').textContent = lastIncorrectInput;
+            
+            // Show modal
+            document.getElementById('override-modal').style.display = 'flex';
+        }
+
+        function closeOverrideModal() {
+            document.getElementById('override-modal').style.display = 'none';
+        }
+
+        function confirmOverride() {
             const id = currentPracticeItem.id;
             
             if (originalScoreBeforeRetry !== null) {
@@ -1074,6 +1137,8 @@
             document.getElementById('next-btn').style.display = 'inline-block';
             document.getElementById('next-btn').focus();
             document.getElementById('override-btn').style.display = 'none';
+            
+            closeOverrideModal();
         }
 
         // --- REVIEW & EDIT LOGIC ---

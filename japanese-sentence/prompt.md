@@ -145,3 +145,13 @@ The edited sentences should stay in-memory only, and the warning banner should o
 # Action
 
 Implement this feature, give only the changes to apply to the `index.html` file
+
+--- Prompt 8 ---
+
+When overriding an incorrect sentence, add a confirmation modal displaying
+
+- the original sentence
+- the primary translation
+- the new sentence that will be added as alternate translation
+
+Give only the changes to apply to the `index.html` file for the above change.
