@@ -121,3 +121,27 @@ Implement this feature, give only the diffs to apply to the `index.html` file
 When a sentence is studied, it should be reinserted at the correct place in the priority queue with regards to its new sentence `score` and `lastStudiedAt`.
 
 Give only the diffs to apply to the `index.html` file
+
+--- Prompt 7 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We want to correct the unsynced changes feature which currently does not compare the remote with the in-memory sentence edits.
+
+## Issue explained
+
+Once the app has reloaded, the in-memory changes are lost and as such, they can no longer be synced to the remote `index.html` file. However, the un-synced changes warning banner is still displayed.
+
+These in-memory sentence edits should not be persisted to local storage as they might then conflict with code or data changes on the remote.
+
+## Expected behaviour
+
+The edited sentences should stay in-memory only, and the warning banner should only be displayed if there are in-memory sentence edits to sync to the remote repository's `index.html`.
+
+# Action
+
+Implement this feature, give only the changes to apply to the `index.html` file

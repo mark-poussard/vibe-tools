@@ -817,22 +817,18 @@
         /* DATA_END */
         // ==========================================
 
-        // --- LOCAL STORAGE DATA OVERRIDE & SYNC TRACKING ---
-        const localMap = localStorage.getItem('sentencesMap');
-        if (localMap) {
-            sentencesMap = JSON.parse(localMap);
-        }
+        // --- SYNC TRACKING ---
+        let hasUnsyncedChanges = false;
 
         function markUnsynced() {
-            localStorage.setItem('has_unsynced_changes', 'true');
-            localStorage.setItem('sentencesMap', JSON.stringify(sentencesMap));
+            hasUnsyncedChanges = true;
             checkUnsyncedBanner();
         }
 
         function checkUnsyncedBanner() {
             const banner = document.getElementById('unsynced-banner');
             if(banner) {
-                banner.style.display = localStorage.getItem('has_unsynced_changes') === 'true' ? 'flex' : 'none';
+                banner.style.display = hasUnsyncedChanges ? 'flex' : 'none';
             }
         }
 
@@ -1237,7 +1233,7 @@
 
                 if (!putRes.ok) throw new Error(`Push failed: ${putRes.status} ${putRes.statusText}`);
 
-                localStorage.setItem('has_unsynced_changes', 'false');
+                hasUnsyncedChanges = false;
                 checkUnsyncedBanner();
                 
                 statusLabel.textContent = "✓ Sync successful!";
