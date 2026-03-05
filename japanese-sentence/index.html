@@ -985,10 +985,11 @@
                 feedback.textContent = `Incorrect. The expected answer was: ${currentPracticeItem.primaryJapanese}`;
                 feedback.className = "text-error";
                 
-                // Pop from front and push 10 spaces back
+                // Pop from front and insert at next, 3rd, and 10th positions
                 const item = practiceQueue.shift();
-                const insertIndex = Math.min(10, practiceQueue.length);
-                practiceQueue.splice(insertIndex, 0, item);
+                practiceQueue.splice(0, 0, item);
+                practiceQueue.splice(Math.min(3, practiceQueue.length), 0, {...item});
+                practiceQueue.splice(Math.min(10, practiceQueue.length), 0, {...item});
             }
 
             // Disable input and swap buttons
@@ -1009,9 +1010,8 @@
             sentencesMap[id].alternates.push(input);
             markUnsynced();
             
-            // Remove the sentence from the queue (it was pushed up to 10 spaces back)
-            const queueIndex = practiceQueue.findIndex(item => item.id === id);
-            if (queueIndex > -1) practiceQueue.splice(queueIndex, 1);
+             // Remove all occurrences of this sentence from the queue
+            practiceQueue = practiceQueue.filter(item => item.id !== id);
             
             // Update UI
             const feedback = document.getElementById('practice-feedback');
