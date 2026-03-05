@@ -1,3 +1,5 @@
+--- Prompt 1 ---
+
 # Intro
 
 We are building a single page webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
@@ -41,3 +43,20 @@ The sync process should get the latest version of the `index.html` file on the r
 # Action
 
 Create this webapp
+
+--- Prompt 2 ---
+
+Never enforce punctuation or spacing when validating an answer.
+When the user enters an answer (correct or incorrect), wait for an explicit button press before moving on to the next sentence.
+
+--- Prompt 3 ---
+
+Give `sentencesMap` for the below japanese sentences (only the `sentencesMap`, no need to include the whole `index.html`)
+
+--- Prompt 4 ---
+
+When the user response is incorrect, add an option to add an alternate translation and override the result as correct.
+On the homepage, we should have a warning banner if there is unsynced data, with the option to sync the data to github.
+The sentence practice should always consider edited sentence data instead of just the harcoded map.
+
+Give only the diffs to make for these changes instead of the entire `index.html`.

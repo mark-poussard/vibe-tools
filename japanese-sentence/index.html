@@ -161,6 +161,32 @@
             margin-left: 10px;
             font-weight: bold;
         }
+
+        /* Banner & Override specific */
+        .banner {
+            background-color: #FFF3CD;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #FFEEBA;
+        }
+        .banner button {
+            background-color: #856404;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        .banner button:hover {
+            background-color: #6c5003;
+        }
+        #override-btn {
+            background-color: #F39C12;
+            margin-left: 10px;
+        }
+        #override-btn:hover { background-color: #D68910; }
     </style>
 </head>
 <body>
@@ -189,6 +215,12 @@
 
         <div id="home-screen" class="screen">
             <h1>Japanese Practice</h1>
+            
+            <div id="unsynced-banner" class="banner" style="display: none;">
+                <span>⚠️ You have unsynced edits.</span>
+                <button onclick="syncWithGithub()">Sync Now</button>
+            </div>
+            
             <div class="btn-group">
                 <button onclick="startPractice()">Sentence Practice</button>
                 <button class="secondary" onclick="openReview()">Review & Edit Sentences</button>
@@ -206,6 +238,7 @@
                 </div>
                 <button id="submit-btn" onclick="checkAnswer()">Submit</button>
                 <button id="next-btn" onclick="loadNextPracticeSentence()" style="display: none;">Next Sentence</button>
+                <button id="override-btn" onclick="overrideAnswer()" style="display: none;">I was right (Add as alternate)</button>
                 <div id="practice-feedback"></div>
             </div>
             <div class="btn-group">
@@ -784,6 +817,25 @@
         /* DATA_END */
         // ==========================================
 
+        // --- LOCAL STORAGE DATA OVERRIDE & SYNC TRACKING ---
+        const localMap = localStorage.getItem('sentencesMap');
+        if (localMap) {
+            sentencesMap = JSON.parse(localMap);
+        }
+
+        function markUnsynced() {
+            localStorage.setItem('has_unsynced_changes', 'true');
+            localStorage.setItem('sentencesMap', JSON.stringify(sentencesMap));
+            checkUnsyncedBanner();
+        }
+
+        function checkUnsyncedBanner() {
+            const banner = document.getElementById('unsynced-banner');
+            if(banner) {
+                banner.style.display = localStorage.getItem('has_unsynced_changes') === 'true' ? 'flex' : 'none';
+            }
+        }
+
         // --- APP STATE ---
         let practiceQueue = [];
         let currentPracticeItem = null;
@@ -792,6 +844,7 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+            if(screenId === 'home-screen') checkUnsyncedBanner();
         }
 
         function initApp() {
@@ -870,6 +923,7 @@
             
             submitBtn.style.display = 'inline-block';
             nextBtn.style.display = 'none';
+            document.getElementById('override-btn').style.display = 'none';
 
             if (practiceQueue.length === 0) {
                 document.getElementById('practice-english').textContent = "🎉 All done! You cleared all sentences.";
@@ -942,6 +996,29 @@
             submitBtn.style.display = 'none';
             nextBtn.style.display = 'inline-block';
             nextBtn.focus();
+            
+            // Show override button only if the answer was marked incorrect
+            document.getElementById('override-btn').style.display = isCorrect ? 'none' : 'inline-block';
+        }
+
+        function overrideAnswer() {
+            const input = document.getElementById('practice-input').value.trim();
+            const id = currentPracticeItem.id;
+            
+            // Add to alternates and mark unsynced
+            sentencesMap[id].alternates.push(input);
+            markUnsynced();
+            
+            // Remove the sentence from the queue (it was pushed up to 10 spaces back)
+            const queueIndex = practiceQueue.findIndex(item => item.id === id);
+            if (queueIndex > -1) practiceQueue.splice(queueIndex, 1);
+            
+            // Update UI
+            const feedback = document.getElementById('practice-feedback');
+            feedback.textContent = "Correct (Added as alternate)!";
+            feedback.className = "text-success";
+            
+            document.getElementById('override-btn').style.display = 'none';
         }
 
         // --- REVIEW & EDIT LOGIC ---
@@ -1005,6 +1082,7 @@
         function deleteSentence(id) {
             if(confirm("Delete this sentence?")) {
                 delete sentencesMap[id];
+                markUnsynced();
                 renderReviewList();
             }
         }
@@ -1024,6 +1102,8 @@
                 primaryJapanese: pri,
                 alternates: alternates
             };
+            
+            markUnsynced();
         }
 
         // --- GITHUB SYNC LOGIC ---
@@ -1098,6 +1178,9 @@
 
                 if (!putRes.ok) throw new Error(`Push failed: ${putRes.status} ${putRes.statusText}`);
 
+                localStorage.setItem('has_unsynced_changes', 'false');
+                checkUnsyncedBanner();
+                
                 statusLabel.textContent = "✓ Sync successful!";
                 statusLabel.style.color = "var(--success)";
                 setTimeout(() => { statusLabel.textContent = ''; }, 3000);
