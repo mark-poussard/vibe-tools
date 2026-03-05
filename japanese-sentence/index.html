@@ -1035,6 +1035,93 @@
             return str.replace(/[\s　、。！？,!?]/g, '').toLowerCase();
         }
 
+        // Helper function to escape HTML characters
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function generateDiffHTML(expected, actual) {
+            // Regex for Japanese and English punctuation, brackets, and spaces
+            const isPunc = (c) => /[。、！？「」『』・\s.,!?]/.test(c);
+
+            // Filter out punctuation while preserving original indices
+            const expFiltered = [];
+            for (let i = 0; i < expected.length; i++) {
+                if (!isPunc(expected[i])) expFiltered.push({ char: expected[i], origIdx: i });
+            }
+            
+            const actFiltered = [];
+            for (let i = 0; i < actual.length; i++) {
+                if (!isPunc(actual[i])) actFiltered.push({ char: actual[i], origIdx: i });
+            }
+
+            let m = expFiltered.length;
+            let n = actFiltered.length;
+            let dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+            
+            // Build the LCS matrix ignoring punctuation
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (expFiltered[i - 1].char === actFiltered[j - 1].char) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+            
+            // Backtrack to find matching characters
+            let i = m, j = n;
+            let actualMatchStatus = new Array(actual.length).fill(false); // Default mismatch (red)
+            
+            while (i > 0 && j > 0) {
+                if (expFiltered[i - 1].char === actFiltered[j - 1].char) {
+                    actualMatchStatus[actFiltered[j - 1].origIdx] = true; // Match (green)
+                    i--; j--;
+                } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                    i--; 
+                } else {
+                    j--; 
+                }
+            }
+            
+            // Build the final HTML string, grouping adjacent styles
+            let actualHTML = '';
+            let currentMatch = null;
+            let currentStr = '';
+            
+            for (let k = 0; k < actual.length; k++) {
+                let char = actual[k];
+                // 'punc' state will color punctuation neutrally
+                let matchState = isPunc(char) ? 'punc' : actualMatchStatus[k];
+                
+                if (matchState === currentMatch) {
+                    currentStr += char;
+                } else {
+                    if (currentMatch !== null) {
+                        let color = currentMatch === 'punc' ? 'var(--text)' : (currentMatch ? 'var(--success)' : 'var(--error)');
+                        actualHTML += `<span style="color: ${color};">${escapeHtml(currentStr)}</span>`;
+                    }
+                    currentMatch = matchState;
+                    currentStr = char;
+                }
+            }
+            if (currentStr) {
+                let color = currentMatch === 'punc' ? 'var(--text)' : (currentMatch ? 'var(--success)' : 'var(--error)');
+                actualHTML += `<span style="color: ${color};">${escapeHtml(currentStr)}</span>`;
+            }
+
+            let expectedHTML = `<span style="color: var(--success);">${escapeHtml(expected)}</span>`;
+
+            return { expectedHTML, actualHTML };
+        }
+
         function checkAnswer() {
             if (practiceQueue.length === 0) return;
 
@@ -1084,8 +1171,14 @@
                     isRetryState = true;
                 }
 
-                feedback.innerHTML = `Incorrect.<br>Your answer: <span>${escapeHtml(input)}</span><br>Expected answer: ${escapeHtml(currentPracticeItem.primaryJapanese)}`;
-                feedback.className = "text-error";
+                const diff = generateDiffHTML(currentPracticeItem.primaryJapanese, input);
+
+                feedback.innerHTML = `
+                    <span class="text-error">Incorrect.</span><br>
+                    <span style="color: var(--text);">Your answer:</span> ${diff.actualHTML}<br>
+                    <span style="color: var(--text);">Expected answer:</span> ${diff.expectedHTML}
+                `;
+                feedback.className = ""; // Cleared so it doesn't force the whole block to be red
                 
                 // Require user to re-type the answer correctly before moving on
                 inputElement.value = '';

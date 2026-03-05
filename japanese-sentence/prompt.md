@@ -155,3 +155,21 @@ When overriding an incorrect sentence, add a confirmation modal displaying
 - the new sentence that will be added as alternate translation
 
 Give only the changes to apply to the `index.html` file for the above change.
+
+--- Prompt 9 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We want to make the differences between the primary correct sentence translation and the user's incorrect answer explicit and easily visible by color coding the differences with the user's answer.
+
+The primary sentence translation should be displayed entirely in green.
+
+Matching words in the user's incorrect answer should be displayed in green. Words that do not match should be displayed in red.
+
+# Action
+
+Implement this feature, give only the changes to apply to the `index.html` file
