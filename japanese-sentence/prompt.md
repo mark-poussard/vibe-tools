@@ -173,3 +173,56 @@ Matching words in the user's incorrect answer should be displayed in green. Word
 # Action
 
 Implement this feature, give only the changes to apply to the `index.html` file
+
+--- Prompt 10 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We want to remove the sentence priority logic and replace it with an list positioning logic. The issue with the current priority system is that the user will always be studying the same sentence until it gets promoted enough to rejoin other sentences of the same level, making for poor actual recall based studying.
+
+## Score logic
+
+The score logic should be refactored to be a simple linear increment.
+
+- All sentences start with a default score of 0
+- When a sentence is answered correctly, it scores increases by 1
+- When a sentence is answered incorrectly
+  - If it has a score >2, then it's score gets reset to 2
+  - If it has a score <=2, then it's score gets reset to 0
+- A sentence score cannot go below 0
+
+## Positioning logic
+
+The priority computation and list ordering logic should be removed entirely. Instead, when a sentence is studied it should be re-inserted at a given index in the list depending on that sentence's score.
+
+The sentence is re-inserted at a position determined by the formula `position = 2^(score+1)`.
+
+# Action
+
+Implement this feature, give only the changes to apply to the `index.html` file
+
+--- Prompt 11 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We want the sentence ordering to be kept between study sessions and webapp reloads.
+
+## Persist sentence order
+
+The position of each sentence should be persisted to local storage so that it remains the same between study sessions.
+
+New sentences that do not exist in the persisted list should be inserted at the beginning of the list.
+
+Take special care to have a total ordering of all sentences, it shouldn't be possible for two sentences to share the same position (you might model away the possibility by modelling sentence positions as an array of sentence identifiers)
+
+# Action
+
+Implement this feature, give only the changes to apply to the `index.html` file

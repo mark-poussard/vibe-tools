@@ -894,6 +894,31 @@
         let originalScoreBeforeRetry = null;
         let lastIncorrectInput = "";
         let sentenceProgress = JSON.parse(localStorage.getItem('sentenceProgress')) || {};
+        let sentenceOrder = JSON.parse(localStorage.getItem('sentenceOrder')) || [];
+
+        function saveOrder() {
+            localStorage.setItem('sentenceOrder', JSON.stringify(sentenceOrder));
+        }
+
+        function normalizeOrder() {
+            let updated = false;
+            const currentIds = Object.keys(sentencesMap);
+            
+            // Remove deleted sentences from order
+            const initialLength = sentenceOrder.length;
+            sentenceOrder = sentenceOrder.filter(id => sentencesMap[id]);
+            if (sentenceOrder.length !== initialLength) updated = true;
+
+            // Find new sentences (not in order)
+            const newIds = currentIds.filter(id => !sentenceOrder.includes(id));
+            if (newIds.length > 0) {
+                // Insert new sentences at the beginning of the list
+                sentenceOrder = [...newIds, ...sentenceOrder];
+                updated = true;
+            }
+
+            if (updated) saveOrder();
+        }
 
         function normalizeProgress() {
             let updated = false;
@@ -961,23 +986,26 @@
         }
 
         // --- PRACTICE LOGIC ---
-        function getPriority(id) {
-            const prog = sentenceProgress[id];
-            if (!prog || !prog.lastStudiedAt) return 0; // Highest priority for unstudied sentences
-            const now = Date.now();
-            const timeSince = Math.max(1, now - prog.lastStudiedAt);
-            return prog.score / timeSince;
+        function normalizeProgress() {
+            let updated = false;
+            for (let id in sentencesMap) {
+                // Initialize to 0, or reset if it's from the old priority system
+                if (!sentenceProgress[id] || sentenceProgress[id].lastStudiedAt !== undefined) {
+                    sentenceProgress[id] = { score: 0 };
+                    updated = true;
+                }
+            }
+            if (updated) saveProgress();
         }
 
         function startPractice() {
             normalizeProgress();
-            practiceQueue = Object.keys(sentencesMap).map(id => ({
+            normalizeOrder();
+            
+            practiceQueue = sentenceOrder.map(id => ({
                 id,
                 ...sentencesMap[id]
             }));
-            
-            // Priority queue (lowest priority score first)
-            practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
 
             if (practiceQueue.length === 0) {
                 alert("No sentences available to practice!");
@@ -1149,17 +1177,22 @@
 
             if (isCorrect) {
                 if (!isRetryState) {
-                    sentenceProgress[currentPracticeItem.id].score *= 1.2;
-                    sentenceProgress[currentPracticeItem.id].lastStudiedAt = Date.now();
+                    sentenceProgress[currentPracticeItem.id].score += 1;
                     saveProgress();
                 }
 
                 feedback.textContent = "Correct!";
                 feedback.className = "text-success";
-                // Reinsert at the correct place in the priority queue
+                
+                // Reinsert at the correct place based on score
                 const item = practiceQueue.shift();
-                practiceQueue.push(item);
-                practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
+                const score = sentenceProgress[item.id].score;
+                const insertPos = Math.pow(2, score + 1);
+                practiceQueue.splice(insertPos, 0, item);
+                
+                // Save the new ordering
+                sentenceOrder = practiceQueue.map(q => q.id);
+                saveOrder();
                 
                 inputElement.disabled = true;
                 submitBtn.style.display = 'none';
@@ -1170,9 +1203,12 @@
             } else {
                 if (!isRetryState) {
                     originalScoreBeforeRetry = sentenceProgress[currentPracticeItem.id].score;
-                    sentenceProgress[currentPracticeItem.id].score *= 0.2;
-                    sentenceProgress[currentPracticeItem.id].lastStudiedAt = Date.now();
+                    let currentScore = sentenceProgress[currentPracticeItem.id].score;
+                    
+                    // Score reset logic
+                    sentenceProgress[currentPracticeItem.id].score = currentScore > 2 ? 2 : 0;
                     saveProgress();
+                    
                     lastIncorrectInput = input;
                     isRetryState = true;
                 }
@@ -1212,7 +1248,7 @@
             const id = currentPracticeItem.id;
             
             if (originalScoreBeforeRetry !== null) {
-                sentenceProgress[id].score = originalScoreBeforeRetry * 1.2;
+                sentenceProgress[id].score = originalScoreBeforeRetry + 1;
                 saveProgress();
             }
 
@@ -1220,10 +1256,15 @@
             sentencesMap[id].alternates.push(lastIncorrectInput);
             markUnsynced();
             
-            // Reinsert at the correct place in the priority queue
+            // Reinsert at the correct place based on score
             const item = practiceQueue.shift();
-            practiceQueue.push(item);
-            practiceQueue.sort((a, b) => getPriority(a.id) - getPriority(b.id));
+            const score = sentenceProgress[item.id].score;
+            const insertPos = Math.pow(2, score + 1);
+            practiceQueue.splice(insertPos, 0, item);
+            
+            // Save the new ordering
+            sentenceOrder = practiceQueue.map(q => q.id);
+            saveOrder();
             
             // Update UI
             const feedback = document.getElementById('practice-feedback');
