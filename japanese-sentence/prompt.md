@@ -226,3 +226,39 @@ Take special care to have a total ordering of all sentences, it shouldn't be pos
 # Action
 
 Implement this feature, give only the changes to apply to the `index.html` file
+
+--- Prompt 12 ---
+
+# Feature
+
+## Intro
+
+We are building a single page mobile-first webapp for practicing written Japanese. The code should be entirely in pure javascript, css and html in a single index.html file.
+
+We add a feature to display the current studied sentence score and to let the user skip a sentence or to not be penalized for a mistake. 
+
+## Display sentence score
+
+The current score of the sentence should be displayed in the bottom right section of the sentence card. The sentence score should be color coded depending on it's value, ranging from red for a sentence score of 0, to green for a sentence score >= 10.
+
+## Skip sentence button
+
+There should be a button in the bottom left part of the sentence card to skip the current sentence. Skipping displays a modal asking the user if they which to change update the score of this sentence with three options
+- don't change
+- score +1
+- score +2
+
+The sentence is then re-inserted in the list depending on the updated sentence score.
+
+## No mistake penalty
+
+Current behaviour is that when a sentence is answered incorrectly, the user is shown the primary translation and prompted to enter a correct translation.
+At this point, we should display a button that allows the user to opt to not have the sentence score be updated for this mistake.
+
+## Other UI updates
+
+- Remove the display of the total number of sentence remaining in the queue
+
+# Action
+
+Implement these features, give only the changes to apply to the `index.html` file

@@ -126,10 +126,34 @@
         /* Practice Screen specific */
         #practice-card {
             text-align: center;
-            padding: 40px 20px;
+            padding: 40px 20px 60px 20px; /* Increased bottom padding for score and skip */
             border: 2px dashed var(--border);
             border-radius: 12px;
             margin-bottom: 20px;
+            position: relative; /* Added for absolute positioning of bottom elements */
+        }
+
+        .card-bottom-left {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+        }
+
+        .card-bottom-right {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .score-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            margin-left: 5px;
         }
 
         .practice-english {
@@ -270,7 +294,6 @@
         <div id="practice-screen" class="screen">
             <h2>Practice</h2>
             <div id="practice-card">
-                <div id="practice-progress" style="margin-bottom: 10px; color: #666;"></div>
                 <div class="practice-english" id="practice-english">Loading...</div>
                 <div class="form-group">
                     <input type="text" id="practice-input" placeholder="Enter Japanese translation..." onkeypress="handlePracticeEnter(event)">
@@ -278,10 +301,31 @@
                 <button id="submit-btn" onclick="checkAnswer()">Submit</button>
                 <button id="next-btn" onclick="loadNextPracticeSentence()" style="display: none;">Next Sentence</button>
                 <button id="override-btn" onclick="overrideAnswer()" style="display: none;">I was right (Add as alternate)</button>
+                <button id="forgive-btn" onclick="forgiveMistake()" style="display: none; background-color: #95a5a6; margin-left: 10px;">No Penalty</button>
                 <div id="practice-feedback"></div>
+                
+                <div class="card-bottom-left">
+                    <button class="secondary" style="padding: 5px 10px; font-size: 14px;" onclick="openSkipModal()">Skip</button>
+                </div>
+                <div class="card-bottom-right">
+                    Score: <span id="current-score" class="score-badge">0</span>
+                </div>
             </div>
             <div class="btn-group">
                 <button class="secondary" onclick="showScreen('home-screen')">Back to Home</button>
+            </div>
+        </div>
+
+        <div id="skip-modal" class="modal-overlay">
+            <div class="modal-content" style="text-align: center;">
+                <h3>Skip Sentence</h3>
+                <p>Would you like to update the score for this skipped sentence?</p>
+                <div class="btn-group" style="flex-direction: column; align-items: stretch;">
+                    <button class="secondary" onclick="skipSentence(0)">Don't change</button>
+                    <button onclick="skipSentence(1)">Score +1</button>
+                    <button onclick="skipSentence(2)">Score +2</button>
+                    <button class="danger" onclick="closeSkipModal()" style="margin-top: 15px;">Cancel</button>
+                </div>
             </div>
         </div>
 
@@ -1059,7 +1103,6 @@
         function loadNextPracticeSentence() {
             const feedback = document.getElementById('practice-feedback');
             const input = document.getElementById('practice-input');
-            const progress = document.getElementById('practice-progress');
             const submitBtn = document.getElementById('submit-btn');
             const nextBtn = document.getElementById('next-btn');
             
@@ -1075,10 +1118,12 @@
             submitBtn.style.display = 'inline-block';
             nextBtn.style.display = 'none';
             document.getElementById('override-btn').style.display = 'none';
+            document.getElementById('forgive-btn').style.display = 'none';
 
             if (practiceQueue.length === 0) {
                 document.getElementById('practice-english').textContent = "🎉 All done! You cleared all sentences.";
-                progress.textContent = "0 remaining";
+                document.getElementById('current-score').textContent = "-";
+                document.getElementById('current-score').style.backgroundColor = "#ccc";
                 input.disabled = true;
                 submitBtn.style.display = 'none';
                 return;
@@ -1086,7 +1131,13 @@
 
             currentPracticeItem = practiceQueue[0];
             document.getElementById('practice-english').textContent = currentPracticeItem.english;
-            progress.textContent = `${practiceQueue.length} sentence(s) remaining in queue`;
+            
+            // Update score display & color (Red=0 through Green>=10)
+            const score = sentenceProgress[currentPracticeItem.id].score;
+            const scoreEl = document.getElementById('current-score');
+            scoreEl.textContent = score;
+            const hue = Math.min(score * 12, 120); 
+            scoreEl.style.backgroundColor = `hsl(${hue}, 70%, 50%)`;
             
             // Focus input after a slight delay to ensure render is complete
             setTimeout(() => input.focus(), 10);
@@ -1240,6 +1291,7 @@
                 nextBtn.focus();
                 
                 document.getElementById('override-btn').style.display = 'none';
+                document.getElementById('forgive-btn').style.display = 'none';
             } else {
                 if (!isRetryState) {
                     originalScoreBeforeRetry = sentenceProgress[currentPracticeItem.id].score;
@@ -1251,6 +1303,9 @@
                     
                     lastIncorrectInput = input;
                     isRetryState = true;
+                    
+                    // Show Forgive / No Penalty button
+                    document.getElementById('forgive-btn').style.display = 'inline-block';
                 }
 
                 const diff = generateDiffHTML(currentPracticeItem.primaryJapanese, input);
@@ -1260,7 +1315,7 @@
                     <span style="color: var(--text);">Your answer:</span> ${diff.actualHTML}<br>
                     <span style="color: var(--text);">Expected answer:</span> ${diff.expectedHTML}
                 `;
-                feedback.className = ""; // Cleared so it doesn't force the whole block to be red
+                feedback.className = "";
                 
                 // Require user to re-type the answer correctly before moving on
                 inputElement.value = '';
@@ -1319,6 +1374,56 @@
             document.getElementById('override-btn').style.display = 'none';
             
             closeOverrideModal();
+        }
+        
+        function openSkipModal() {
+            if (practiceQueue.length === 0) return;
+            document.getElementById('skip-modal').style.display = 'flex';
+        }
+
+        function closeSkipModal() {
+            document.getElementById('skip-modal').style.display = 'none';
+        }
+
+        function skipSentence(scoreChange) {
+            if (practiceQueue.length === 0) return;
+            const id = currentPracticeItem.id;
+            
+            if (scoreChange > 0) {
+                sentenceProgress[id].score += scoreChange;
+                saveProgress();
+            }
+            
+            // Reinsert at the correct place based on updated score
+            const item = practiceQueue.shift();
+            const newScore = sentenceProgress[id].score;
+            const insertPos = Math.pow(2, newScore + 1);
+            practiceQueue.splice(insertPos, 0, item);
+            
+            // Save the new ordering
+            sentenceOrder = practiceQueue.map(q => q.id);
+            saveOrder();
+            
+            closeSkipModal();
+            loadNextPracticeSentence();
+        }
+
+        function forgiveMistake() {
+            if (isRetryState && originalScoreBeforeRetry !== null) {
+                // Revert score penalty
+                sentenceProgress[currentPracticeItem.id].score = originalScoreBeforeRetry;
+                saveProgress();
+                
+                // Hide the forgive button
+                document.getElementById('forgive-btn').style.display = 'none';
+                
+                // Instantly update the displayed UI score color and value
+                const score = sentenceProgress[currentPracticeItem.id].score;
+                const scoreEl = document.getElementById('current-score');
+                scoreEl.textContent = score;
+                const hue = Math.min(score * 12, 120);
+                scoreEl.style.backgroundColor = `hsl(${hue}, 70%, 50%)`;
+            }
         }
 
         // --- REVIEW & EDIT LOGIC ---
