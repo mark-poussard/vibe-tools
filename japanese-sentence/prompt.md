@@ -262,3 +262,22 @@ At this point, we should display a button that allows the user to opt to not hav
 # Action
 
 Implement these features, give only the changes to apply to the `index.html` file
+
+--- Prompt 13 ---
+
+# Feature
+
+## Intro
+
+The webapp currently does not allow changing the github repository path and github personal access token. We want to add an option to allow the user to change the locally stored settings from the home page.
+
+## Configuration
+
+A `Edit Config` button should be added to the homepage.
+Clicking on the `Edit Config` button should open a modal which allows updating the currently set github configurations.
+The current `Clear Config` button on the homepage should be removed from the homepage and moved to the `Edit Config` modal.
+The `Edit Config` modal should have a `Save` button which saves the new configuration to the webapp local storage.
+
+# Action
+
+Implement these features, give only the changes to apply to the `index.html` file

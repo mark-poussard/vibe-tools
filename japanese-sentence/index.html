@@ -287,7 +287,7 @@
             <div class="btn-group">
                 <button onclick="startPractice()">Sentence Practice</button>
                 <button class="secondary" onclick="openReview()">Review & Edit Sentences</button>
-                <button class="danger" onclick="clearConfig()">Clear Config</button>
+                <button class="secondary" onclick="openConfigModal()">Edit Config</button>
             </div>
         </div>
 
@@ -361,6 +361,32 @@
             <div class="btn-group" style="justify-content: flex-end;">
                 <button class="secondary" onclick="closeOverrideModal()">Cancel</button>
                 <button onclick="confirmOverride()">Confirm & Add</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="config-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Edit Configuration</h3>
+            <p>Update your locally stored GitHub settings.</p>
+            <div class="form-group">
+                <label for="edit-gh-token">GitHub Personal Access Token</label>
+                <input type="password" id="edit-gh-token" placeholder="ghp_xxxxxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label for="edit-gh-repo">Repository (Format: username/repo)</label>
+                <input type="text" id="edit-gh-repo" placeholder="octocat/japanese-practice">
+            </div>
+            <div class="form-group">
+                <label for="edit-gh-path">File Path</label>
+                <input type="text" id="edit-gh-path" placeholder="index.html">
+            </div>
+            <div class="modal-footer">
+                <button class="danger" onclick="clearConfig()">Clear Config</button>
+                <div class="btn-group" style="margin-top: 0;">
+                    <button class="secondary" onclick="closeConfigModal()">Cancel</button>
+                    <button onclick="saveEditedConfig()">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1693,6 +1719,39 @@
                 statusLabel.style.color = "var(--error)";
                 alert(`Sync Error: ${error.message}`);
             }
+        }
+        
+        // --- CONFIGURATION MODAL ---
+        function openConfigModal() {
+            // Populate inputs with current stored settings
+            document.getElementById('edit-gh-token').value = localStorage.getItem('gh_token') || '';
+            document.getElementById('edit-gh-repo').value = localStorage.getItem('gh_repo') || '';
+            document.getElementById('edit-gh-path').value = localStorage.getItem('gh_path') || 'index.html';
+            
+            document.getElementById('config-modal').style.display = 'flex';
+        }
+
+        function closeConfigModal() {
+            document.getElementById('config-modal').style.display = 'none';
+        }
+
+        function saveEditedConfig() {
+            const token = document.getElementById('edit-gh-token').value.trim();
+            const repo = document.getElementById('edit-gh-repo').value.trim();
+            const path = document.getElementById('edit-gh-path').value.trim();
+
+            if (!token || !repo || !path) {
+                alert("Please fill in all configuration fields.");
+                return;
+            }
+
+            // Update localStorage
+            localStorage.setItem('gh_token', token);
+            localStorage.setItem('gh_repo', repo);
+            localStorage.setItem('gh_path', path);
+            
+            closeConfigModal();
+            alert("Configuration successfully updated!");
         }
 
         // --- INITIALIZATION ---
