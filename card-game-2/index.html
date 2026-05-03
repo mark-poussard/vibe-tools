@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Game: Persistence</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2f;
+            --text-color: #e0e0e0;
+            --card-bg: #2a2a40;
+            --card-border: #444;
+            --highlight: #f39c12;
+            --p1-color: #3498db;
+            --p2-color: #e74c3c;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body { margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; }
+
+        #game-board { display: flex; flex-direction: column; height: 100vh; justify-content: space-between; }
+
+        .player-area { display: flex; flex-direction: column; height: 35vh; padding: 10px; border-bottom: 2px solid #111; position: relative; }
+        .player-area.p1 { border-top: 2px solid #111; border-bottom: none; }
+        
+        .field-zone { display: flex; justify-content: center; align-items: center; height: 50%; gap: 10px; border: 1px dashed rgba(255,255,255,0.1); margin-bottom: 10px; }
+        .hand-zone { display: flex; justify-content: center; height: 50%; gap: 10px; }
+        
+        .deck-info { position: absolute; right: 20px; top: 10px; text-align: right; font-size: 0.9em; color: #aaa; }
+
+        #center-zone { height: 30vh; display: flex; background: #151522; border-top: 2px solid #000; border-bottom: 2px solid #000; padding: 10px; }
+        #info-panel { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid #333; padding: 10px;}
+        #stack-zone { flex: 2; display: flex; gap: 10px; overflow-x: auto; align-items: center; padding-left: 20px;}
+
+        /* Cards */
+        .card {
+            width: 100px; height: 140px; background: var(--card-bg); border: 2px solid var(--card-border);
+            border-radius: 8px; padding: 5px; cursor: pointer; position: relative; font-size: 0.75em;
+            display: flex; flex-direction: column; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.5); border-color: #888; }
+        .card.hidden-card { background: repeating-linear-gradient(45deg, #222, #222 10px, #333 10px, #333 20px); cursor: default; }
+        .card.hidden-card * { display: none; }
+        
+        .card .title { font-weight: bold; font-size: 0.9em; text-align: center; border-bottom: 1px solid #555; margin-bottom: 4px; padding-bottom: 2px;}
+        .card .type { font-size: 0.8em; text-align: center; font-style: italic; color: #aaa; margin-bottom: 4px;}
+        .card .stats { display: flex; flex-wrap: wrap; gap: 2px; justify-content: space-between; font-size: 0.85em; margin-top: auto; }
+        .card .stat { width: 45%; background: rgba(0,0,0,0.3); text-align: center; border-radius: 3px; }
+        .card .effect { font-size: 0.75em; text-align: center; color: #00ffcc; flex-grow: 1; }
+        
+        .card.selected { border-color: var(--highlight); box-shadow: 0 0 10px var(--highlight); transform: translateY(-10px); }
+        .card.targetable { border-color: #2ecc71; box-shadow: 0 0 10px #2ecc71; animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse { 0% { box-shadow: 0 0 5px #2ecc71; } 50% { box-shadow: 0 0 15px #2ecc71; } 100% { box-shadow: 0 0 5px #2ecc71; } }
+
+        /* UI Overlays & Modals */
+        #modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+        }
+        .modal { background: #222; padding: 20px; border-radius: 8px; border: 1px solid #444; text-align: center; max-width: 400px; }
+        .modal h2 { margin-top: 0; color: var(--highlight); }
+        .modal button { margin: 5px; padding: 10px 15px; cursor: pointer; background: #333; color: white; border: 1px solid #555; border-radius: 4px; }
+        .modal button:hover { background: #555; }
+
+        .action-btns { margin-top: 10px; display: flex; gap: 10px; justify-content: center; }
+        .action-btns button { padding: 8px 12px; cursor: pointer; background: #444; color: white; border: 1px solid #666; border-radius: 4px; font-weight: bold; }
+        .action-btns button:hover { background: #666; }
+        .action-btns button.primary { background: var(--highlight); color: black; border-color: #e67e22; }
+        .action-btns button.primary:hover { background: #e67e22; }
+
+        .log { margin-top: 10px; font-size: 0.8em; color: #888; max-height: 80px; overflow-y: auto; text-align: left; width: 100%; border-top: 1px solid #333; padding-top: 5px;}
+        .highlight-text { color: var(--highlight); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="game-board">
+    <!-- P2 Area (Top) -->
+    <div class="player-area p2" id="p2-area">
+        <div class="deck-info" id="p2-info">P2 Deck: 0 | Discard: 0</div>
+        <div class="hand-zone" id="p2-hand"></div>
+        <div class="field-zone" id="p2-field"></div>
+    </div>
+
+    <!-- Center Zone -->
+    <div id="center-zone">
+        <div id="info-panel">
+            <h3 id="phase-display">Initializing...</h3>
+            <div id="battle-info"></div>
+            <div class="action-btns" id="action-buttons"></div>
+            <div class="log" id="game-log"></div>
+        </div>
+        <div id="stack-zone"></div>
+    </div>
+
+    <!-- P1 Area (Bottom) -->
+    <div class="player-area p1" id="p1-area">
+        <div class="deck-info" id="p1-info">P1 Deck: 0 | Discard: 0</div>
+        <div class="field-zone" id="p1-field"></div>
+        <div class="hand-zone" id="p1-hand"></div>
+    </div>
+</div>
+
+<div id="modal-overlay" style="display: none;">
+    <div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+// --- CARD DATABASE ---
+const MONSTERS = [
+    { name: "Ironclad Grunt", type: "Monster", tier: "Basic", stats: { mtg: 3, mag: 0, cel: 1, lck: 0 } },
+    { name: "Novice Acolyte", type: "Monster", tier: "Basic", stats: { mtg: 0, mag: 3, cel: 1, lck: 0 } },
+    { name: "Fleet Runner", type: "Monster", tier: "Basic", stats: { mtg: 1, mag: 0, cel: 3, lck: 0 } },
+    { name: "Tavern Gambler", type: "Monster", tier: "Basic", stats: { mtg: 0, mag: 1, cel: 0, lck: 3 } },
+    
+    { name: "Spellblade", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 3, cel: 1, lck: 0 } },
+    { name: "Wind-Walker", type: "Monster", tier: "Mid", stats: { mtg: 1, mag: 0, cel: 3, lck: 3 } },
+    { name: "Savage Hunter", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 0, cel: 3, lck: 1 } },
+    { name: "Cursed Idol", type: "Monster", tier: "Mid", stats: { mtg: 0, mag: 3, cel: 1, lck: 3 } },
+    { name: "Dwarven Sapper", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 0, cel: 1, lck: 3 } },
+    { name: "Lightning Disciple", type: "Monster", tier: "Mid", stats: { mtg: 1, mag: 3, cel: 3, lck: 0 } },
+    { name: "Ronin of the Waste", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 1, cel: 3, lck: 0 } },
+    { name: "Mist-Walker Star-Gazer", type: "Monster", tier: "Mid", stats: { mtg: 0, mag: 3, cel: 1, lck: 3 } },
+    { name: "Ancestral Protector", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 3, cel: 0, lck: 1 } },
+    { name: "Venom-Edge Roof-Runner", type: "Monster", tier: "Mid", stats: { mtg: 1, mag: 0, cel: 3, lck: 3 } },
+    { name: "Brass Sentinel", type: "Monster", tier: "Mid", stats: { mtg: 3, mag: 0, cel: 3, lck: 1 } },
+    { name: "Blink-Wraith", type: "Monster", tier: "Mid", stats: { mtg: 0, mag: 3, cel: 3, lck: 1 } },
+
+    { name: "War Behemoth", type: "Monster", tier: "Large", stats: { mtg: 5, mag: 1, cel: 3, lck: 1 } },
+    { name: "Archmage Eternal", type: "Monster", tier: "Large", stats: { mtg: 2, mag: 5, cel: 1, lck: 3 } },
+    { name: "Storm Griffin", type: "Monster", tier: "Large", stats: { mtg: 3, mag: 1, cel: 5, lck: 2 } },
+    { name: "Fortune Dragon", type: "Monster", tier: "Large", stats: { mtg: 2, mag: 3, cel: 1, lck: 5 } }
+];
+
+const SUPPORTS = [
+    { name: "Rusting Curse", type: "Sigil", effectTxt: "-1 Might", needsTarget: true },
+    { name: "Mana Leak", type: "Sigil", effectTxt: "-1 Magic", needsTarget: true },
+    { name: "Hobble", type: "Sigil", effectTxt: "-1 Celerity", needsTarget: true },
+    { name: "Black Cat", type: "Sigil", effectTxt: "-1 Luck", needsTarget: true },
+    { name: "Phalanx Call", type: "Sigil", effectTxt: "Def adds +1 monster", needsTarget: false },
+    { name: "Collateral Damage", type: "Incant", effectTxt: "If Attacker wins, Def discards hand", needsTarget: false },
+    { name: "Pivot Point", type: "Sigil", effectTxt: "Change Battle Stat", needsTarget: false },
+    { name: "Dull Senses", type: "Sigil", effectTxt: "Highest stat treated as 0", needsTarget: false },
+    { name: "Double or Nothing", type: "Sigil", effectTxt: "50% Double Stat / 50% Zero", needsTarget: true },
+    { name: "Loaded Dice", type: "Sigil", effectTxt: "Attacker wins ties if Luck", needsTarget: false },
+    { name: "Memory Leak", type: "Incant", effectTxt: "Opponent discards 2", needsTarget: false },
+    { name: "Scavenge", type: "Incant", effectTxt: "Return top discard Monster to hand", needsTarget: false }
+];
+
+// --- GAME STATE ---
+let uidCounter = 0;
+function createDeck() {
+    let deck = [];
+    // 2x Basics, 1x Mid, 1x Large, 1x Supports = roughly 40 cards
+    MONSTERS.filter(m=>m.tier==="Basic").forEach(m => { deck.push({...m, uid: uidCounter++}); deck.push({...m, uid: uidCounter++}); });
+    MONSTERS.filter(m=>m.tier==="Mid").forEach(m => deck.push({...m, uid: uidCounter++}));
+    MONSTERS.filter(m=>m.tier==="Large").forEach(m => deck.push({...m, uid: uidCounter++}));
+    SUPPORTS.forEach(s => deck.push({...s, uid: uidCounter++}));
+    return deck.sort(() => Math.random() - 0.5);
+}
+
+const state = {
+    p1: { id: 'p1', name: "Player 1", hand: [], field: [], discard: [], deck: createDeck() },
+    p2: { id: 'p2', name: "Player 2", hand: [], field: [], discard: [], deck: createDeck() },
+    activePlayer: null, // Whose turn it is (The Attacker)
+    turnPriority: null, // Used during support phase
+    phase: 'SETUP', // SETUP, INIT_DEFENSE, ATTACK, SUPPORT, RESOLUTION, COMBAT, MAINTENANCE
+    battleStat: null,
+    pendingMaintenance: [],
+    postMaintenancePhase: '',
+    stack: [],
+    consecutivePasses: 0,
+    selectedCards: [],
+    awaitingTarget: null,
+    
+    // Battle modifiers
+    battleMods: { collateral: false, dullSenses: false, loadedDice: false, phalanx: false },
+    cardMods: {}, // uid -> { mtg: 0, mag: 0, cel: 0, lck: 0, mult: 1 }
+    
+    log: []
+};
+
+// --- CORE LOGIC ---
+function logMsg(msg) {
+    state.log.unshift(msg);
+    if(state.log.length > 10) state.log.pop();
+}
+
+function getOpponent(pid) { return pid === 'p1' ? state.p2 : state.p1; }
+function getPlayer(pid) { return pid === 'p1' ? state.p1 : state.p2; }
+
+function drawCards(player, count) {
+    for(let i=0; i<count; i++) {
+        if(player.deck.length === 0) {
+            alert(`${player.name} tried to draw from an empty deck and LOST THE GAME!`);
+            location.reload();
+            return;
+        }
+        player.hand.push(player.deck.pop());
+    }
+}
+
+function cycleForDefense(player) {
+    let hasMonster = player.hand.some(c => c.type === 'Monster');
+    while(!hasMonster) {
+        logMsg(`${player.name} has no monsters. Discarding hand and drawing 5.`);
+        while(player.hand.length > 0) player.discard.push(player.hand.pop());
+        drawCards(player, 5);
+        if(player.deck.length === 0) return; // Handled in drawCards
+        hasMonster = player.hand.some(c => c.type === 'Monster');
+    }
+}
+
+function initGame() {
+    drawCards(state.p1, 5);
+    drawCards(state.p2, 5);
+    
+    // Coin toss
+    const p1Wins = Math.random() > 0.5;
+    const opener = p1Wins ? state.p1 : state.p2;
+    state.activePlayer = opener;
+    logMsg(`Coin toss: ${opener.name} won! They must play the Initial Defense.`);
+    
+    cycleForDefense(opener);
+    state.phase = 'INIT_DEFENSE';
+    render();
+}
+
+function startMaintenance(players, nextPhase) {
+    state.pendingMaintenance = players;
+    state.postMaintenancePhase = nextPhase;
+    state.phase = 'MAINTENANCE';
+    state.turnPriority = state.pendingMaintenance[0];
+    state.selectedCards = [];
+    render();
+}
+
+// --- PHASE ACTIONS ---
+function handleConfirmAction() {
+    const p = state.activePlayer;
+    const opp = getOpponent(p.id);
+
+    if (state.phase === 'INIT_DEFENSE' || state.phase === 'DECLARE_DEFENDER') {
+        if (state.selectedCards.length !== 1) return alert("Select exactly one monster to defend.");
+        const cardId = state.selectedCards[0];
+        const cardIdx = p.hand.findIndex(c => c.uid === cardId);
+        
+        let card;
+        if(cardIdx > -1) { // Played from hand
+            card = p.hand.splice(cardIdx, 1)[0];
+            p.field.push(card);
+        } else { // Picked from field
+            card = p.field.find(c => c.uid === cardId);
+            // Discard other field monsters
+            p.field = p.field.filter(c => {
+                if(c.uid !== cardId) { p.discard.push(c); return false; }
+                return true;
+            });
+        }
+        state.selectedCards = [];
+        
+        // Pick Battle Stat
+        showStatModal((stat) => {
+            state.battleStat = stat;
+            logMsg(`${p.name} declares ${card.name} as Defender. Battle Stat: ${stat.toUpperCase()}`);
+            
+            // Turn priority shifts, both players do maintenance
+            state.activePlayer = opp; 
+            startMaintenance([p, opp], 'ATTACK'); 
+        });
+        return;
+    }
+
+    if (state.phase === 'ATTACK') {
+        if (state.selectedCards.length === 0) return alert("Select at least one monster to attack.");
+        state.selectedCards.forEach(uid => {
+            const idx = p.hand.findIndex(c => c.uid === uid);
+            p.field.push(p.hand.splice(idx, 1)[0]);
+        });
+        state.selectedCards = [];
+        logMsg(`${p.name} declares attack with ${p.field.length} monster(s).`);
+        state.phase = 'SUPPORT';
+        state.turnPriority = p; // Attacker goes first
+        state.consecutivePasses = 0;
+        render();
+        return;
+    }
+}
+
+function handleMaintenanceCycle() {
+    const p = state.turnPriority;
+    
+    if (state.selectedCards.length > 0) {
+        // Discard selected
+        state.selectedCards.forEach(uid => {
+            const idx = p.hand.findIndex(c => c.uid === uid);
+            p.discard.push(p.hand.splice(idx, 1)[0]);
+        });
+        state.selectedCards = [];
+        logMsg(`${p.name} discarded cards to draw.`);
+    }
+    
+    const drawAmt = 5 - p.hand.length;
+    if(drawAmt > 0) drawCards(p, drawAmt);
+    
+    render();
+}
+
+function handleEndMaintenance() {
+    const p = state.turnPriority;
+    
+    // Ensure hand size is exactly 5 before ending
+    const drawAmt = 5 - p.hand.length;
+    if (drawAmt > 0) drawCards(p, drawAmt);
+
+    // Constraint: Active player must have at least one Monster card
+    if (p.id === state.activePlayer.id) {
+        const hasMonster = p.hand.some(c => c.type === 'Monster');
+        if (!hasMonster) {
+            return alert("You must have at least one Monster card in your hand to end maintenance. Please select cards, then click 'Discard & Draw'.");
+        }
+    }
+
+    logMsg(`${p.name} finished maintenance.`);
+    state.selectedCards = [];
+
+    // Move to next player in queue, or proceed to next phase
+    state.pendingMaintenance.shift();
+    if (state.pendingMaintenance.length > 0) {
+        state.turnPriority = state.pendingMaintenance[0];
+    } else {
+        if (state.postMaintenancePhase === 'ATTACK') {
+            state.phase = 'ATTACK';
+            state.stack = [];
+            state.battleMods = { collateral: false, dullSenses: false, loadedDice: false, phalanx: false };
+            state.cardMods = {};
+            logMsg(`--- ${state.activePlayer.name}'s Turn (Attacker) ---`);
+        } else {
+            state.phase = state.postMaintenancePhase;
+        }
+    }
+    render();
+}
+
+function handlePass() {
+    if (state.phase === 'SUPPORT') {
+        state.consecutivePasses++;
+        logMsg(`${state.turnPriority.name} passes support.`);
+        if (state.consecutivePasses >= 2) {
+            state.phase = 'RESOLUTION';
+            resolveStack();
+        } else {
+            state.turnPriority = getOpponent(state.turnPriority.id);
+            render();
+        }
+    }
+}
+
+function playSupportCard(cardUID) {
+    const p = state.turnPriority;
+    const cardIdx = p.hand.findIndex(c => c.uid === cardUID);
+    const card = p.hand[cardIdx];
+
+    if (card.needsTarget) {
+        state.awaitingTarget = { card, cardIdx };
+        logMsg(`Select a target for ${card.name}.`);
+        render();
+        return;
+    }
+    
+    // Play immediately
+    p.hand.splice(cardIdx, 1);
+    state.stack.push({ card, owner: p, target: null });
+    logMsg(`${p.name} played ${card.name}.`);
+    state.consecutivePasses = 0;
+    state.turnPriority = getOpponent(p.id);
+    render();
+}
+
+function applySupportEffect(stackItem) {
+    const { card, owner, target } = stackItem;
+    const opp = getOpponent(owner.id);
+    
+    if(!state.cardMods[target]) state.cardMods[target] = { mtg: 0, mag: 0, cel: 0, lck: 0, mult: 1 };
+    
+    switch(card.name) {
+        case "Rusting Curse": state.cardMods[target].mtg -= 1; break;
+        case "Mana Leak": state.cardMods[target].mag -= 1; break;
+        case "Hobble": state.cardMods[target].cel -= 1; break;
+        case "Black Cat": state.cardMods[target].lck -= 1; break;
+        case "Collateral Damage": state.battleMods.collateral = true; break;
+        case "Dull Senses": state.battleMods.dullSenses = true; break;
+        case "Loaded Dice": state.battleMods.loadedDice = true; break;
+        case "Phalanx Call": state.battleMods.phalanx = true; break; // Handled in combat logic manually or via prompt?
+        case "Memory Leak": 
+            // Randomly discard 2 from opponent
+            for(let i=0; i<2; i++) {
+                if(opp.hand.length > 0) {
+                    let rIdx = Math.floor(Math.random() * opp.hand.length);
+                    opp.discard.push(opp.hand.splice(rIdx, 1)[0]);
+                }
+            }
+            logMsg(`${opp.name} discarded 2 cards due to Memory Leak.`);
+            break;
+        case "Scavenge":
+            const topMon = owner.discard.find(c => c.type === 'Monster');
+            if(topMon) {
+                owner.discard = owner.discard.filter(c => c.uid !== topMon.uid);
+                owner.hand.push(topMon);
+                logMsg(`${owner.name} scavenged ${topMon.name}.`);
+            }
+            break;
+        case "Double or Nothing":
+            const success = Math.random() > 0.5;
+            state.cardMods[target].mult = success ? 2 : 0;
+            logMsg(`Double or Nothing on target: ${success ? 'Doubled!' : 'Zeroed!'}`);
+            break;
+        case "Pivot Point":
+            // For SPA simplicity, randomly pick a new one or ask owner
+            const stats = ['mtg','mag','cel','lck'].filter(s => s !== state.battleStat);
+            state.battleStat = stats[Math.floor(Math.random()*stats.length)];
+            logMsg(`Pivot Point changed Battle Stat to ${state.battleStat.toUpperCase()}`);
+            break;
+    }
+
+    // Move card
+    if(card.type === 'Sigil') owner.hand.push(card);
+    else owner.discard.push(card);
+}
+
+function resolveStack() {
+    logMsg(`--- Resolving Stack (${state.stack.length}) ---`);
+    while(state.stack.length > 0) {
+        const item = state.stack.pop(); // LIFO
+        applySupportEffect(item);
+    }
+    
+    // Handle Phalanx Call interruption
+    if (state.battleMods.phalanx) {
+        const defPlayer = getOpponent(state.activePlayer.id);
+        const defMonsters = defPlayer.hand.filter(c => c.type === 'Monster');
+        if (defMonsters.length > 0) {
+            // Auto pick highest stat for simplicity in single-player UI
+            defMonsters.sort((a,b) => b.stats[state.battleStat] - a.stats[state.battleStat]);
+            const pCard = defPlayer.hand.splice(defPlayer.hand.findIndex(c=>c.uid===defMonsters[0].uid), 1)[0];
+            defPlayer.field.push(pCard);
+            logMsg(`Phalanx Call: ${defPlayer.name} added ${pCard.name} to defense!`);
+        }
+    }
+
+    state.phase = 'COMBAT';
+    setTimeout(resolveCombat, 1500); // Small delay for UX
+    render();
+}
+
+function getCardStat(card, stat) {
+    let mods = state.cardMods[card.uid] || { mtg: 0, mag: 0, cel: 0, lck: 0, mult: 1 };
+    let val = card.stats[stat] + mods[stat];
+    if (val < 0) val = 0;
+    
+    if (state.battleMods.dullSenses) {
+        // Find highest stat
+        let maxS = -1;
+        ['mtg','mag','cel','lck'].forEach(s => {
+            let sVal = card.stats[s] + (mods[s]||0);
+            if(sVal > maxS) maxS = sVal;
+        });
+        if (val === maxS) val = 0;
+    }
+    
+    return val * mods.mult;
+}
+
+function resolveCombat() {
+    const att = state.activePlayer;
+    const def = getOpponent(att.id);
+    const stat = state.battleStat;
+
+    let attTotal = att.field.reduce((sum, c) => sum + getCardStat(c, stat), 0);
+    let defTotal = def.field.reduce((sum, c) => sum + getCardStat(c, stat), 0);
+
+    logMsg(`COMBAT: Attacker ${attTotal} vs Defender ${defTotal}`);
+
+    let attWins = attTotal > defTotal;
+    if (attTotal === defTotal && stat === 'lck' && state.battleMods.loadedDice) attWins = true;
+
+    if (attWins) {
+        logMsg(`Attacker (${att.name}) WINS! Defender is defeated.`);
+        // Discard defender field
+        while(def.field.length > 0) def.discard.push(def.field.pop());
+        
+        if (state.battleMods.collateral) {
+            logMsg(`Collateral Damage! ${def.name} discards entire hand.`);
+            while(def.hand.length > 0) def.discard.push(def.hand.pop());
+        }
+
+        // Active player must declare new defender
+        cycleForDefense(att);
+        state.phase = 'DECLARE_DEFENDER';
+        state.selectedCards = [];
+    } else {
+        logMsg(`Defender (${def.name}) SURVIVES! Attacker defeated.`);
+        while(att.field.length > 0) att.discard.push(att.field.pop());
+        
+        // Attacker starts new turn immediately. Only Attacker does maintenance.
+        startMaintenance([att], 'ATTACK');
+    }
+    render();
+}
+
+// --- UI INTERACTIONS ---
+function handleCardClick(uid, ownerId, zone) {
+    const p = state.activePlayer;
+    
+    // Target Selection Phase
+    if (state.awaitingTarget) {
+        // Can target any monster on field
+        const tCard = state.p1.field.concat(state.p2.field).find(c => c.uid === uid);
+        if (tCard) {
+            const { card, cardIdx } = state.awaitingTarget;
+            const owner = state.turnPriority;
+            owner.hand.splice(cardIdx, 1);
+            state.stack.push({ card, owner, target: uid });
+            logMsg(`${owner.name} played ${card.name} on ${tCard.name}.`);
+            state.awaitingTarget = null;
+            state.consecutivePasses = 0;
+            state.turnPriority = getOpponent(owner.id);
+            render();
+        }
+        return;
+    }
+
+    if (state.phase === 'INIT_DEFENSE' || state.phase === 'DECLARE_DEFENDER') {
+        if (ownerId === p.id && (zone === 'hand' || zone === 'field')) {
+            const c = p.hand.concat(p.field).find(x => x.uid === uid);
+            if (c && c.type === 'Monster') {
+                state.selectedCards = [uid];
+                render();
+            }
+        }
+    }
+    else if (state.phase === 'ATTACK') {
+        if (ownerId === p.id && zone === 'hand') {
+            const c = p.hand.find(x => x.uid === uid);
+            if (c && c.type === 'Monster') {
+                if(state.selectedCards.includes(uid)) state.selectedCards = state.selectedCards.filter(id => id !== uid);
+                else state.selectedCards.push(uid);
+                render();
+            }
+        }
+    }
+    else if (state.phase === 'SUPPORT') {
+        if (ownerId === state.turnPriority.id && zone === 'hand') {
+            const c = state.turnPriority.hand.find(x => x.uid === uid);
+            if (c && c.type !== 'Monster') playSupportCard(uid);
+        }
+    }
+    else if (state.phase === 'MAINTENANCE') {
+        const curr = state.turnPriority;
+        if (ownerId === curr.id && zone === 'hand') {
+            if(state.selectedCards.includes(uid)) state.selectedCards = state.selectedCards.filter(id => id !== uid);
+            else state.selectedCards.push(uid);
+            render();
+        }
+    }
+}
+
+function showStatModal(callback) {
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+    content.innerHTML = `
+        <h2>Select Battle Stat</h2>
+        <button onclick="window.selectStat('mtg')">Might</button>
+        <button onclick="window.selectStat('mag')">Magic</button>
+        <button onclick="window.selectStat('cel')">Celerity</button>
+        <button onclick="window.selectStat('lck')">Luck</button>
+    `;
+    overlay.style.display = 'flex';
+    window.selectStat = (stat) => {
+        overlay.style.display = 'none';
+        callback(stat);
+    };
+}
+
+// --- RENDERING ---
+function createCardHTML(card, isHidden, isSelected, isTargetable) {
+    if (isHidden) return `<div class="card hidden-card"></div>`;
+    
+    let statsHTML = '';
+    if (card.type === 'Monster') {
+        statsHTML = `
+            <div class="stats">
+                <div class="stat" style="color:#e74c3c">M: ${card.stats.mtg}</div>
+                <div class="stat" style="color:#3498db">Mg: ${card.stats.mag}</div>
+                <div class="stat" style="color:#2ecc71">C: ${card.stats.cel}</div>
+                <div class="stat" style="color:#f1c40f">L: ${card.stats.lck}</div>
+            </div>`;
+    } else {
+        statsHTML = `<div class="effect">${card.effectTxt}</div>`;
+    }
+
+    const cls = `card ${isSelected ? 'selected' : ''} ${isTargetable ? 'targetable' : ''}`;
+    return `
+        <div class="${cls}" onclick="handleCardClick(${card.uid}, 'ownerPlaceholder', 'zonePlaceholder')">
+            <div class="title">${card.name}</div>
+            <div class="type">${card.type}</div>
+            ${statsHTML}
+        </div>
+    `;
+}
+
+function renderPlayerArea(p) {
+    const isCurrentPOV = (state.phase === 'SUPPORT' || state.phase === 'MAINTENANCE') 
+                         ? p.id === state.turnPriority.id 
+                         : p.id === state.activePlayer?.id;
+    
+    document.getElementById(`${p.id}-info`).innerText = `${p.name} | Deck: ${p.deck.length} | Discard: ${p.discard.length}`;
+    
+    let fieldHTML = p.field.map(c => {
+        let isTargetable = state.awaitingTarget && c.type === 'Monster';
+        let isSel = state.selectedCards.includes(c.uid);
+        return createCardHTML(c, false, isSel, isTargetable).replace('ownerPlaceholder', p.id).replace('zonePlaceholder', 'field');
+    }).join('');
+    document.getElementById(`${p.id}-field`).innerHTML = fieldHTML;
+
+    let handHTML = p.hand.map(c => {
+        let isSel = state.selectedCards.includes(c.uid);
+        let hide = !isCurrentPOV; 
+        if (state.phase === 'SETUP') hide = false;
+        return createCardHTML(c, hide, isSel, false).replace('ownerPlaceholder', p.id).replace('zonePlaceholder', 'hand');
+    }).join('');
+    document.getElementById(`${p.id}-hand`).innerHTML = handHTML;
+}
+
+function render() {
+    renderPlayerArea(state.p1);
+    renderPlayerArea(state.p2);
+
+    const phaseEl = document.getElementById('phase-display');
+    const btnsEl = document.getElementById('action-buttons');
+    const logEl = document.getElementById('game-log');
+    const battleInfoEl = document.getElementById('battle-info');
+    
+    logEl.innerHTML = state.log.map(msg => `<div>${msg}</div>`).join('');
+    battleInfoEl.innerHTML = state.battleStat ? `Active Stat: <span class="highlight-text">${state.battleStat.toUpperCase()}</span>` : '';
+
+    btnsEl.innerHTML = '';
+
+    if (state.phase === 'INIT_DEFENSE' || state.phase === 'DECLARE_DEFENDER') {
+        phaseEl.innerText = `${state.activePlayer.name}: Declare Defender`;
+        btnsEl.innerHTML = `<button class="primary" onclick="handleConfirmAction()">Confirm Defender</button>`;
+    }
+    else if (state.phase === 'ATTACK') {
+        phaseEl.innerText = `${state.activePlayer.name}: Declare Attackers`;
+        btnsEl.innerHTML = `<button class="primary" onclick="handleConfirmAction()">Confirm Attack</button>`;
+    }
+    else if (state.phase === 'SUPPORT') {
+        if (state.awaitingTarget) {
+            phaseEl.innerText = `${state.turnPriority.name}: Select Target`;
+            btnsEl.innerHTML = `<button onclick="state.awaitingTarget = null; render();">Cancel</button>`;
+        } else {
+            phaseEl.innerText = `${state.turnPriority.name}: Play Support`;
+            btnsEl.innerHTML = `<button onclick="handlePass()">Pass Priority</button>`;
+        }
+    }
+    else if (state.phase === 'MAINTENANCE') {
+        phaseEl.innerText = `${state.turnPriority.name}: Maintenance`;
+        btnsEl.innerHTML = `
+            <button class="primary" onclick="handleMaintenanceCycle()">Discard & Draw</button>
+            <button onclick="handleEndMaintenance()">End Maintenance</button>
+        `;
+    }
+    else {
+        phaseEl.innerText = state.phase;
+    }
+
+    // Render Stack
+    document.getElementById('stack-zone').innerHTML = state.stack.map(s => `
+        <div class="card" style="transform: scale(0.8)">
+            <div class="title">${s.card.name}</div>
+            <div class="type">${s.owner.name}</div>
+        </div>
+    `).join('');
+}
+
+// Start Game
+initGame();
+
+</script>
+</body>
+</html>
