@@ -147,6 +147,21 @@
             margin-right: -15px; 
         }
 
+        .card-back {
+            background: repeating-linear-gradient(45deg, #1a0a2a, #1a0a2a 10px, #2a1a4a 10px, #2a1a4a 20px) !important;
+            border: 2px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-back::after {
+            content: 'FS';
+            font-size: 1.5em;
+            font-weight: bold;
+            color: rgba(255,255,255,0.2);
+        }
+
         /* ================= Desktop Sizing (Scales Up) ================= */
         @media (min-width: 768px) {
             .player-area { padding: 10px; }
@@ -163,10 +178,19 @@
                 flex-direction: row; 
                 padding: 10px 20px; 
                 align-items: stretch;
+                min-height: 0; /* CRUCIAL: Prevents center-board from expanding */
             }
             #controls { flex: 1; gap: 10px; }
-            #stack-container { flex: 1; min-height: 100px; gap: -20px; padding: 10px; justify-content: flex-start; }
-            #log-container { flex: 1; height: auto; min-height: 100px; font-size: 0.85em; padding: 10px; margin-right: 10px; }
+            #stack-container { flex: 1; min-height: 0; gap: -20px; padding: 10px; justify-content: flex-start; }
+            
+            #log-container { 
+                flex: 1; 
+                height: 100%; /* Forces it to respect the parent boundaries */
+                min-height: 0; /* CRUCIAL: Allows container to shrink below content size and scroll */
+                font-size: 0.85em; 
+                padding: 10px; 
+                margin-right: 10px; 
+            }
             
             #stack-container .card { margin-right: -25px; }
         }
@@ -193,7 +217,8 @@
         <div id="controls">
             <h3 id="phase-title">Setup</h3>
             <div style="font-size: 0.85em; margin-bottom: 5px;">Battle Stat: <strong id="battle-stat-display">None</strong></div>
-            <button id="main-btn" class="btn">Start Game</button>
+            <button id="main-btn" class="btn">Start Game (Hotseat)</button>
+            <button id="ai-btn" class="btn" style="display: none; margin-top: 5px; background: #673ab7;">Start Game (vs AI)</button>
             <button id="draw-btn" class="btn" style="display: none; margin-top: 5px; background: #388e3c;">Draw to 5</button>
             <button id="pass-btn" class="btn btn-action" style="display: none;">Pass</button>
         </div>
@@ -263,6 +288,8 @@ const SUPPORT_DB = [
 
 /* ===================== GAME STATE ===================== */
 let state = {
+    isVsAI: false,       // <-- NEW
+    aiThinking: false,   // <-- NEW
     phase: 'INIT', // INIT, SETUP_DEFENDER, MAINT_DEFENDER, MAINT_ATTACKER, ATTACK, CLASH, CHOOSE_NEW_DEFENDER, TIE_REPLACE_DEFENDER, GAME_OVER
     activePlayer: 0,
     defenderIndex: 0,
@@ -309,7 +336,8 @@ function log(msg) {
 
 /* ===================== CORE MECHANICS ===================== */
 
-function initGame() {
+function initGame(vsAI) {
+    state.isVsAI = vsAI; // Set the game mode
     state.players[0].deck = generateDeck();
     state.players[1].deck = generateDeck();
     log("Decks generated and shuffled.");
@@ -370,7 +398,8 @@ function gameOver(winnerIndex, reason) {
     updateUI();
 }
 
-function handleDrawAction() {
+function handleDrawAction(fromAI = false) {
+    if (state.isVsAI && state.activePlayer === 1 && fromAI !== true) return; 
     let p = state.players[state.activePlayer];
     if ((state.phase === 'MAINT_DEFENDER' || state.phase === 'MAINT_ATTACKER') && p.hand.length < 5) {
         drawUpTo(state.activePlayer, 5);
@@ -381,11 +410,14 @@ function handleDrawAction() {
 
 /* ===================== PHASE TRANSITIONS & LOGIC ===================== */
 
-function handleMainAction() {
+function handleMainAction(isInitVsAI = false, fromAI = false) {
+    // Block human input during AI turn, but let the AI pass through
+    if (state.isVsAI && state.activePlayer === 1 && state.phase !== 'INIT' && fromAI !== true) return; 
+
     const p = state.players[state.activePlayer];
     
     if (state.phase === 'INIT') {
-        initGame();
+        initGame(isInitVsAI);
     }
     else if (state.phase === 'MAINT_DEFENDER') {
         // Discard selected
@@ -432,7 +464,8 @@ function handleMainAction() {
     updateUI();
 }
 
-function handlePassAction() {
+function handlePassAction(fromAI = false) {
+    if (state.isVsAI && state.activePlayer === 1 && fromAI !== true) return;
     if (state.phase === 'CLASH') {
         log(`Player ${state.activePlayer + 1} passes.`);
         state.passedClash++;
@@ -445,7 +478,9 @@ function handlePassAction() {
     }
 }
 
-function handleCardClick(cardId, zone, ownerIndex) {
+function handleCardClick(cardId, zone, ownerIndex, fromAI = false) {
+    // Block human input if it's the AI's turn
+    if (state.isVsAI && state.activePlayer === 1 && fromAI !== true) return; 
     if (state.phase === 'GAME_OVER') return;
 
     // FIX: Retrieve the actual card object by ID to preserve its methods
@@ -645,15 +680,121 @@ function renderCard(card, zone, ownerIndex) {
     return html;
 }
 
+function renderCardBack() {
+    return `<div class="card card-back"></div>`;
+}
+
+function doAITurn() {
+    if (state.phase === 'GAME_OVER') return;
+    state.aiThinking = false; // Reset the lock immediately so subsequent actions can trigger the next turn
+    
+    let p = state.players[1]; // AI is always Player 2
+    
+    if (state.phase === 'SETUP_DEFENDER' || state.phase === 'TIE_REPLACE_DEFENDER' || state.phase === 'CHOOSE_NEW_DEFENDER') {
+        let pool = state.phase === 'CHOOSE_NEW_DEFENDER' ? p.field : p.hand.filter(c => c.type === 'Monster');
+        let bestCard = pool[0];
+        let bestStat = 'Mtg';
+        let maxVal = -1;
+        
+        pool.forEach(c => {
+            ['Mtg', 'Mag', 'Cel', 'Lck'].forEach(s => {
+                if (c.stats[s] > maxVal) { maxVal = c.stats[s]; bestStat = s; bestCard = c; }
+            });
+        });
+        
+        state.selectedCards = [bestCard.id];
+        selectStat(bestStat);
+    }
+    else if (state.phase === 'MAINT_DEFENDER' || state.phase === 'MAINT_ATTACKER') {
+        let hasMonster = p.hand.some(c => c.type === 'Monster');
+        if (state.phase === 'MAINT_ATTACKER' && !hasMonster) {
+            state.selectedCards = p.hand.map(c => c.id); 
+            discardSelected();
+        } else if (p.hand.length < 5) {
+            drawUpTo(1, 5);
+            log(`Player 2 drew back up to 5 cards.`);
+            updateUI();
+        } else {
+            handleMainAction(false, true); // Override block
+        }
+    }
+    else if (state.phase === 'ATTACK') {
+        let defStatVal = state.players[0].field[0].stats[state.battleStat];
+        let monsters = p.hand.filter(c => c.type === 'Monster').sort((a,b) => a.stats[state.battleStat] - b.stats[state.battleStat]);
+        
+        let attackSelected = [];
+        let currentSum = 0;
+        
+        let single = monsters.find(m => m.stats[state.battleStat] > defStatVal);
+        if (single) {
+            attackSelected.push(single.id);
+        } else {
+            let totalPossible = monsters.reduce((sum, m) => sum + m.stats[state.battleStat], 0);
+            if (totalPossible > defStatVal) {
+                // If it can win, play minimal combination
+                for (let m of monsters) {
+                    attackSelected.push(m.id);
+                    currentSum += m.stats[state.battleStat];
+                    if (currentSum > defStatVal) break;
+                }
+            } else {
+                // AI Heuristic: If it CANNOT win, deliberately throw the single weakest monster to cycle it and draw a new card next maintenance.
+                attackSelected.push(monsters[0].id); 
+            }
+        }
+        
+        state.selectedCards = attackSelected;
+        handleMainAction(false, true); // Override block
+    }
+    else if (state.phase === 'CLASH') {
+        let defTotal = state.players[state.defenderIndex].field[0].stats[state.battleStat];
+        let attTotal = state.players[state.attackerIndex].field.reduce((acc, m) => acc + m.stats[state.battleStat], 0);
+        let currentStats = { [state.defenderIndex]: defTotal, [state.attackerIndex]: attTotal };
+        
+        for (let i = state.stack.length - 1; i >= 0; i--) {
+            let item = state.stack[i];
+            item.card.effect(currentStats, item.owner, 1 - item.owner);
+        }
+        
+        let aiStat = currentStats[1];
+        let humanStat = currentStats[0];
+        
+        if (aiStat > humanStat) {
+            handlePassAction(true); // Override block
+        } else {
+            let supports = p.hand.filter(c => c.type === 'Support');
+            let played = false;
+            
+            for (let card of supports) {
+                let testStats = { 0: humanStat, 1: aiStat }; 
+                card.effect(testStats, 1, 0);
+                if (testStats[1] > testStats[0]) {
+                    handleCardClick(card.id, 'hand', 1, true); // Override block
+                    played = true;
+                    break;
+                }
+            }
+            if (!played) handlePassAction(true); // Override block
+        }
+    }
+}
+
 function updateUI() {
     // Player 0 (Bottom), Player 1 (Top)
     for (let i = 0; i < 2; i++) {
         document.getElementById(`p${i}-deck`).innerText = state.players[i].deck.length;
         document.getElementById(`p${i}-grave`).innerText = state.players[i].grave.length;
         
-        // Render Hand (hide opponent hand if you want, but for hotseat we show all or active)
-        // We will show all cards to make hotseat easier to test/play.
-        let handHtml = state.players[i].hand.map(c => renderCard(c, 'hand', i)).join('');
+        let isHidden = false;
+        if (state.phase !== 'GAME_OVER') {
+            if (state.isVsAI) {
+                if (i === 1) isHidden = true; // AI hand always hidden
+            } else {
+                if (i !== state.activePlayer) isHidden = true; // Hotseat hides inactive player
+            }
+        }
+        
+        let handHtml = state.players[i].hand.map(c => isHidden ? renderCardBack() : renderCard(c, 'hand', i)).join('');
         document.getElementById(`p${i}-hand`).innerHTML = handHtml;
         
         let fieldHtml = state.players[i].field.map(c => renderCard(c, 'field', i)).join('');
@@ -676,19 +817,22 @@ function updateUI() {
 
     // Central Controls
     let btn = document.getElementById('main-btn');
+    let aiBtn = document.getElementById('ai-btn');
     let passBtn = document.getElementById('pass-btn');
     let drawBtn = document.getElementById('draw-btn');
     let title = document.getElementById('phase-title');
     
     passBtn.style.display = 'none';
     drawBtn.style.display = 'none';
+    aiBtn.style.display = 'none';
     btn.style.display = 'block';
     btn.disabled = false;
 
     switch(state.phase) {
         case 'INIT':
             title.innerText = "Welcome";
-            btn.innerText = "Start Game";
+            btn.innerText = "Start Game (Hotseat)";
+            aiBtn.style.display = 'block';
             break;
         case 'SETUP_DEFENDER':
             title.innerText = `P${state.activePlayer+1}: Play a Defender`;
@@ -726,12 +870,17 @@ function updateUI() {
             btn.style.display = 'none';
             break;
     }
+    if (state.isVsAI && state.activePlayer === 1 && state.phase !== 'GAME_OVER' && state.phase !== 'INIT' && !state.aiThinking) {
+        state.aiThinking = true;
+        setTimeout(doAITurn, 1000); // 1s delay for UX so human can see what's happening
+    }
 }
 
 // Attach event listeners to buttons
-document.getElementById('main-btn').addEventListener('click', handleMainAction);
-document.getElementById('pass-btn').addEventListener('click', handlePassAction);
-document.getElementById('draw-btn').addEventListener('click', handleDrawAction);
+document.getElementById('main-btn').addEventListener('click', () => handleMainAction(false, false));
+document.getElementById('ai-btn').addEventListener('click', () => handleMainAction(true, false));
+document.getElementById('pass-btn').addEventListener('click', () => handlePassAction(false));
+document.getElementById('draw-btn').addEventListener('click', () => handleDrawAction(false));
 
 // Init call just to set basic UI up before game starts
 updateUI();

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Card Generator</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --primary: #e67e22;
+            --primary-hover: #d35400;
+            --text-main: #f0f0f0;
+            --text-muted: #a0a0a0;
+            --border: #333333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            box-sizing: border-box;
+        }
+
+        * {
+            box-sizing: inherit;
+        }
+
+        header {
+            text-align: center;
+            padding: 20px;
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 20px 40px 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--surface);
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.secondary {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        .card-preview-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        /* Displays the canvas responsively */
+        #preview-canvas {
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 5 / 7;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            object-fit: contain;
+        }
+        
+        .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: FORM -->
+    <div id="screen-1">
+        <header>
+            <h1>Card Generator</h1>
+        </header>
+        <div class="container">
+            <form id="card-form">
+
+                <div class="form-group">
+                    <label for="card-artist">Artist Name</label>
+                    <input type="text" id="card-artist" placeholder="e.g. Jane Doe" value="Unknown">
+                </div>
+                
+                <div class="form-group">
+                    <label for="card-type">Card Type</label>
+                    <select id="card-type" required>
+                        <option value="monster">Monster</option>
+                        <option value="incant">Support - Incant</option>
+                        <option value="sigil">Support - Sigil</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="card-name">Card Name</label>
+                    <input type="text" id="card-name" placeholder="e.g. Abyssal Behemoth" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="card-image">Illustration</label>
+                    <input type="file" id="card-image" accept="image/*" required>
+                    <div class="hint">Will be auto-cropped to fit the frame.</div>
+                </div>
+
+                <div id="stats-container">
+                    <div class="form-group stats-grid">
+                        <div>
+                            <label for="stat-might">Might</label>
+                            <input type="number" id="stat-might" value="0" required>
+                        </div>
+                        <div>
+                            <label for="stat-magic">Magic</label>
+                            <input type="number" id="stat-magic" value="0" required>
+                        </div>
+                        <div>
+                            <label for="stat-celerity">Celerity</label>
+                            <input type="number" id="stat-celerity" value="0" required>
+                        </div>
+                        <div>
+                            <label for="stat-luck">Luck</label>
+                            <input type="number" id="stat-luck" value="0" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="card-desc">Effect / Description</label>
+                    <textarea id="card-desc" placeholder="Enter card abilities, combat rules, or lore..." required></textarea>
+                </div>
+
+                <button type="submit">Generate Card</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: PREVIEW & DOWNLOAD -->
+    <div id="screen-2" class="hidden">
+        <header>
+            <h1>Generated Card</h1>
+        </header>
+        <div class="container">
+            <button type="button" class="secondary" id="btn-back">← Back to Editor</button>
+            
+            <div class="card-preview-container">
+                <!-- High-res canvas will be displayed here, scaled down by CSS -->
+                <canvas id="preview-canvas" width="2000" height="2800"></canvas>
+            </div>
+
+            <button type="button" id="btn-download">Download High-Res (800 DPI)</button>
+            <div class="hint" style="text-align: center; margin-top:10px;">Downloads a 2000x2800 pixel image (5:7 ratio).</div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const screen1 = document.getElementById('screen-1');
+        const screen2 = document.getElementById('screen-2');
+        const form = document.getElementById('card-form');
+        const typeSelect = document.getElementById('card-type');
+        const statsContainer = document.getElementById('stats-container');
+        const btnBack = document.getElementById('btn-back');
+        const btnDownload = document.getElementById('btn-download');
+        const canvas = document.getElementById('preview-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Toggle stats based on card type
+        typeSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'monster') {
+                statsContainer.classList.remove('hidden');
+                // Make stats required
+                document.getElementById('stat-might').required = true;
+                document.getElementById('stat-magic').required = true;
+                document.getElementById('stat-celerity').required = true;
+                document.getElementById('stat-luck').required = true;
+            } else {
+                statsContainer.classList.add('hidden');
+                // Remove required attribute
+                document.getElementById('stat-might').required = false;
+                document.getElementById('stat-magic').required = false;
+                document.getElementById('stat-celerity').required = false;
+                document.getElementById('stat-luck').required = false;
+            }
+        });
+
+        // Navigation
+        btnBack.addEventListener('click', () => {
+            screen2.classList.add('hidden');
+            screen1.classList.remove('hidden');
+            window.scrollTo(0,0);
+        });
+
+        // Handle Form Submission
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Gather inputs
+            const values = {
+                type: typeSelect.value,
+                name: document.getElementById('card-name').value,
+                artist: document.getElementById('card-artist').value,
+                desc: document.getElementById('card-desc').value,
+                might: document.getElementById('stat-might').value,
+                magic: document.getElementById('stat-magic').value,
+                celerity: document.getElementById('stat-celerity').value,
+                luck: document.getElementById('stat-luck').value
+            };
+
+            // Read Image File
+            const fileInput = document.getElementById('card-image');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        renderCard(img, values);
+                        screen1.classList.add('hidden');
+                        screen2.classList.remove('hidden');
+                        window.scrollTo(0,0);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Download generated card
+        btnDownload.addEventListener('click', () => {
+            const cardName = document.getElementById('card-name').value.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'card';
+            const link = document.createElement('a');
+            link.download = `${cardName}_800dpi.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        });
+
+        // The Core Rendering Engine
+        function renderCard(img, data) {
+            // Clear canvas entirely
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Helper: Chamfered Rectangle (Cut Corners)
+            function drawChamferRect(x, y, w, h, cut) {
+                ctx.beginPath();
+                ctx.moveTo(x + cut, y);
+                ctx.lineTo(x + w - cut, y);
+                ctx.lineTo(x + w, y + cut);
+                ctx.lineTo(x + w, y + h - cut);
+                ctx.lineTo(x + w - cut, y + h);
+                ctx.lineTo(x + cut, y + h);
+                ctx.lineTo(x, y + h - cut);
+                ctx.lineTo(x, y + cut);
+                ctx.closePath();
+            }
+
+            // Helper: Standard Rounded Rectangle
+            function drawRoundRect(x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+            }
+
+            // Helper: Asymmetrical Rounded Rectangle (Different top & bottom radii)
+            function drawAsymRoundRect(x, y, w, h, rTop, rBot) {
+                ctx.beginPath();
+                ctx.moveTo(x + rTop, y);
+                ctx.lineTo(x + w - rTop, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + rTop);
+                ctx.lineTo(x + w, y + h - rBot);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - rBot, y + h);
+                ctx.lineTo(x + rBot, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - rBot);
+                ctx.lineTo(x, y + rTop);
+                ctx.quadraticCurveTo(x, y, x + rTop, y);
+                ctx.closePath();
+            }
+
+            // --- 1. ROUNDED PHYSICAL CARD BASE ---
+            ctx.save();
+            // The physical card edge maintains standard uniform rounded corners
+            drawRoundRect(0, 0, 2000, 2800, 80);
+            ctx.clip();
+
+            // The base card color is black. This naturally creates the thick outer borders 
+            // and the solid black footer area at the bottom when we draw on top of it.
+            ctx.fillStyle = "#111111";
+            ctx.fillRect(0, 0, 2000, 2800);
+
+            // --- 2. INNER PASTEL BACKGROUND ---
+            // This inner shape uses the huge 280px radius at the bottom to sweep underneath the text box
+            drawAsymRoundRect(24, 24, 1952, 2624, 60, 280);
+            
+            const bgGrad = ctx.createLinearGradient(0, 0, 2000, 2800);
+            bgGrad.addColorStop(0, '#ffb8c6'); // Vibrant peach/pink
+            bgGrad.addColorStop(0.25, '#fff0f5'); // Soft glowing white
+            bgGrad.addColorStop(0.75, '#e0ffff'); // Bright cyan
+            bgGrad.addColorStop(1, '#a8f0d8'); // Vibrant mint green
+            ctx.fillStyle = bgGrad;
+            ctx.fill();
+
+            // Inner white border highlight tracing the exact same asymmetrical curve
+            drawAsymRoundRect(36, 36, 1928, 2600, 48, 268);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "rgba(255,255,255,0.9)";
+            ctx.stroke();
+
+            // --- 3. FOOTER TEXT ---
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 40px sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText("TEMPLATE-001", 120, 2745);
+            ctx.textAlign = "center";
+            ctx.fillText("© 2024 CARD GAME PROJECT", 1000, 2745);
+            ctx.textAlign = "right";
+            ctx.fillText(`Art by ${data.artist || '[Artist]'}`, 1880, 2745);
+            ctx.textAlign = "left"; // reset
+
+            // 5. Main Illustration Box
+            const imgX = 120, imgY = 280, imgW = 1760, imgH = 1220;
+            
+            // Outer aesthetic grey-blue border for image with 3D metallic HIGHLIGHT
+            ctx.save();
+            drawChamferRect(imgX - 24, imgY - 24, imgW + 48, imgH + 48, 62);
+            const frameGrad = ctx.createLinearGradient(imgX, imgY, imgX + imgW, imgY + imgH);
+            frameGrad.addColorStop(0, '#e8f4f8'); // Bright top-left highlight
+            frameGrad.addColorStop(0.5, '#a8bac2'); // Midtone
+            frameGrad.addColorStop(1, '#5a6b73'); // Deep bottom-right shadow
+            ctx.fillStyle = frameGrad;
+            ctx.fill();
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+            ctx.restore();
+            
+            // Inner white gap
+            drawChamferRect(imgX - 10, imgY - 10, imgW + 20, imgH + 20, 55);
+            ctx.fillStyle = "#ffffff";
+            ctx.fill();
+            ctx.stroke();
+
+            // Image Clip & Draw
+            ctx.save();
+            drawChamferRect(imgX, imgY, imgW, imgH, 50);
+            ctx.clip();
+            
+            const imgAspect = img.width / img.height;
+            const boxAspect = imgW / imgH;
+            let drawW, drawH, drawX, drawY;
+
+            if (imgAspect > boxAspect) {
+                drawH = imgH;
+                drawW = img.width * (imgH / img.height);
+                drawX = imgX - (drawW - imgW) / 2;
+                drawY = imgY;
+            } else {
+                drawW = imgW;
+                drawH = img.height * (imgW / img.width);
+                drawX = imgX;
+                drawY = imgY - (drawH - imgH) / 2;
+            }
+            ctx.drawImage(img, drawX, drawY, drawW, drawH);
+            ctx.restore();
+            
+            // Image inner black border & highlight shadow
+            drawChamferRect(imgX, imgY, imgW, imgH, 50);
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+
+            // 6. Title Box
+            const titleX = 100, titleY = 60, titleW = 1800, titleH = 160;
+            
+            // Background shadow layer behind title (vibrant pink pop)
+            drawRoundRect(titleX - 12, titleY - 12, titleW + 24, titleH + 24, 25);
+            ctx.fillStyle = "#ff7b93";
+            ctx.fill();
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+
+            // Actual Title Bar
+            drawRoundRect(titleX, titleY, titleW, titleH, 20);
+            ctx.fillStyle = "#fdfbf6";
+            ctx.fill();
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+
+            // Title Box Glossy Top Highlight
+            ctx.beginPath();
+            ctx.moveTo(titleX + 20, titleY + 12);
+            ctx.lineTo(titleX + titleW - 20, titleY + 12);
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+            ctx.stroke();
+
+            ctx.fillStyle = "#111111";
+            ctx.font = "bold 110px 'Times New Roman', Times, serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(data.name, 1000, titleY + titleH / 2 + 10);
+
+            // 7. Type Badge
+            const typeW = 600, typeH = 70;
+            const typeX = 1000 - typeW / 2;
+            const typeY = titleY + titleH;
+
+            // Trapezoid shape
+            ctx.beginPath();
+            ctx.moveTo(typeX, typeY);
+            ctx.lineTo(typeX + typeW, typeY);
+            ctx.lineTo(typeX + typeW - 30, typeY + typeH);
+            ctx.lineTo(typeX + 30, typeY + typeH);
+            ctx.closePath();
+            
+            const typeGrad = ctx.createLinearGradient(typeX, typeY, typeX + typeW, typeY);
+            typeGrad.addColorStop(0, '#9a6b83');
+            typeGrad.addColorStop(0.5, '#7b7194');
+            typeGrad.addColorStop(1, '#66829e');
+            
+            ctx.fillStyle = typeGrad;
+            ctx.fill();
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+
+            // Type Badge Top Highlight
+            ctx.beginPath();
+            ctx.moveTo(typeX + 15, typeY + 8);
+            ctx.lineTo(typeX + typeW - 15, typeY + 8);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.stroke();
+
+            let typeLabel = "MONSTER";
+            if(data.type === 'incant') typeLabel = "SUPPORT — INCANT";
+            if(data.type === 'sigil') typeLabel = "SUPPORT — SIGIL";
+
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 45px sans-serif";
+            ctx.fillText(typeLabel, 1000, typeY + typeH / 2 + 5);
+
+            // 8. Stats Row (If Monster)
+            if (data.type === 'monster') {
+                // Made colors vastly more vibrant for the inner glow
+                const stats = [
+                    { label: 'MIGHT', val: data.might, color: '#ff7b7b', grad: '#c0392b', icon: '⚔️🔥' },
+                    { label: 'MAGIC', val: data.magic, color: '#68c4ff', grad: '#2980b9', icon: '🪄🔮' },
+                    { label: 'CELERITY', val: data.celerity, color: '#6ffc9e', grad: '#27ae60', icon: '🪽👟' },
+                    { label: 'LUCK', val: data.luck, color: '#ffe175', grad: '#d35400', icon: '🍀🎲' }
+                ];
+                
+                const boxW = 410, boxH = 410, startY = 1540;
+                
+                stats.forEach((stat, i) => {
+                    const startX = 120 + i * (boxW + 40);
+                    
+                    // Outer shadow/border box
+                    drawRoundRect(startX - 12, startY - 12, boxW + 24, boxH + 24, 30);
+                    ctx.fillStyle = stat.grad;
+                    ctx.globalAlpha = 0.6;
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                    ctx.lineWidth = 6;
+                    ctx.strokeStyle = "#111111";
+                    ctx.stroke();
+
+                    // Colored Stat Box
+                    drawRoundRect(startX, startY, boxW, boxH, 20);
+                    const statGrad = ctx.createRadialGradient(startX + boxW / 2, startY + boxH / 2, 0, startX + boxW / 2, startY + boxH / 2, boxW);
+                    statGrad.addColorStop(0, stat.color);
+                    statGrad.addColorStop(1, stat.grad);
+                    ctx.fillStyle = statGrad;
+                    ctx.fill();
+                    
+                    // Glass Curve Highlight Overlay (Glossy effect)
+                    ctx.save();
+                    drawRoundRect(startX, startY, boxW, boxH, 20);
+                    ctx.clip(); // Restrict highlight to inside the box
+                    ctx.beginPath();
+                    ctx.ellipse(startX + boxW / 2, startY - 20, boxW * 0.9, boxH * 0.5, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Stat Box Borders
+                    drawRoundRect(startX, startY, boxW, boxH, 20);
+                    ctx.lineWidth = 8;
+                    ctx.strokeStyle = "#111111";
+                    ctx.stroke();
+                    
+                    // Inner white border detail
+                    drawRoundRect(startX + 15, startY + 15, boxW - 30, boxH - 30, 10);
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+                    ctx.stroke();
+
+                    // Emoji Icons
+                    ctx.font = "140px sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(stat.icon.substring(0, 2), startX + boxW / 2 - 40, startY + boxH / 2 - 50);
+                    ctx.fillText(stat.icon.substring(2), startX + boxW / 2 + 40, startY + boxH / 2 + 10);
+
+                    // Text Strip at bottom
+                    const textStr = `${stat.label}: ${stat.val}`;
+                    ctx.font = "bold 65px 'Impact', sans-serif";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "bottom";
+                    
+                    // Text black outline then white fill
+                    ctx.lineWidth = 10;
+                    ctx.strokeStyle = "#111111";
+                    ctx.strokeText(textStr, startX + boxW / 2, startY + boxH - 25);
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(textStr, startX + boxW / 2, startY + boxH - 25);
+                });
+            }
+
+            // 9. Description Box
+            const descX = 120, descY = 1990, descW = 1760, descH = 670; // Extended down to overlap the sweeping curve
+            
+            // Base background for text box with pastel horizontal gradient
+            drawRoundRect(descX, descY, descW, descH, 16);
+            const descGrad = ctx.createLinearGradient(descX, descY, descX + descW, descY);
+            descGrad.addColorStop(0, '#ffece0'); // Light peach/pink on left
+            descGrad.addColorStop(0.5, '#fcfee9'); // Pale yellow in middle
+            descGrad.addColorStop(1, '#e2f9f1'); // Mint/blue on right
+            ctx.fillStyle = descGrad;
+            ctx.fill();
+            
+            // Thick outer black border
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#111111";
+            ctx.stroke();
+            
+            // Inner thin ornate border with golden/grey tint
+            const innerGap = 16;
+            drawRoundRect(descX + innerGap, descY + innerGap, descW - innerGap*2, descH - innerGap*2, 10);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#b5a397";
+            ctx.stroke();
+
+            // Decorative corner leaves (matching the reference image)
+            function drawCornerDetail(cx, cy, scaleX, scaleY) {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.scale(scaleX, scaleY);
+                
+                // Base inner curve piece
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(25, 0);
+                ctx.quadraticCurveTo(25, 25, 0, 25);
+                ctx.closePath();
+                ctx.fillStyle = "#ffffff";
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Draw the corner accents
+            drawCornerDetail(descX + innerGap, descY + innerGap, 1, 1); // Top Left
+            drawCornerDetail(descX + descW - innerGap, descY + innerGap, -1, 1); // Top Right
+            drawCornerDetail(descX + innerGap, descY + descH - innerGap, 1, -1); // Bottom Left
+            drawCornerDetail(descX + descW - innerGap, descY + descH - innerGap, -1, -1); // Bottom Right
+
+            // Header "Special Ability / Lore"
+            ctx.fillStyle = "#111111";
+            ctx.font = "bold 60px 'Times New Roman', serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText("Special Ability / Lore", 1000, descY + 45);
+
+            // Decorative horizontal line
+            ctx.beginPath();
+            ctx.moveTo(350, descY + 125);
+            ctx.lineTo(1650, descY + 125);
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#b5a397";
+            ctx.stroke();
+            
+            // Description Text Wrapping
+            ctx.fillStyle = "#222222";
+            ctx.font = "45px 'Times New Roman', serif";
+            ctx.textAlign = "left";
+            const maxDescW = 1600;
+            const lineHeight = 65;
+            
+            drawTextWrap(ctx, data.desc, descX + 80, descY + 185, maxDescW, lineHeight);
+
+            // End global clip for rounded corners
+            ctx.restore();
+        }
+
+        // Helper function to wrap text on the canvas and handle line breaks
+        function drawTextWrap(context, text, x, y, maxWidth, lineHeight) {
+            const paragraphs = text.split('\n');
+            let currentY = y;
+            
+            for(let p = 0; p < paragraphs.length; p++) {
+                const words = paragraphs[p].split(' ');
+                let line = '';
+                
+                for(let n = 0; n < words.length; n++) {
+                    const testLine = line + words[n] + ' ';
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    
+                    if (testWidth > maxWidth && n > 0) {
+                        context.fillText(line, x, currentY);
+                        line = words[n] + ' ';
+                        currentY += lineHeight;
+                    } else {
+                        line = testLine;
+                    }
+                }
+                context.fillText(line, x, currentY);
+                currentY += lineHeight; // Add line height for the next paragraph
+            }
+        }
+    </script>
+</body>
+</html>
