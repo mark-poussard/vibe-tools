@@ -1,3 +1,55 @@
+<!-- 
+# Card Game Rules
+
+## The Objective
+The ultimate goal of the game is to outlast your opponent. You win if your opponent is forced to draw a card but their deck is empty. Because players frequently discard and draw cards to find the right monsters or survive, deck management is crucial!
+
+## Card Types & Stats
+There are two main types of cards:
+1. Monsters: Used to attack and defend. Every monster has four stats: Might, Magic, Celerity, and Luck.
+2. Support Cards: Spells played during combat to turn the tide.
+    * Incants: Discarded after their effect resolves.
+    * Sigils: Return to your hand after their effect resolves, allowing them to be used repeatedly.
+
+## 1. Game Setup
+* Draw: Both players start by drawing 5 cards.
+* The Coin Toss: A coin is automatically flipped to determine the "Opener."
+* The First Stand: The Opener must immediately play exactly one Monster from their hand to the field as the Defender, and choose which of the four stats (Might, Magic, Celerity, or Luck) will be the Battle Stat for this encounter.
+* Turn Shift: Once the Defender is set, turn priority shifts to the other player, making them the Attacking player.
+(Note: If a player is ever required to play a Defender but has no monsters in their hand, they must discard their entire hand and draw 5 new cards. They repeat this "cycle" until they find a monster!)
+
+## 2. The Maintenance Phase
+Before an attack happens, players enter the Maintenance Phase to sculpt their hands.
+* Discard & Draw: Players can select any number of cards from their hand, discard them, and draw back up to exactly 5 cards. You can do this as many times as you want.
+* The Constraint: The Attacker cannot end their Maintenance Phase unless they have at least one Monster card in their hand to attack with.
+* When a Defender is defeated and roles swap, both players get a chance to do Maintenance before the next attack begins.
+
+## 3. The Attack Phase
+The active player (the Attacker) selects one or more Monsters from their hand and places them on the field to attack the Defender.
+* To win the battle, the sum of the Attackers' Battle Stat must be strictly higher than the Defender's Battle Stat. In case of a tie, all monsters are defeated and the attacking and defending player roles are reversed.
+
+## 4. The Support Phase (The Clash)
+Before the battle resolves, players can play Support Cards to manipulate stats or break the rules.
+* Alternating Turns: The Attacker has the first chance to play a Support card or pass. Players take turns playing one Support card at a time until both players pass sequentially.
+* The Stack (Last-In, First-Out): Support cards resolve in reverse order. The last card played resolves first.(Example: If Player A plays a card to double their stat, Player B can respond with a card to reduce that stat to 0. Player B's card happens first, making the stat 0, and then Player A doubles 0—resulting in 0!)
+
+## 5. Combat Resolution & The "Persistence" Rule
+Once all Support cards resolve, the final stats are calculated.
+Scenario A: The Defender SurvivesIf the Attacker fails to beat the Defender's stat, all attacking monsters are destroyed. However, the Attacker does not lose their turn. The Attacker immediately enters Maintenance, draws back up to 5, and launches a brand-new attack against the exact same Defender. The Attacker persists until they break through!
+Scenario B: The Defender is DefeatedIf the Attacker's total stat is higher, the Defending monster is destroyed.
+1. Roles Swap: Turn priority immediately shifts. The player who just attacked is now the Defender.
+2. Declare New Defender: The new defending player must choose one of the remaining monsters on their field to be the new defender, and choose the new Battle Stat.
+3. Both players enter Maintenance, and the game continues with the roles reversed.
+
+## Summary of a Turn:
+1. Defender is placed; Battle Stat is chosen.
+2. Maintenance: Players discard/draw to find the perfect combo (Max 5 cards in the hand at all times).
+3. Attacker plays monsters to beat the Battle Stat.
+4. Support Phase: Both players throw down spells to disrupt the math.
+5. Resolve: If Attacker wins, roles swap. If Defender survives, Attacker tries again!
+6. Repeat until someone's deck runs out of cards.
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -543,7 +595,7 @@
                     { label: 'LUCK', val: data.luck, color: '#ffe175', grad: '#d35400', icon: '🍀🎲' }
                 ];
                 
-                const boxW = 410, boxH = 410, startY = 1540;
+                const boxW = 410, boxH = 410, startY = 2250;
                 
                 stats.forEach((stat, i) => {
                     const startX = 120 + i * (boxW + 40);
@@ -611,7 +663,7 @@
             }
 
             // 9. Description Box
-            const descX = 120, descY = 1990, descW = 1760, descH = 670; // Extended down to overlap the sweeping curve
+            const descX = 120, descY = 1575, descW = 1760, descH = 600;
             
             // Base background for text box with pastel horizontal gradient
             drawRoundRect(descX, descY, descW, descH, 16);
