@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam QR Scanner</title>
+    <!-- Load the jsQR library from a CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 { margin-top: 0; font-size: 24px; }
+        
+        #loadingMessage {
+            text-align: center;
+            padding: 40px;
+            background-color: #eee;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        /* We hide the video and display the canvas so we can draw cool boxes over the QR code */
+        #video { display: none; }
+        #canvas {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            display: none; /* Hidden until camera starts */
+            margin: 0 auto;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            word-wrap: break-word;
+            display: none;
+        }
+
+        #result span { font-weight: bold; color: #4338ca; }
+        
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            display: none;
+        }
+        button:hover { background-color: #4338ca; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>QR Code Scanner</h1>
+        
+        <div id="loadingMessage">🎥 Waiting for camera permission...</div>
+        
+        <!-- Hidden video element to capture stream -->
+        <video id="video" playsinline autoplay></video>
+        <!-- Canvas to display the video and draw the detection box -->
+        <canvas id="canvas"></canvas>
+
+        <div id="result">
+            <b>Found QR Code!</b><br><br>
+            <span id="outputData"></span>
+        </div>
+
+        <button id="scanAgainBtn" onclick="startScanning()">Scan Another Code</button>
+    </div>
+
+    <script>
+        const video = document.getElementById("video");
+        const canvasElement = document.getElementById("canvas");
+        const canvas = canvasElement.getContext("2d", { willReadFrequently: true });
+        const loadingMessage = document.getElementById("loadingMessage");
+        const resultDiv = document.getElementById("result");
+        const outputData = document.getElementById("outputData");
+        const scanAgainBtn = document.getElementById("scanAgainBtn");
+
+        let scanning = true;
+
+        // Draw a box around the detected QR code
+        function drawLine(begin, end, color) {
+            canvas.beginPath();
+            canvas.moveTo(begin.x, begin.y);
+            canvas.lineTo(end.x, end.y);
+            canvas.lineWidth = 4;
+            canvas.strokeStyle = color;
+            canvas.stroke();
+        }
+
+        // Request camera access
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(function(stream) {
+                video.srcObject = stream;
+                video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+                video.play();
+                requestAnimationFrame(tick);
+            })
+            .catch(function(err) {
+                loadingMessage.innerText = "Error: Unable to access camera. Please ensure you have granted permission.";
+                console.error(err);
+            });
+
+        // The main scanning loop
+        function tick() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                loadingMessage.style.display = "none";
+                canvasElement.style.display = "block";
+                
+                // Set canvas dimensions to match video
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                
+                // Draw current video frame to canvas
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
+                if (scanning) {
+                    // Extract image data from canvas
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    
+                    // Pass data to jsQR
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    // If a QR code is found
+                    if (code) {
+                        // Draw lines around it
+                        drawLine(code.location.topLeftCorner, code.location.topRightCorner, "#FF3B58");
+                        drawLine(code.location.topRightCorner, code.location.bottomRightCorner, "#FF3B58");
+                        drawLine(code.location.bottomRightCorner, code.location.bottomLeftCorner, "#FF3B58");
+                        drawLine(code.location.bottomLeftCorner, code.location.topLeftCorner, "#FF3B58");
+                        
+                        // Stop scanning and show result
+                        scanning = false;
+                        resultDiv.style.display = "block";
+                        scanAgainBtn.style.display = "inline-block";
+                        
+                        // Make it a clickable link if it's a URL
+                        if (code.data.startsWith("http://") || code.data.startsWith("https://")) {
+                            outputData.innerHTML = `<a href="${code.data}" target="_blank">${code.data}</a>`;
+                        } else {
+                            outputData.innerText = code.data;
+                        }
+                    }
+                }
+            }
+            // Keep looping
+            requestAnimationFrame(tick);
+        }
+
+        // Reset UI to scan again
+        function startScanning() {
+            resultDiv.style.display = "none";
+            scanAgainBtn.style.display = "none";
+            outputData.innerText = "";
+            scanning = true;
+        }
+    </script>
+
+</body>
+</html>
