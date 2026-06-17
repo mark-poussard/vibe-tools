@@ -22,7 +22,17 @@ function decodeBase64Unicode(b64) {
 }
 
 function getStatusLabel() {
-    return document.getElementById('sync-status') || document.getElementById('home-sync-status');
+    const homeScreen = document.getElementById('home-screen');
+    if (homeScreen?.classList.contains('active')) {
+        return document.getElementById('home-sync-status') || document.getElementById('sync-status');
+    }
+
+    const reviewScreen = document.getElementById('review-screen');
+    if (reviewScreen?.classList.contains('active')) {
+        return document.getElementById('sync-status') || document.getElementById('home-sync-status');
+    }
+
+    return document.getElementById('home-sync-status') || document.getElementById('sync-status');
 }
 
 function setStatus(message, color) {
