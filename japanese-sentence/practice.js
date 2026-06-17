@@ -81,24 +81,7 @@ function getWordPracticeMatchFields(data, normalizedQuery) {
 }
 
 function escapeRegExp(value) {
-    return value.replace(/[.*+?^\${}()|[\]\\]/g, '\\function getWordPracticeMatchFields(data, normalizedQuery) {
-    const matchedFields = [];
-
-    if (normalizeString(data.english).includes(normalizedQuery)) {
-        matchedFields.push('English');
-    }
-
-    if (normalizeString(data.primaryJapanese).includes(normalizedQuery)) {
-        matchedFields.push('Primary Japanese');
-    }
-
-    if ((data.alternates || []).some((alternate) => normalizeString(alternate).includes(normalizedQuery))) {
-        matchedFields.push('Alternate translations');
-    }
-
-    return matchedFields;
-}
-');
+    return value.replace(/[.*+?^\${}()|[\]\\]/g, "\\$&");
 }
 
 function highlightText(text, query) {
