@@ -42,6 +42,21 @@ h1, h2 {
     color: var(--text);
 }
 
+.screen-subtitle {
+    margin-top: -8px;
+    margin-bottom: 14px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.breadcrumb {
+    margin: 0 0 18px;
+    color: #8192a6;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
 .form-group {
     margin-bottom: 15px;
 }
@@ -81,6 +96,11 @@ button {
 
 button:hover {
     background-color: var(--primary-hover);
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 button.secondary {
@@ -157,19 +177,70 @@ button.danger:hover {
 .text-success { color: var(--success); }
 .text-error { color: var(--error); }
 
-.sentence-row {
-    border: 1px solid var(--border);
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    display: grid;
-    grid-template-columns: 1fr;
+.word-practice-tools {
+    display: flex;
     gap: 10px;
-    background: #FAFAFA;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
 }
 
-.sentence-row button {
-    justify-self: start;
+.word-practice-tools .form-group {
+    flex: 1 1 280px;
+    margin-bottom: 0;
+}
+
+#word-practice-results {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.word-practice-result {
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+}
+
+.word-practice-result-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.word-practice-result-id {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.word-practice-result-match {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.word-practice-result-fields {
+    display: grid;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+.word-practice-empty {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    color: #64748b;
+    background: #fbfcfe;
+}
+
+.word-practice-highlight {
+    background: #fff2a8;
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 3px;
 }
 
 #sync-status {
@@ -247,4 +318,3 @@ button.danger:hover {
 
 .modal-details div { margin-bottom: 10px; }
 .modal-details strong { color: #555; }
-

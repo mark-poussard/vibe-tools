@@ -40,13 +40,34 @@
             </div>
             <div class="btn-group">
                 <button onclick="startPractice()">Sentence Practice</button>
+                <button class="secondary" onclick="openWordPractice()">Word Practice</button>
                 <button class="secondary" onclick="openReview()">Review & Edit Sentences</button>
                 <button class="secondary" onclick="openConfigModal()">Edit Config</button>
             </div>
         </div>
 
+        <div id="word-practice-screen" class="screen">
+            <h2>Word Practice</h2>
+            <p class="screen-subtitle">Search by English, Japanese, or kanji, review matching sentences, then start a focused practice session.</p>
+            <p class="breadcrumb">word practice > search word or kanji > list sentences > start practice</p>
+            <div class="word-practice-tools">
+                <div class="form-group">
+                    <label for="word-practice-input">Search word or kanji</label>
+                    <input type="text" id="word-practice-input" placeholder="e.g. 乾く / practice / 猫" onkeypress="handleWordPracticeEnter(event)">
+                </div>
+                <button onclick="searchWordPractice()">Search</button>
+            </div>
+            <div id="word-practice-summary" class="screen-subtitle"></div>
+            <div id="word-practice-results"></div>
+            <div class="btn-group" style="justify-content:flex-end;">
+                <button class="secondary" onclick="showScreen('home-screen')">Back to Home</button>
+                <button id="start-word-practice-btn" onclick="startSelectedWordPractice()" disabled>Start Practice</button>
+            </div>
+        </div>
+
         <div id="practice-screen" class="screen">
             <h2>Practice</h2>
+            <div id="practice-session-label" class="screen-subtitle"></div>
             <div id="practice-card">
                 <div class="practice-english" id="practice-english">Loading...</div>
                 <div class="form-group">

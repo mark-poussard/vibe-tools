@@ -27,11 +27,15 @@ export const state = {
     sentenceOrder: [],
     practiceQueue: [],
     currentPracticeItem: null,
+    practiceSessionIds: null,
+    practiceSessionLabel: '',
     isRetryState: false,
     originalScoreBeforeRetry: null,
     lastIncorrectInput: '',
     hasUnsyncedChanges: false,
     corpusMetadata: cloneJson(seedCorpusMetadata),
+    wordPracticeQuery: '',
+    wordPracticeMatches: [],
 };
 
 export function initializeState() {
@@ -40,11 +44,15 @@ export function initializeState() {
     state.sentenceOrder = readJson(STORAGE_KEYS.order, []);
     state.practiceQueue = [];
     state.currentPracticeItem = null;
+    state.practiceSessionIds = null;
+    state.practiceSessionLabel = '';
     state.isRetryState = false;
     state.originalScoreBeforeRetry = null;
     state.lastIncorrectInput = '';
     state.hasUnsyncedChanges = false;
     state.corpusMetadata = cloneJson(seedCorpusMetadata);
+    state.wordPracticeQuery = '';
+    state.wordPracticeMatches = [];
     refreshCorpusMetadata();
     normalizeProgress(true);
     normalizeOrder(true);
@@ -124,4 +132,3 @@ export function ensureSentenceState(id) {
         state.sentenceOrder.unshift(id);
     }
 }
-

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-v3';
+const CACHE_NAME = 'offline-v4';
 const ASSETS_TO_CACHE = [
   '/vibe-tools/japanese-sentence/index.html',
   '/vibe-tools/japanese-sentence/app.css',

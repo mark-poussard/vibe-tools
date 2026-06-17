@@ -1,4 +1,4 @@
-import { initializeState, state } from './state.js';
+import { initializeState } from './state.js';
 import { showScreen, openConfigModal, closeConfigModal, saveConfig, clearConfig, saveEditedConfig } from './ui.js';
 import {
     startPractice,
@@ -12,6 +12,10 @@ import {
     closeSkipModal,
     skipSentence,
     forgiveMistake,
+    openWordPractice,
+    searchWordPractice,
+    startSelectedWordPractice,
+    handleWordPracticeEnter,
 } from './practice.js';
 import {
     openReview,
@@ -57,6 +61,10 @@ function bindGlobals() {
         closeSkipModal,
         skipSentence,
         forgiveMistake,
+        openWordPractice,
+        searchWordPractice,
+        startSelectedWordPractice,
+        handleWordPracticeEnter,
         openReview,
         renderReviewList,
         addSentenceRow,
@@ -73,4 +81,3 @@ if (typeof window !== 'undefined') {
     bindGlobals();
     initApp();
 }
-

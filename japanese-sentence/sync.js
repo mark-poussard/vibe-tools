@@ -2,6 +2,7 @@ import { refreshCorpusMetadata, state, clearUnsynced, normalizeOrder, normalizeP
 import { updateUnsyncedBanner } from './ui.js';
 import { buildCorpusMetadata, cloneJson } from './utils.js';
 import { renderReviewList } from './review.js';
+import { renderWordPracticeResults } from './practice.js';
 
 const DATA_BLOCK_REGEX = /\/\* DATA_START \*\/[\s\S]*?\/\* DATA_END \*\//;
 const EXPORT_REGEX = (name) => new RegExp('export const ' + name + ' = ([\\s\\S]*?);\\n');
@@ -141,9 +142,13 @@ async function applyRemoteCorpus(remoteContent, remoteMetadata) {
     state.sentencesMap = cloneJson(map);
     state.practiceQueue = [];
     state.currentPracticeItem = null;
+    state.practiceSessionIds = null;
+    state.practiceSessionLabel = '';
     state.isRetryState = false;
     state.originalScoreBeforeRetry = null;
     state.lastIncorrectInput = '';
+    state.wordPracticeQuery = '';
+    state.wordPracticeMatches = [];
     const appliedMetadata = refreshCorpusMetadata();
     state.corpusMetadata = remoteMetadata || appliedMetadata;
     normalizeProgress(true);
@@ -153,6 +158,10 @@ async function applyRemoteCorpus(remoteContent, remoteMetadata) {
 
     if (document.getElementById('review-screen')?.classList.contains('active')) {
         renderReviewList();
+    }
+
+    if (document.getElementById('word-practice-screen')?.classList.contains('active')) {
+        renderWordPracticeResults([], '');
     }
 
     setStatus(`✓ Local corpus replaced with ${appliedMetadata.version}`, 'var(--success)');
