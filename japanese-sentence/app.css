@@ -1,0 +1,250 @@
+:root {
+    --primary: #4A90E2;
+    --primary-hover: #357ABD;
+    --bg: #F5F7FA;
+    --card-bg: #FFFFFF;
+    --text: #333333;
+    --error: #E74C3C;
+    --success: #2ECC71;
+    --border: #E1E8ED;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    padding: 30px;
+    box-sizing: border-box;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+h1, h2 {
+    margin-top: 0;
+    color: var(--text);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 16px;
+}
+
+input:disabled {
+    background-color: #F0F4F8;
+    color: #777;
+}
+
+button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+}
+
+button.secondary {
+    background-color: transparent;
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+button.secondary:hover {
+    background-color: #F0F4F8;
+}
+
+button.danger {
+    background-color: transparent;
+    color: var(--error);
+    border: 1px solid var(--error);
+}
+
+button.danger:hover {
+    background-color: #FDEDEC;
+}
+
+.btn-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+#practice-card {
+    text-align: center;
+    padding: 40px 20px 60px 20px;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.card-bottom-left {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+}
+
+.card-bottom-right {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.score-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    color: white;
+    font-size: 14px;
+    margin-left: 5px;
+}
+
+.practice-english {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+#practice-feedback {
+    margin-top: 15px;
+    font-weight: bold;
+    min-height: 24px;
+}
+
+.text-success { color: var(--success); }
+.text-error { color: var(--error); }
+
+.sentence-row {
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    background: #FAFAFA;
+}
+
+.sentence-row button {
+    justify-self: start;
+}
+
+#sync-status {
+    margin-left: 10px;
+    font-weight: bold;
+}
+
+.version-mono {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    word-break: break-all;
+}
+
+.banner {
+    background-color: #FFF3CD;
+    color: #856404;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #FFEEBA;
+}
+
+.banner button {
+    background-color: #856404;
+    padding: 8px 15px;
+    font-size: 14px;
+}
+
+.banner button:hover {
+    background-color: #6c5003;
+}
+
+#override-btn {
+    background-color: #F39C12;
+    margin-left: 10px;
+}
+
+#override-btn:hover {
+    background-color: #D68910;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.modal-details {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.modal-details div { margin-bottom: 10px; }
+.modal-details strong { color: #555; }
+

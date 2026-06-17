@@ -81,7 +81,14 @@
     <div class="container">
         <h1>QR Code Scanner</h1>
         
-        <div id="loadingMessage">🎥 Waiting for camera permission...</div>
+        <div style="margin-bottom: 15px;">
+            <label for="imageInput" style="cursor: pointer; background: #6b7280; color: white; padding: 10px 20px; border-radius: 6px;">Upload Image</label>
+            <input type="file" id="imageInput" accept="image/*" style="display:none">
+            
+            <button id="startCameraButton" onclick="startCamera()" style="display:inline-block; background-color: #10b981; margin-left: 10px;">Start Camera</button>
+        </div>
+
+        <div id="loadingMessage" style="display: none;">🎥 Waiting for camera permission...</div>
         
         <!-- Hidden video element to capture stream -->
         <video id="video" playsinline autoplay></video>
@@ -93,7 +100,7 @@
             <span id="outputData"></span>
         </div>
 
-        <button id="scanAgainBtn" onclick="startScanning()">Scan Another Code</button>
+        <button id="scanAgainBtn" onclick="resumeScanning()">Resume Scanning</button>
     </div>
 
     <script>
@@ -118,17 +125,22 @@
         }
 
         // Request camera access
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(function(stream) {
-                video.srcObject = stream;
-                video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
-                video.play();
-                requestAnimationFrame(tick);
-            })
-            .catch(function(err) {
-                loadingMessage.innerText = "Error: Unable to access camera. Please ensure you have granted permission.";
-                console.error(err);
-            });
+        function startCamera() {
+            document.getElementById("startCameraButton").style.display = "none";
+            loadingMessage.style.display = "block";
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true); // required to tell iOS safari we don't want fullscreen
+                    video.play();
+                    requestAnimationFrame(tick);
+                })
+                .catch(function(err) {
+                    loadingMessage.innerText = "Error: Unable to access camera. Please ensure you have granted permission.";
+                    console.error(err);
+                });
+        }
 
         // The main scanning loop
         function tick() {
@@ -162,6 +174,7 @@
                         
                         // Stop scanning and show result
                         scanning = false;
+                        video.pause();
                         resultDiv.style.display = "block";
                         scanAgainBtn.style.display = "inline-block";
                         
@@ -179,12 +192,46 @@
         }
 
         // Reset UI to scan again
-        function startScanning() {
+        function resumeScanning() {
             resultDiv.style.display = "none";
             scanAgainBtn.style.display = "none";
             outputData.innerText = "";
             scanning = true;
+            video.play();
         }
+
+        // Image upload
+        document.getElementById("imageInput").addEventListener("change", function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    canvasElement.style.display = "block";
+                    canvasElement.height = img.height;
+                    canvasElement.width = img.width;
+                    canvas.drawImage(img, 0, 0);
+                    video.pause();
+                    scanning = false; // Disable video scanning
+                    const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (code) {
+                        resultDiv.style.display = "block";
+                        scanAgainBtn.style.display = "inline-block";
+                        if (code.data.startsWith("http://") || code.data.startsWith("https://")) {
+                            outputData.innerHTML = `<a href="${code.data}" target="_blank">${code.data}</a>`;
+                        } else {
+                            outputData.innerText = code.data;
+                        }
+                    } else {
+                        alert("No QR code found in image.");
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
     </script>
 
 </body>
