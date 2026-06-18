@@ -236,6 +236,21 @@ button.danger:hover {
     background: #fbfcfe;
 }
 
+.review-search {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin: 18px 0 10px;
+}
+
+.review-empty {
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    color: #64748b;
+    background: #fbfcfe;
+}
+
 .word-practice-highlight {
     background: #fff2a8;
     color: inherit;

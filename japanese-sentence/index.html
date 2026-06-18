@@ -92,6 +92,7 @@
 
         <div id="review-screen" class="screen">
             <h2>Review & Edit Sentences</h2>
+            <p class="screen-subtitle">Search by English, Japanese, or alternate translations before editing the corpus.</p>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <button onclick="addSentenceRow()">+ Add New Sentence</button>
                 <div>
@@ -99,6 +100,13 @@
                     <span id="sync-status"></span>
                 </div>
             </div>
+            <div class="review-search">
+                <div class="form-group" style="margin:0; flex:1 1 320px;">
+                    <label for="review-search-input">Search sentences</label>
+                    <input type="text" id="review-search-input" placeholder="Search by word or translation..." oninput="searchReviewSentences()" onkeypress="if (event.key === 'Enter') searchReviewSentences()">
+                </div>
+            </div>
+            <div id="review-summary" class="screen-subtitle"></div>
             <div id="review-list"></div>
             <div class="btn-group" style="margin-top:30px;">
                 <button class="secondary" onclick="showScreen('home-screen')">Back to Home</button>

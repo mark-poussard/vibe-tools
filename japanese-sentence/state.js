@@ -36,6 +36,7 @@ export const state = {
     corpusMetadata: cloneJson(seedCorpusMetadata),
     wordPracticeQuery: '',
     wordPracticeMatches: [],
+    reviewSearchQuery: '',
 };
 
 export function initializeState() {
@@ -53,6 +54,7 @@ export function initializeState() {
     state.corpusMetadata = cloneJson(seedCorpusMetadata);
     state.wordPracticeQuery = '';
     state.wordPracticeMatches = [];
+    state.reviewSearchQuery = '';
     refreshCorpusMetadata();
     normalizeProgress(true);
     normalizeOrder(true);

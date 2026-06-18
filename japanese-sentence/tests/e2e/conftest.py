@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import threading
 from dataclasses import dataclass, field
 from functools import partial
@@ -14,9 +13,6 @@ from playwright.sync_api import Error, Page, Playwright, sync_playwright
 
 
 ROOT = Path(__file__).resolve().parents[2]
-PLAYWRIGHT_BROWSERS_PATH = ROOT / ".playwright-browsers"
-
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(PLAYWRIGHT_BROWSERS_PATH))
 
 
 class QuietHTTPServer(ThreadingHTTPServer):
@@ -63,7 +59,7 @@ def browser(playwright: Playwright):
     except Error as exc:  # pragma: no cover - environment dependent
         raise RuntimeError(
             "Firefox is required for the headless browser tests. "
-            "Install it with `PLAYWRIGHT_BROWSERS_PATH=.playwright-browsers uv run python -m playwright install firefox`."
+            "Install it with `uv run python -m playwright install firefox`."
         ) from exc
 
     try:

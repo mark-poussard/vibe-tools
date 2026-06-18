@@ -114,3 +114,53 @@ def test_review_edits_sync_to_mocked_github(browser, app_server):
         assert "I changed this sentence." in pushed_content
     finally:
         context.close()
+
+
+def test_review_search_filters_by_sentence_and_translation(browser, app_server):
+    context = browser.new_context(viewport={"width": 1280, "height": 960})
+    page = open_authenticated_app(context, app_server)
+    try:
+        page.get_by_role("button", name="Review & Edit Sentences").click()
+        wait_for_screen(page, "review-screen")
+
+        search = page.locator("#review-search-input")
+        search.fill("imagination")
+
+        expect(page.locator("#review-summary")).to_contain_text('1 sentence match "imagination".')
+        expect(page.locator(".sentence-row")).to_have_count(1)
+        expect(page.locator('.sentence-row[data-id="10"] .edit-english')).to_have_value(
+            "That is nothing but your imagination."
+        )
+
+        search.fill("免許証")
+
+        expect(page.locator("#review-summary")).to_contain_text('1 sentence match "免許証".')
+        expect(page.locator(".sentence-row")).to_have_count(1)
+        expect(page.locator('.sentence-row[data-id="8"] .edit-primary')).to_have_value("免許証を拝見できますか。")
+
+        search.fill("彼は病気を理由に会議を出席しませんでした")
+
+        expect(page.locator("#review-summary")).to_contain_text(
+            '1 sentence match "彼は病気を理由に会議を出席しませんでした".'
+        )
+        expect(page.locator(".sentence-row")).to_have_count(1)
+        expect(page.locator('.sentence-row[data-id="19"] .edit-english')).to_have_value(
+            "He did not attend the meeting due to illness."
+        )
+
+        search.fill("imagination license")
+
+        expect(page.locator("#review-summary")).to_contain_text('2 sentences match "imagination license".')
+        expect(page.locator(".sentence-row")).to_have_count(2)
+        expect(page.locator('.sentence-row[data-id="10"] .edit-english')).to_have_value(
+            "That is nothing but your imagination."
+        )
+        expect(page.locator('.sentence-row[data-id="8"] .edit-primary')).to_have_value("免許証を拝見できますか。")
+
+        search.fill("astronaut nebula")
+
+        expect(page.locator("#review-summary")).to_contain_text('0 sentences match "astronaut nebula".')
+        expect(page.locator(".review-empty")).to_contain_text("No sentences match this search.")
+        expect(page.locator(".sentence-row")).to_have_count(0)
+    finally:
+        context.close()

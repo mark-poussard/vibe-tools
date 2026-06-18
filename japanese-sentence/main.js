@@ -23,6 +23,7 @@ import {
     addSentenceRow,
     deleteSentence,
     updateLocalMap,
+    searchReviewSentences,
 } from './review.js';
 import { cancelCorpusSync, keepLocalCorpus, pullRemoteCorpus, syncWithGithub } from './sync.js';
 
@@ -70,6 +71,7 @@ function bindGlobals() {
         addSentenceRow,
         deleteSentence,
         updateLocalMap,
+        searchReviewSentences,
         syncWithGithub,
         keepLocalCorpus,
         pullRemoteCorpus,
