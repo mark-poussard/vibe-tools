@@ -4,6 +4,7 @@ import { seedCorpusMetadata, seedSentencesMap } from './sentences-data.js';
 const STORAGE_KEYS = {
     progress: 'sentenceProgress',
     order: 'sentenceOrder',
+    aiProviderConfigs: 'aiProviderConfigs',
 };
 
 function readJson(key, fallback) {
@@ -25,6 +26,7 @@ export const state = {
     sentencesMap: cloneJson(seedSentencesMap),
     sentenceProgress: {},
     sentenceOrder: [],
+    aiProviderConfigs: {},
     practiceQueue: [],
     currentPracticeItem: null,
     practiceSessionIds: null,
@@ -37,12 +39,16 @@ export const state = {
     wordPracticeQuery: '',
     wordPracticeMatches: [],
     reviewSearchQuery: '',
+    generatedSentenceWord: '',
+    generatedSentenceCandidates: [],
+    generatedSentenceStatus: '',
 };
 
 export function initializeState() {
     state.sentencesMap = cloneJson(seedSentencesMap);
     state.sentenceProgress = readJson(STORAGE_KEYS.progress, {});
     state.sentenceOrder = readJson(STORAGE_KEYS.order, []);
+    state.aiProviderConfigs = readJson(STORAGE_KEYS.aiProviderConfigs, {});
     state.practiceQueue = [];
     state.currentPracticeItem = null;
     state.practiceSessionIds = null;
@@ -55,6 +61,9 @@ export function initializeState() {
     state.wordPracticeQuery = '';
     state.wordPracticeMatches = [];
     state.reviewSearchQuery = '';
+    state.generatedSentenceWord = '';
+    state.generatedSentenceCandidates = [];
+    state.generatedSentenceStatus = '';
     refreshCorpusMetadata();
     normalizeProgress(true);
     normalizeOrder(true);
@@ -66,6 +75,16 @@ export function saveProgress() {
 
 export function saveOrder() {
     writeJson(STORAGE_KEYS.order, state.sentenceOrder);
+}
+
+export function saveAiProviderConfigs() {
+    writeJson(STORAGE_KEYS.aiProviderConfigs, state.aiProviderConfigs);
+}
+
+export function clearAiProviderConfigs() {
+    state.aiProviderConfigs = {};
+    if (typeof localStorage === 'undefined') return;
+    localStorage.removeItem(STORAGE_KEYS.aiProviderConfigs);
 }
 
 export function markUnsynced() {

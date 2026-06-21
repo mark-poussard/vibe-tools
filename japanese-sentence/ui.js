@@ -1,4 +1,5 @@
-import { state } from './state.js';
+import { state, clearAiProviderConfigs } from './state.js';
+import { populateAiProviderConfigFields, saveAiProviderConfigValues } from './ai.js';
 
 export function updateUnsyncedBanner() {
     const banner = document.getElementById('unsynced-banner');
@@ -23,6 +24,7 @@ export function openConfigModal() {
     document.getElementById('edit-gh-token').value = localStorage.getItem('gh_token') || '';
     document.getElementById('edit-gh-repo').value = localStorage.getItem('gh_repo') || '';
     document.getElementById('edit-gh-path').value = localStorage.getItem('gh_path') || 'sentences-data.js';
+    populateAiProviderConfigFields('edit-ai');
     document.getElementById('config-modal').style.display = 'flex';
 }
 
@@ -43,19 +45,24 @@ export function saveConfig() {
     localStorage.setItem('gh_token', token);
     localStorage.setItem('gh_repo', repo);
     localStorage.setItem('gh_path', path);
+    saveAiProviderConfigValues('config-ai');
+    populateAiProviderConfigFields('edit-ai');
     showScreen('home-screen');
 }
 
 export function clearConfig() {
-    if (!confirm('Are you sure you want to clear your GitHub configuration?')) return;
+    if (!confirm('Are you sure you want to clear your GitHub and AI configuration?')) return;
 
     localStorage.removeItem('gh_token');
     localStorage.removeItem('gh_repo');
     localStorage.removeItem('gh_path');
+    clearAiProviderConfigs();
 
     document.getElementById('gh-token').value = '';
     document.getElementById('gh-repo').value = '';
     document.getElementById('gh-path').value = 'sentences-data.js';
+    populateAiProviderConfigFields('config-ai');
+    populateAiProviderConfigFields('edit-ai');
 
     showScreen('config-screen');
 }
@@ -73,8 +80,9 @@ export function saveEditedConfig() {
     localStorage.setItem('gh_token', token);
     localStorage.setItem('gh_repo', repo);
     localStorage.setItem('gh_path', path);
+    saveAiProviderConfigValues('edit-ai');
+    populateAiProviderConfigFields('config-ai');
     closeConfigModal();
     updateUnsyncedBanner();
     alert('Configuration successfully updated!');
 }
-

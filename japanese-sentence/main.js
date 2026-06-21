@@ -1,5 +1,6 @@
 import { initializeState } from './state.js';
 import { showScreen, openConfigModal, closeConfigModal, saveConfig, clearConfig, saveEditedConfig } from './ui.js';
+import { renderAiProviderConfigFields } from './ai.js';
 import {
     startPractice,
     loadNextPracticeSentence,
@@ -18,6 +19,13 @@ import {
     handleWordPracticeEnter,
 } from './practice.js';
 import {
+    openGenerateSentences,
+    generateSentences,
+    handleGenerateSentenceEnter,
+    toggleGeneratedSentenceSelection,
+    addSelectedGeneratedSentences,
+} from './generate.js';
+import {
     openReview,
     renderReviewList,
     addSentenceRow,
@@ -29,6 +37,8 @@ import { cancelCorpusSync, keepLocalCorpus, pullRemoteCorpus, syncWithGithub } f
 
 function initApp() {
     initializeState();
+    renderAiProviderConfigFields('config-ai-providers', 'config-ai');
+    renderAiProviderConfigFields('edit-ai-providers', 'edit-ai');
 
     const token = localStorage.getItem('gh_token');
     const repo = localStorage.getItem('gh_repo');
@@ -66,6 +76,11 @@ function bindGlobals() {
         searchWordPractice,
         startSelectedWordPractice,
         handleWordPracticeEnter,
+        openGenerateSentences,
+        generateSentences,
+        handleGenerateSentenceEnter,
+        toggleGeneratedSentenceSelection,
+        addSelectedGeneratedSentences,
         openReview,
         renderReviewList,
         addSentenceRow,

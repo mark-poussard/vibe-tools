@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 from pathlib import Path
 
 from playwright.sync_api import expect
@@ -17,6 +18,88 @@ def open_authenticated_app(context, app_server: str):
     page.goto(app_server, wait_until="domcontentloaded")
     wait_for_screen(page, "home-screen")
     return page
+
+
+def install_mock_gemini(context):
+    requests: list[dict] = []
+    responses = [
+        [
+            {
+                "japanese": "猫が窓辺で眠っている。",
+                "english": "The cat is sleeping by the window.",
+            },
+            {
+                "japanese": "猫は静かに背伸びをした。",
+                "english": "The cat quietly stretched.",
+            },
+            {
+                "japanese": "その猫は庭をゆっくり歩いた。",
+                "english": "That cat walked slowly through the garden.",
+            },
+            {
+                "japanese": "子猫が毛布の上で丸くなった。",
+                "english": "The kitten curled up on the blanket.",
+            },
+            {
+                "japanese": "黒い猫が月明かりの下に座っていた。",
+                "english": "The black cat was sitting under the moonlight.",
+            },
+        ],
+        [
+            {
+                "japanese": "猫は台所の椅子の下に隠れた。",
+                "english": "The cat hid under the kitchen chair.",
+            },
+            {
+                "japanese": "猫の目が暗闇で光った。",
+                "english": "The cat's eyes shone in the dark.",
+            },
+            {
+                "japanese": "その猫は魚の匂いに気づいた。",
+                "english": "That cat noticed the smell of fish.",
+            },
+            {
+                "japanese": "白い猫が窓の外をじっと見ていた。",
+                "english": "The white cat was staring out the window.",
+            },
+            {
+                "japanese": "猫は暖かい日差しの中であくびをした。",
+                "english": "The cat yawned in the warm sunlight.",
+            },
+        ],
+    ]
+    response_index = 0
+
+    def handler(route) -> None:
+        nonlocal response_index
+        request = route.request
+        payload = json.loads(request.post_data or "{}")
+        requests.append(payload)
+
+        next_sentences = responses[min(response_index, len(responses) - 1)]
+        response_index += 1
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {
+                                        "text": json.dumps({"sentences": next_sentences}, ensure_ascii=False),
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ),
+        )
+
+    context.route("**/generativelanguage.googleapis.com/**", handler)
+    return requests
 
 
 def test_config_flow_persists_to_reload(browser, app_server):
@@ -162,5 +245,64 @@ def test_review_search_filters_by_sentence_and_translation(browser, app_server):
         expect(page.locator("#review-summary")).to_contain_text('0 sentences match "astronaut nebula".')
         expect(page.locator(".review-empty")).to_contain_text("No sentences match this search.")
         expect(page.locator(".sentence-row")).to_have_count(0)
+    finally:
+        context.close()
+
+
+def test_generate_sentences_adds_ai_results_to_corpus(browser, app_server):
+    context = browser.new_context(viewport={"width": 1280, "height": 960})
+    seed_authenticated_context(
+        context,
+        ai_provider_configs={"gemini": {"apiKey": "test-gemini-key"}},
+    )
+    gemini_requests = install_mock_gemini(context)
+    page = context.new_page()
+    try:
+        page.goto(app_server, wait_until="domcontentloaded")
+        wait_for_screen(page, "home-screen")
+
+        page.get_by_role("button", name="Generate sentences").click()
+        wait_for_screen(page, "generate-sentences-screen")
+
+        page.get_by_label("Japanese word or phrase").fill("猫")
+        page.get_by_role("button", name="Generate", exact=True).click()
+
+        expect(page.locator("#generated-sentence-summary")).to_contain_text('5 generated sentences for "猫".')
+        expect(page.locator(".generated-sentence-card")).to_have_count(5)
+
+        page.get_by_role("button", name="Generate more").click()
+
+        expect(page.locator("#generated-sentence-summary")).to_contain_text('10 generated sentences for "猫".')
+        expect(page.locator(".generated-sentence-card")).to_have_count(10)
+
+        page.get_by_role("button", name="Add selected to corpus").click()
+
+        expect(page.locator("#generate-status")).to_contain_text("Added 10 sentences to the corpus.")
+
+        page.get_by_role("button", name="Back to Home").click()
+        wait_for_screen(page, "home-screen")
+        expect(page.locator("#unsynced-banner")).to_be_visible()
+
+        page.get_by_role("button", name="Review & Edit Sentences").click()
+        wait_for_screen(page, "review-screen")
+
+        search = page.locator("#review-search-input")
+        search.fill("窓辺で眠っている")
+
+        expect(page.locator("#review-summary")).to_contain_text(
+            '1 sentence match "窓辺で眠っている".'
+        )
+        expect(page.locator(".sentence-row")).to_have_count(1)
+        expect(page.locator(".sentence-row .edit-english")).to_have_value(
+            "The cat is sleeping by the window."
+        )
+
+        first_request = gemini_requests[0]
+        assert first_request["generationConfig"]["responseMimeType"] == "application/json"
+        assert first_request["generationConfig"]["responseSchema"]["properties"]["sentences"]["minItems"] == 5
+        assert "Create exactly 5 different natural Japanese example sentences" in first_request["contents"][0]["parts"][0]["text"]
+        assert "Do not repeat or closely paraphrase" in gemini_requests[1]["contents"][0]["parts"][0]["text"]
+        assert len(gemini_requests) == 2
+        assert "猫" in json.dumps(gemini_requests[0], ensure_ascii=False)
     finally:
         context.close()

@@ -91,8 +91,9 @@ def seed_authenticated_context(
     token: str = "test-token",
     repo: str = "owner/repo",
     path: str = "sentences-data.js",
+    ai_provider_configs: dict | None = None,
 ) -> None:
-    seed = json.dumps({"token": token, "repo": repo, "path": path})
+    seed = json.dumps({"token": token, "repo": repo, "path": path, "aiProviderConfigs": ai_provider_configs or {}})
     context.add_init_script(
         f"""
         (() => {{
@@ -100,6 +101,7 @@ def seed_authenticated_context(
             localStorage.setItem('gh_token', seed.token);
             localStorage.setItem('gh_repo', seed.repo);
             localStorage.setItem('gh_path', seed.path);
+            localStorage.setItem('aiProviderConfigs', JSON.stringify(seed.aiProviderConfigs));
         }})();
         """
     )

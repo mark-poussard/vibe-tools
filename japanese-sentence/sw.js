@@ -1,12 +1,14 @@
-const CACHE_NAME = 'offline-v4';
+const CACHE_NAME = 'offline-v5';
 const ASSETS_TO_CACHE = [
   '/vibe-tools/japanese-sentence/index.html',
   '/vibe-tools/japanese-sentence/app.css',
   '/vibe-tools/japanese-sentence/main.js',
+  '/vibe-tools/japanese-sentence/ai.js',
   '/vibe-tools/japanese-sentence/state.js',
   '/vibe-tools/japanese-sentence/ui.js',
   '/vibe-tools/japanese-sentence/utils.js',
   '/vibe-tools/japanese-sentence/practice.js',
+  '/vibe-tools/japanese-sentence/generate.js',
   '/vibe-tools/japanese-sentence/review.js',
   '/vibe-tools/japanese-sentence/sync.js',
   '/vibe-tools/japanese-sentence/sentences-data.js',
