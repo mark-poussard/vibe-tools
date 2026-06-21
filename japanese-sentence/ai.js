@@ -8,8 +8,8 @@ export const AI_PROVIDER_DEFINITIONS = [
         keyLabel: 'Gemini API key',
         keyPlaceholder: 'AIza...',
         helperText: 'Optional. Used only for sentence generation.',
-        model: 'gemini-3.5-flash',
-        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
+        model: 'gemini-3.1-flash-lite',
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent',
     },
 ];
 
