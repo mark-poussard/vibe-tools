@@ -182,12 +182,10 @@ function buildGeminiResponseSchema(count = 5) {
                         english: { type: 'string' },
                     },
                     required: ['japanese', 'english'],
-                    additionalProperties: false,
                 },
             },
         },
         required: ['sentences'],
-        additionalProperties: false,
     };
 }
 
