@@ -145,6 +145,13 @@ button.danger:hover {
     left: 15px;
 }
 
+.practice-skip-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: calc(100% - 170px);
+}
+
 .card-bottom-right {
     position: absolute;
     bottom: 15px;

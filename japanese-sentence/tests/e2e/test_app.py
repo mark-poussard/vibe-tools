@@ -169,6 +169,27 @@ def test_incorrect_answer_can_be_overridden(browser, app_server):
         context.close()
 
 
+def test_reveal_marks_sentence_incorrect(browser, app_server):
+    context = browser.new_context(viewport={"width": 1280, "height": 960})
+    page = open_authenticated_app(context, app_server)
+    try:
+        page.get_by_role("button", name="Word Practice").click()
+        page.get_by_label("Search word or kanji").fill("imagination")
+        page.get_by_role("button", name="Search").click()
+        page.get_by_role("button", name="Start Practice").click()
+        wait_for_screen(page, "practice-screen")
+
+        page.get_by_role("button", name="Reveal").click()
+
+        expect(page.locator("#practice-feedback")).to_contain_text("Incorrect.")
+        expect(page.locator("#practice-input")).to_have_value("")
+        expect(page.locator("#current-score")).to_contain_text("0")
+        expect(page.get_by_role("button", name="I was right (Add as alternate)")).to_be_visible()
+        expect(page.get_by_role("button", name="No Penalty")).to_be_visible()
+    finally:
+        context.close()
+
+
 def test_review_edits_sync_to_mocked_github(browser, app_server):
     context = browser.new_context(viewport={"width": 1280, "height": 960})
     mock = install_mock_github(context, REMOTE_SENTENCES)
@@ -181,7 +202,7 @@ def test_review_edits_sync_to_mocked_github(browser, app_server):
         row.locator(".edit-english").fill("I changed this sentence.")
         row.locator(".edit-english").press("Tab")
 
-        page.get_by_role("button", name="Back to Home").click()
+        page.get_by_role("button", name="Back to Home").first.click()
         wait_for_screen(page, "home-screen")
         expect(page.locator("#unsynced-banner")).to_be_visible()
 
@@ -279,7 +300,7 @@ def test_generate_sentences_adds_ai_results_to_corpus(browser, app_server):
 
         expect(page.locator("#generate-status")).to_contain_text("Added 10 sentences to the corpus.")
 
-        page.get_by_role("button", name="Back to Home").click()
+        page.get_by_role("button", name="Back to Home").first.click()
         wait_for_screen(page, "home-screen")
         expect(page.locator("#unsynced-banner")).to_be_visible()
 

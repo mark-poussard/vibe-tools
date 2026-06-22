@@ -9,11 +9,15 @@ function updateScoreDisplay(score) {
     scoreEl.style.backgroundColor = `hsl(${hue}, 70%, 50%)`;
 }
 
-function setPracticeButtons({ submit, next, override, forgive }) {
+function setPracticeButtons({ submit, next, override, forgive, reveal }) {
     document.getElementById('submit-btn').style.display = submit ? 'inline-block' : 'none';
     document.getElementById('next-btn').style.display = next ? 'inline-block' : 'none';
     document.getElementById('override-btn').style.display = override ? 'inline-block' : 'none';
     document.getElementById('forgive-btn').style.display = forgive ? 'inline-block' : 'none';
+    const revealBtn = document.getElementById('reveal-btn');
+    if (revealBtn) {
+        revealBtn.style.display = reveal ? 'inline-block' : 'none';
+    }
 }
 
 function isWordPracticeSession() {
@@ -232,14 +236,14 @@ export function loadNextPracticeSentence() {
     feedback.className = '';
     input.value = '';
     input.disabled = false;
-    setPracticeButtons({ submit: true, next: false, override: false, forgive: false });
+    setPracticeButtons({ submit: true, next: false, override: false, forgive: false, reveal: true });
 
     if (state.practiceQueue.length === 0) {
         document.getElementById('practice-english').textContent = getSessionCompleteMessage();
         document.getElementById('current-score').textContent = '-';
         document.getElementById('current-score').style.backgroundColor = '#ccc';
         input.disabled = true;
-        setPracticeButtons({ submit: false, next: false, override: false, forgive: false });
+        setPracticeButtons({ submit: false, next: false, override: false, forgive: false, reveal: false });
         return;
     }
 
@@ -259,7 +263,7 @@ export function handlePracticeEnter(event) {
     }
 }
 
-export function checkAnswer() {
+export function checkAnswer(options = {}) {
     if (state.practiceQueue.length === 0) return;
 
     const inputElement = document.getElementById('practice-input');
@@ -269,7 +273,7 @@ export function checkAnswer() {
     const normalizedInput = normalizeString(input);
     const normalizedPrimary = normalizeString(state.currentPracticeItem.primaryJapanese);
     const normalizedAlternates = state.currentPracticeItem.alternates.map(normalizeString);
-    const isCorrect = normalizedInput === normalizedPrimary || normalizedAlternates.includes(normalizedInput);
+    const isCorrect = !options.forceIncorrect && (normalizedInput === normalizedPrimary || normalizedAlternates.includes(normalizedInput));
 
     const feedback = document.getElementById('practice-feedback');
     const nextBtn = document.getElementById('next-btn');
@@ -285,7 +289,7 @@ export function checkAnswer() {
 
         requeueCurrentPracticeItem();
         inputElement.disabled = true;
-        setPracticeButtons({ submit: false, next: true, override: false, forgive: false });
+        setPracticeButtons({ submit: false, next: true, override: false, forgive: false, reveal: false });
         nextBtn.focus();
     } else {
         if (!state.isRetryState) {
@@ -295,7 +299,9 @@ export function checkAnswer() {
             saveProgress();
             state.lastIncorrectInput = input;
             state.isRetryState = true;
-            setPracticeButtons({ submit: true, next: false, override: true, forgive: true });
+            setPracticeButtons({ submit: true, next: false, override: true, forgive: true, reveal: true });
+        } else if (options.forceIncorrect && !options.preserveLastIncorrectInput) {
+            state.lastIncorrectInput = input;
         }
 
         const diff = generateDiffHTML(state.currentPracticeItem.primaryJapanese, input);
@@ -308,6 +314,14 @@ export function checkAnswer() {
         inputElement.value = '';
         inputElement.focus();
     }
+}
+
+export function revealAnswer() {
+    if (state.practiceQueue.length === 0) return;
+
+    const inputElement = document.getElementById('practice-input');
+    inputElement.value = state.currentPracticeItem.primaryJapanese;
+    checkAnswer({ forceIncorrect: true, preserveLastIncorrectInput: true });
 }
 
 export function overrideAnswer() {
@@ -338,18 +352,9 @@ export function confirmOverride() {
     document.getElementById('practice-feedback').textContent = 'Correct (Added as alternate)!';
     document.getElementById('practice-feedback').className = 'text-success';
     document.getElementById('practice-input').disabled = true;
-    setPracticeButtons({ submit: false, next: true, override: false, forgive: false });
+    setPracticeButtons({ submit: false, next: true, override: false, forgive: false, reveal: false });
     document.getElementById('next-btn').focus();
     closeOverrideModal();
-}
-
-export function openSkipModal() {
-    if (state.practiceQueue.length === 0) return;
-    document.getElementById('skip-modal').style.display = 'flex';
-}
-
-export function closeSkipModal() {
-    document.getElementById('skip-modal').style.display = 'none';
 }
 
 export function skipSentence(scoreChange) {
@@ -362,7 +367,6 @@ export function skipSentence(scoreChange) {
     }
 
     requeueCurrentPracticeItem();
-    closeSkipModal();
     loadNextPracticeSentence();
 }
 
